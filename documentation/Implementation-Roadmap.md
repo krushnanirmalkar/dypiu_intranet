@@ -79,12 +79,12 @@ Prepare the university server so everything can eventually run on-premises.
 
 ## Tasks
 
-* [ ] Prepare Ubuntu Server.
-* [ ] Configure static/internal networking.
-* [ ] Configure firewall.
-* [ ] Install Docker.
-* [ ] Install Docker Compose.
-* [ ] Install NGINX.
+* [x] Prepare Ubuntu Server.
+* [x] Configure static/internal networking.
+* [x] Configure firewall.
+* [x] Install Docker.
+* [x] Install Docker Compose.
+* [x] Install NGINX.
 * [ ] Configure DNS.
 * [ ] Configure HTTPS certificates.
 * [ ] Create project directory structure.
