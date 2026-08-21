@@ -125,7 +125,7 @@ Make Keycloak the central identity broker.
 * [ ] Configure HTTPS.
 * [x] Configure realm settings.
 * [x] Understand users, groups, roles and clients.
-* [ ] Configure session settings.
+* [x] Configure session settings.
 * [ ] Configure logout behaviour.
 * [ ] Configure security settings.
 
