@@ -47,13 +47,13 @@ Before writing code, understand exactly what is being built and freeze the archi
 
 * [x] Understand OIDC and OAuth 2.0 basics.
 * [x] Understand Keycloak's role.
-* [ ] Understand Google → Keycloak authentication.
-* [ ] Understand Authorization Code Flow + PKCE.
-* [ ] Understand access token vs ID token.
-* [ ] Understand server-side sessions.
-* [ ] Understand NGINX reverse proxying.
-* [ ] Understand role-based authorization.
-* [ ] Finalize domain structure.
+* [x] Understand Google → Keycloak authentication.
+* [x] Understand Authorization Code Flow + PKCE.
+* [x] Understand access token vs ID token.
+* [x] Understand server-side sessions.
+* [x] Understand NGINX reverse proxying.
+* [x] Understand role-based authorization.
+* [x] Finalize domain structure.
 
 Suggested domains:
 
