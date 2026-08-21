@@ -46,28 +46,7 @@ Before writing code, understand exactly what is being built and freeze the archi
 ## Tasks
 
 * [x] Understand OIDC and OAuth 2.0 basics.
-      Student
-   │
-   │ Open intranet
-   ▼
-DYPIU Application
-   │
-   │ "I need to know who this user is"
-   ▼
-Keycloak
-   │
-   │ Authenticate using university Google account
-   ▼
-Google Workspace
-   │
-   │ Login / MFA
-   ▼
-Keycloak
-   │
-   │ Validated identity
-   ▼
-DYPIU Application
-* [ ] Understand Keycloak's role.
+* [x] Understand Keycloak's role.
 * [ ] Understand Google → Keycloak authentication.
 * [ ] Understand Authorization Code Flow + PKCE.
 * [ ] Understand access token vs ID token.
