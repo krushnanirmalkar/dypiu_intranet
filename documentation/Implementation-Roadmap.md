@@ -118,13 +118,13 @@ Make Keycloak the central identity broker.
 
 ## Tasks
 
-* [ ] Deploy Keycloak.
-* [ ] Configure PostgreSQL for Keycloak.
-* [ ] Create DYPIU realm.
-* [ ] Configure administrator access.
+* [x] Deploy Keycloak.
+* [x] Configure PostgreSQL for Keycloak.
+* [x] Create DYPIU realm.
+* [x] Configure administrator access.
 * [ ] Configure HTTPS.
-* [ ] Configure realm settings.
-* [ ] Understand users, groups, roles and clients.
+* [x] Configure realm settings.
+* [x] Understand users, groups, roles and clients.
 * [ ] Configure session settings.
 * [ ] Configure logout behaviour.
 * [ ] Configure security settings.
