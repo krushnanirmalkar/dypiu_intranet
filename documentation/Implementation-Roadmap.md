@@ -217,7 +217,7 @@ Keycloak
 
 ## Tasks
 
-* [ ] Create application.
+* [x] Create application.
 * [ ] Register it as a Keycloak OIDC client.
 * [ ] Configure exact redirect URI.
 * [ ] Configure post-logout URI.
