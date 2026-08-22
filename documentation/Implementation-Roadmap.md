@@ -156,16 +156,16 @@ Allow DYPIU users to authenticate using their institutional Google accounts.
 
 ## Tasks
 
-* [ ] Configure Google Workspace identity provider.
-* [ ] Configure Google OAuth/OIDC credentials.
-* [ ] Restrict authentication to the DYPIU domain.
-* [ ] Configure redirect URLs.
-* [ ] Verify Google issuer.
-* [ ] Verify signed token.
-* [ ] Verify audience.
-* [ ] Verify expiry.
-* [ ] Verify institutional domain claim.
-* [ ] Test MFA behaviour.
+* [x] Configure Google Workspace identity provider.
+* [x] Configure Google OAuth/OIDC credentials.
+* [x] Restrict authentication to the DYPIU domain.
+* [x] Configure redirect URLs.
+* [x] Verify Google issuer.
+* [x] Verify signed token.
+* [x] Verify audience.
+* [x] Verify expiry.
+* [x] Verify institutional domain claim.
+* [x] Test MFA behaviour.
 
 Expected flow:
 
