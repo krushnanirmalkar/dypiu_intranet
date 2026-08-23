@@ -38,7 +38,11 @@ export const MainApp: React.FC = () => {
 
   const [authLoading, setAuthLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
-
+  const [authenticatedUser, setAuthenticatedUser] = useState<{
+    sub: string;
+    name: string;
+    email: string;
+  } | null>(null);
   useEffect(() => {
     // The signed-out page must remain publicly accessible.
     // Do NOT automatically start SSO from this page.
@@ -57,7 +61,8 @@ export const MainApp: React.FC = () => {
         if (response.ok) {
           const data = await response.json();
 
-          if (data.authenticated) {
+        if (data.authenticated && data.user) {
+            setAuthenticatedUser(data.user);
             setAuthenticated(true);
             setAuthLoading(false);
             return;
@@ -117,7 +122,19 @@ export const MainApp: React.FC = () => {
    * We will replace this with the authenticated identity
    * returned by the backend in the next step.
    */
-  const currentUser: UserProfile = mockUsers[currentRole];
+    const baseUser = mockUsers[currentRole];
+
+  const currentUser: UserProfile = authenticatedUser
+    ? {
+        ...baseUser,
+        id: authenticatedUser.sub,
+        name: authenticatedUser.name,
+        email: authenticatedUser.email,
+
+        // Temporary until university profile mapping is implemented
+        collegeId: authenticatedUser.email.split('@')[0],
+      }
+    : baseUser;
 
   // =========================================================
   // ROLE SWITCHER
