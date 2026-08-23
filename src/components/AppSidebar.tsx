@@ -56,7 +56,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
               <span>Help & Support</span>
             </button>
             <button 
-              onClick={() => alert('SSO Logout session terminated mock action.')}
+              onClick={() => {window.location.href = '/logout';}}
               className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium text-navy-700 hover:bg-white hover:text-red-700 transition-colors"
             >
               <LogOut className="w-4 h-4 text-navy-500" />

@@ -182,7 +182,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
 
               <div className="pt-1">
                 <button
-                  onClick={() => { alert('Logged out demo'); setIsDropdownOpen(false); }}
+                  onClick={() => {setIsDropdownOpen(false);window.location.href = '/logout';}}
                   className="w-full flex items-center space-x-2.5 px-4 py-2 text-xs text-navy-700 hover:bg-navy-50 hover:text-red-700 font-medium transition-colors"
                 >
                   <LogOut className="w-4 h-4 text-navy-500" />
