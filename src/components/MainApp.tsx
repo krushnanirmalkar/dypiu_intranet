@@ -10,7 +10,6 @@ import { WelcomeBanner } from '../components/WelcomeBanner';
 import { ApplicationsGrid } from '../components/ApplicationsGrid';
 import { EventCard } from '../components/EventCard';
 import { ActivityHub } from '../components/ActivityHub';
-import { MiniCalendar } from '../components/MiniCalendar';
 
 import { ApplicationsPage } from '../pages/ApplicationsPage';
 import { ProfilePage } from '../pages/ProfilePage';
@@ -72,7 +71,7 @@ export const MainApp: React.FC = () => {
       />
 
       {/* Main Workspace Layout */}
-      <div className="lg:pl-64 flex-1 flex flex-col min-w-0">
+      <div className="lg:pl-72 flex-1 flex flex-col min-w-0">
         {/* Sticky Top Navbar */}
         <TopNavbar
           user={currentUser}
@@ -91,19 +90,11 @@ export const MainApp: React.FC = () => {
           {/* NAV VIEW SWITCHER */}
           {currentNav === 'dashboard' && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              {/* 1. Top Section: Ultra-compact Welcome Banner + Mini Calendar Side-by-Side */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-                {/* Left 2 Columns: Compact Welcome Banner */}
-                <div className="lg:col-span-2">
-                  <WelcomeBanner
-                    user={currentUser}
-                  />
-                </div>
-
-                {/* Right 1 Column: Calendar on its Right */}
-                <div className="lg:col-span-1">
-                  <MiniCalendar />
-                </div>
+              {/* 1. Top Section: Welcome Banner */}
+              <div>
+                <WelcomeBanner
+                  user={currentUser}
+                />
               </div>
 
               {/* 2. Main Dashboard Content Grid: 2/3 Feed + 1/3 Activity Hub Sidebar */}
