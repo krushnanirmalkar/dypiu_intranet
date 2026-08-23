@@ -218,17 +218,17 @@ Keycloak
 ## Tasks
 
 * [x] Create application.
-* [ ] Register it as a Keycloak OIDC client.
-* [ ] Configure exact redirect URI.
-* [ ] Configure post-logout URI.
-* [ ] Implement Authorization Code + PKCE.
-* [ ] Implement state.
-* [ ] Implement nonce.
-* [ ] Implement callback.
-* [ ] Exchange authorization code on backend.
-* [ ] Validate returned tokens.
-* [ ] Create server-side session.
-* [ ] Create secure cookie.
+* [x] Register it as a Keycloak OIDC client.
+* [x] Configure exact redirect URI.
+* [x] Configure post-logout URI.
+* [x] Implement Authorization Code + PKCE.
+* [x] Implement state.
+* [x] Implement nonce.
+* [x] Implement callback.
+* [x] Exchange authorization code on backend.
+* [x] Validate returned tokens.
+* [x] Create server-side session.
+* [x] Create secure cookie.
 * [ ] Implement logout.
 * [ ] Test expired sessions.
 
