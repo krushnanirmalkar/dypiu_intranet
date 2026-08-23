@@ -2,18 +2,15 @@ import React, { useState } from 'react';
 import type { ApplicationItem, UserRole, UserProfile } from '../types';
 import { 
   mockUsers, mockApplications, mockEvents, 
-  mockNotifications, mockStudentSchedule, mockFacultySchedule, 
-  mockStudentStats, mockFacultyStats 
+  mockNotifications 
 } from '../data/mockData';
 import { AppSidebar } from '../components/AppSidebar';
 import { TopNavbar } from '../components/TopNavbar';
 import { WelcomeBanner } from '../components/WelcomeBanner';
-import { AnnouncementSection } from '../components/AnnouncementSection';
 import { ApplicationsGrid } from '../components/ApplicationsGrid';
-import { StatCard } from '../components/StatCard';
-import { ScheduleTimeline } from '../components/ScheduleTimeline';
 import { EventCard } from '../components/EventCard';
-import { NotificationPanel } from '../components/NotificationPanel';
+import { ActivityHub } from '../components/ActivityHub';
+import { MiniCalendar } from '../components/MiniCalendar';
 
 import { ApplicationsPage } from '../pages/ApplicationsPage';
 import { ProfilePage } from '../pages/ProfilePage';
@@ -94,47 +91,32 @@ export const MainApp: React.FC = () => {
           {/* NAV VIEW SWITCHER */}
           {currentNav === 'dashboard' && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              {/* 1. Hero / Welcome Banner */}
-              <WelcomeBanner
-                user={currentUser}
-                onExploreApps={() => setCurrentNav('applications')}
-              />
-
-              {/* 2. My Applications (3 per row) + Vertical Campus Announcements Side-by-Side */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-                {/* Left 2 Columns: Applications (3 cards per row) */}
+              {/* 1. Top Section: Ultra-compact Welcome Banner + Mini Calendar Side-by-Side */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+                {/* Left 2 Columns: Compact Welcome Banner */}
                 <div className="lg:col-span-2">
+                  <WelcomeBanner
+                    user={currentUser}
+                  />
+                </div>
+
+                {/* Right 1 Column: Calendar on its Right */}
+                <div className="lg:col-span-1">
+                  <MiniCalendar />
+                </div>
+              </div>
+
+              {/* 2. Main Dashboard Content Grid: 2/3 Feed + 1/3 Activity Hub Sidebar */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                {/* Left 2 Columns: Main Feed (Applications, Timeline, Events) */}
+                <div className="lg:col-span-2 space-y-6">
+                  {/* Single Sign-On Applications Grid */}
                   <ApplicationsGrid
                     applications={applications}
                     currentRole={currentRole}
                     onOpenApp={(app) => setSimulatedApp(app)}
                     onToggleFavorite={handleToggleFavorite}
                     onViewAllApps={() => setCurrentNav('applications')}
-                  />
-                </div>
-
-                {/* Right Column: Campus Announcements Vertically */}
-                <div className="lg:col-span-1">
-                  <AnnouncementSection
-                    currentRole={currentRole}
-                  />
-                </div>
-              </div>
-
-              {/* 3. Role-aware Statistics Overview Cards */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {(currentRole === 'student' ? mockStudentStats : mockFacultyStats).map((stat, idx) => (
-                  <StatCard key={idx} stat={stat} />
-                ))}
-              </div>
-
-              {/* 5. Two Column Dashboard Content: Timeline + Events + Notifications */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Left 2-Columns: Today's Schedule */}
-                <div className="lg:col-span-2 space-y-6">
-                  <ScheduleTimeline
-                    schedule={currentRole === 'student' ? mockStudentSchedule : mockFacultySchedule}
-                    title={currentRole === 'student' ? "Today's Academic Timeline" : "Faculty Lectures & Meetings"}
                   />
 
                   {/* Academic Management Quick Actions for Faculty */}
@@ -156,7 +138,7 @@ export const MainApp: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Upcoming Events Grid */}
+                  {/* Upcoming Campus & Academic Events */}
                   <div className="bg-white rounded-2xl border border-navy-100 p-6 shadow-sm">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-base font-extrabold text-navy-900">Upcoming Campus & Academic Events</h3>
@@ -176,31 +158,13 @@ export const MainApp: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Right Column: Notifications & Announcements */}
-                <div className="space-y-6">
-                  <NotificationPanel
+                {/* Right Column: Activity Hub */}
+                <div className="lg:col-span-1 space-y-6">
+                  <ActivityHub
                     notifications={notifications}
                     currentRole={currentRole}
                     onMarkAllRead={handleMarkAllRead}
                   />
-
-                  {/* SSO Portal Status Widget */}
-                  <div className="bg-navy-800 text-white rounded-2xl p-6 shadow-sm border border-navy-700">
-                    <div className="flex items-center space-x-2 text-xs font-bold text-navy-200 mb-2">
-                      <ShieldCheck className="w-4 h-4 text-white" />
-                      <span>UNIVERSAL SSO ACTIVE</span>
-                    </div>
-                    <h4 className="text-sm font-extrabold mb-1">Seamless Digital Access</h4>
-                    <p className="text-xs text-navy-200 leading-relaxed mb-4">
-                      You are authenticated via Central Identity Provider. Clicking Juno, LMS, or UniSync launches directly into your account session.
-                    </p>
-                    <button
-                      onClick={() => setCurrentNav('applications')}
-                      className="w-full py-2 rounded-lg bg-white text-navy-900 font-bold text-xs hover:bg-navy-50 transition-colors shadow-sm"
-                    >
-                      Explore All SSO Applications
-                    </button>
-                  </div>
                 </div>
               </div>
             </div>
