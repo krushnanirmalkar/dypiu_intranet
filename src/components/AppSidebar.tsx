@@ -1,6 +1,6 @@
 import React from 'react';
 import type { UserRole } from '../types';
-import { HelpCircle, LogOut } from 'lucide-react';
+import { HelpCircle, LogOut, Phone, Calendar, BookMarked } from 'lucide-react';
 import { MiniCalendar } from './MiniCalendar';
 
 interface AppSidebarProps {
@@ -32,18 +32,65 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
         ${isOpenMobile ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         <div className="flex flex-col h-full overflow-hidden">
-          {/* Header Brand */}
-          <div className="h-20 px-4 py-3 border-b border-navy-100 flex items-center justify-center bg-white shrink-0">
+          {/* Header Brand - Clickable to return to Dashboard */}
+          <button 
+            onClick={() => {
+              onNavigate('dashboard');
+              onCloseMobile();
+            }}
+            className="h-20 px-4 py-3 border-b border-navy-100 flex items-center justify-center bg-white shrink-0 cursor-pointer focus:outline-none w-full"
+            title="Return to Dashboard"
+          >
             <img 
               src="/DYPIU colour logo 1.png" 
               alt="D Y Patil International University" 
               className="h-full w-auto object-contain max-w-full" 
             />
-          </div>
+          </button>
 
-          {/* Sidebar Mini Calendar */}
-          <div className="p-3.5 overflow-y-auto flex-1">
+          {/* Sidebar Mini Calendar & Quick Links */}
+          <div className="p-3.5 overflow-y-auto flex-1 space-y-3">
             <MiniCalendar />
+
+            {/* Quick Links & Contacts */}
+            <div className="bg-white rounded-xl border border-navy-100 p-3 shadow-xs space-y-2">
+              <h4 className="text-[11px] font-extrabold text-navy-900 uppercase tracking-wider">
+                Quick Links
+              </h4>
+              <div className="flex flex-col space-y-1.5 text-xs">
+                <button
+                  onClick={() => alert("Campus IT Helpdesk: support@dypiu.ac.in | Ext: 4040")}
+                  className="w-full p-2 rounded-lg bg-navy-50/70 hover:bg-navy-100 border border-navy-100 flex items-center space-x-2 text-navy-800 font-medium group text-left transition-colors"
+                >
+                  <Phone className="w-3.5 h-3.5 text-navy-600 shrink-0" />
+                  <span className="truncate text-xs font-bold">IT Support Desk</span>
+                </button>
+
+                <button
+                  onClick={() => alert("Academic Calendar 2026-27: Mid-term exams start March 15.")}
+                  className="w-full p-2 rounded-lg bg-navy-50/70 hover:bg-navy-100 border border-navy-100 flex items-center space-x-2 text-navy-800 font-medium group text-left transition-colors"
+                >
+                  <Calendar className="w-3.5 h-3.5 text-navy-600 shrink-0" />
+                  <span className="truncate text-xs font-bold">Academic Calendar</span>
+                </button>
+
+                <button
+                  onClick={() => alert("Central Library Portal: 45,000+ E-books and IEEE Journals available.")}
+                  className="w-full p-2 rounded-lg bg-navy-50/70 hover:bg-navy-100 border border-navy-100 flex items-center space-x-2 text-navy-800 font-medium group text-left transition-colors"
+                >
+                  <BookMarked className="w-3.5 h-3.5 text-navy-600 shrink-0" />
+                  <span className="truncate text-xs font-bold">Central E-Library</span>
+                </button>
+
+                <button
+                  onClick={() => alert("DYPIU Student FAQs & Guidelines portal opened.")}
+                  className="w-full p-2 rounded-lg bg-navy-50/70 hover:bg-navy-100 border border-navy-100 flex items-center space-x-2 text-navy-800 font-medium group text-left transition-colors"
+                >
+                  <HelpCircle className="w-3.5 h-3.5 text-navy-600 shrink-0" />
+                  <span className="truncate text-xs font-bold">Help Desk & FAQs</span>
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Footer Support & Logout */}
