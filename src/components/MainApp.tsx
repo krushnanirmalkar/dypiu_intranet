@@ -26,6 +26,13 @@ import {
 
 export const MainApp: React.FC = () => {
   // =========================================================
+  // SIGNED-OUT PAGE
+  // =========================================================
+
+  const isSignedOutPage =
+    window.location.pathname === '/signed-out';
+
+  // =========================================================
   // REAL SSO AUTHENTICATION STATE
   // =========================================================
 
@@ -33,6 +40,13 @@ export const MainApp: React.FC = () => {
   const [authenticated, setAuthenticated] = useState(false);
 
   useEffect(() => {
+    // The signed-out page must remain publicly accessible.
+    // Do NOT automatically start SSO from this page.
+    if (isSignedOutPage) {
+      setAuthLoading(false);
+      return;
+    }
+
     const checkAuthentication = async () => {
       try {
         const response = await fetch('/api/me', {
@@ -63,7 +77,7 @@ export const MainApp: React.FC = () => {
     };
 
     checkAuthentication();
-  }, []);
+  }, [isSignedOutPage]);
 
   // =========================================================
   // PORTAL STATE
@@ -152,6 +166,41 @@ export const MainApp: React.FC = () => {
       n.targetRoles.includes(currentRole) &&
       !n.isRead
   ).length;
+
+  // =========================================================
+  // SIGNED-OUT LANDING PAGE
+  // =========================================================
+
+  if (isSignedOutPage) {
+    return (
+      <div className="min-h-screen bg-navy-50 flex items-center justify-center px-4">
+        <div className="w-full max-w-md bg-white rounded-2xl border border-navy-100 shadow-lg p-8 text-center">
+
+          <div className="w-14 h-14 mx-auto mb-5 rounded-2xl bg-navy-800 text-white flex items-center justify-center">
+            <ShieldCheck className="w-7 h-7" />
+          </div>
+
+          <h1 className="text-2xl font-black text-navy-900">
+            You have been signed out
+          </h1>
+
+          <p className="mt-3 text-sm text-navy-500 leading-relaxed">
+            Your DYPIU Intranet session has been securely ended.
+          </p>
+
+          <button
+            onClick={() => {
+              window.location.href = '/login';
+            }}
+            className="mt-6 w-full py-3 rounded-xl bg-navy-800 text-white text-sm font-bold hover:bg-navy-900 transition-colors"
+          >
+            Sign in again
+          </button>
+
+        </div>
+      </div>
+    );
+  }
 
   // =========================================================
   // AUTHENTICATION GATE
