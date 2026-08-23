@@ -38,11 +38,13 @@ export const MainApp: React.FC = () => {
 
   const [authLoading, setAuthLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
+
   const [authenticatedUser, setAuthenticatedUser] = useState<{
     sub: string;
     name: string;
     email: string;
   } | null>(null);
+
   useEffect(() => {
     // The signed-out page must remain publicly accessible.
     // Do NOT automatically start SSO from this page.
@@ -61,7 +63,7 @@ export const MainApp: React.FC = () => {
         if (response.ok) {
           const data = await response.json();
 
-        if (data.authenticated && data.user) {
+          if (data.authenticated && data.user) {
             setAuthenticatedUser(data.user);
             setAuthenticated(true);
             setAuthLoading(false);
@@ -70,7 +72,7 @@ export const MainApp: React.FC = () => {
         }
 
         // No valid server-side session.
-        // Start the real DYPIU SSO login flow.
+        // Start the normal DYPIU SSO login flow.
         window.location.href = '/login';
       } catch (error) {
         console.error('Authentication check failed:', error);
@@ -116,13 +118,17 @@ export const MainApp: React.FC = () => {
 
   /*
    * IMPORTANT:
-   * Authentication is now REAL through /api/me.
+   * Authentication is REAL through /api/me.
    *
-   * User profile / role data is still mock data temporarily.
-   * We will replace this with the authenticated identity
-   * returned by the backend in the next step.
+   * Name, email and identity ID come from the authenticated
+   * SSO session.
+   *
+   * Role and remaining university profile data are still
+   * temporary mock data until university profile/RBAC
+   * mapping is implemented.
    */
-    const baseUser = mockUsers[currentRole];
+
+  const baseUser = mockUsers[currentRole];
 
   const currentUser: UserProfile = authenticatedUser
     ? {
@@ -207,7 +213,7 @@ export const MainApp: React.FC = () => {
 
           <button
             onClick={() => {
-              window.location.href = '/login';
+              window.location.href = '/login?reauth=1';
             }}
             className="mt-6 w-full py-3 rounded-xl bg-navy-800 text-white text-sm font-bold hover:bg-navy-900 transition-colors"
           >
@@ -232,11 +238,13 @@ export const MainApp: React.FC = () => {
     return (
       <div className="min-h-screen bg-navy-50 flex items-center justify-center">
         <div className="text-center space-y-3">
+
           <div className="w-10 h-10 border-4 border-navy-200 border-t-navy-800 rounded-full animate-spin mx-auto" />
 
           <p className="text-sm font-semibold text-navy-700">
             Verifying university session...
           </p>
+
         </div>
       </div>
     );
