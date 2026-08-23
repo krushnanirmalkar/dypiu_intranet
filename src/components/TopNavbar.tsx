@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import type { UserProfile, UserRole } from '../types';
+import type { UserProfile, UserRole, NotificationItem } from '../types';
+import { NotificationPanel } from './NotificationPanel';
 import { 
   Search, Bell, Menu, User, Settings, RefreshCw, LogOut, ChevronDown, Check
 } from 'lucide-react';
@@ -13,6 +14,8 @@ interface TopNavbarProps {
   onNavigate: (navId: string) => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  notifications?: NotificationItem[];
+  onMarkAllRead?: () => void;
 }
 
 export const TopNavbar: React.FC<TopNavbarProps> = ({
@@ -24,14 +27,22 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
   onNavigate,
   searchQuery,
   onSearchChange,
+  notifications = [],
+  onMarkAllRead = () => {},
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+        setIsNotifOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -89,17 +100,30 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
 
       {/* Right Actions */}
       <div className="flex items-center space-x-3">
-        {/* Notifications Icon */}
-        <button 
-          onClick={() => onNavigate('notifications')}
-          className="relative p-2 rounded-lg text-navy-700 hover:bg-navy-50 hover:text-navy-900 transition-colors"
-          title="Notifications"
-        >
-          <Bell className="w-5 h-5" />
-          {unreadNotifCount > 0 && (
-            <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-navy-800 rounded-full ring-2 ring-white" />
+        {/* Notifications Bell Dropdown Container */}
+        <div className="relative" ref={notifRef}>
+          <button 
+            onClick={() => setIsNotifOpen(!isNotifOpen)}
+            className="relative p-2 rounded-lg text-navy-700 hover:bg-navy-50 hover:text-navy-900 transition-colors focus:outline-none"
+            title="Notifications"
+          >
+            <Bell className="w-5 h-5" />
+            {unreadNotifCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-navy-800 rounded-full ring-2 ring-white" />
+            )}
+          </button>
+
+          {/* Notifications Dropdown Panel */}
+          {isNotifOpen && (
+            <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-navy-100 p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+              <NotificationPanel
+                notifications={notifications}
+                currentRole={user.role}
+                onMarkAllRead={onMarkAllRead}
+              />
+            </div>
           )}
-        </button>
+        </div>
 
         {/* User Profile Dropdown */}
         <div className="relative" ref={dropdownRef}>

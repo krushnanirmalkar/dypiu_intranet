@@ -10,9 +10,9 @@ interface CalendarEvent {
 }
 
 export const MiniCalendar: React.FC = () => {
-  // Current calendar view date
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 1, 21)); // Feb 21, 2026
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date(2026, 1, 21));
+  // Current calendar view date dynamically initialized to current system date
+  const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   const eventsMap: Record<string, CalendarEvent[]> = {
     '2026-02-28': [
@@ -48,7 +48,7 @@ export const MiniCalendar: React.FC = () => {
   };
 
   const handleToday = () => {
-    const today = new Date(2026, 1, 21);
+    const today = new Date();
     setCurrentDate(today);
     setSelectedDate(today);
   };
@@ -64,7 +64,8 @@ export const MiniCalendar: React.FC = () => {
     return `${y}-${mm}-${dd}`;
   };
 
-  const todayKey = '2026-02-21';
+  const now = new Date();
+  const todayKey = formatDateKey(now.getFullYear(), now.getMonth(), now.getDate());
   const selectedKey = formatDateKey(
     selectedDate.getFullYear(),
     selectedDate.getMonth(),

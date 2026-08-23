@@ -216,6 +216,8 @@ export const MainApp: React.FC = () => {
           onNavigate={setCurrentNav}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
+          notifications={notifications}
+          onMarkAllRead={handleMarkAllRead}
         />
 
         {/* =================================================
@@ -344,11 +346,7 @@ export const MainApp: React.FC = () => {
                 <div className="lg:col-span-1 space-y-6">
 
                   <ActivityHub
-                    notifications={notifications}
                     currentRole={currentRole}
-                    onMarkAllRead={
-                      handleMarkAllRead
-                    }
                   />
 
                 </div>
