@@ -82,6 +82,8 @@ export const MainApp: React.FC = () => {
           onNavigate={setCurrentNav}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
+          notifications={notifications}
+          onMarkAllRead={handleMarkAllRead}
         />
 
         {/* Scrollable Dashboard & Pages Content */}
@@ -152,9 +154,7 @@ export const MainApp: React.FC = () => {
                 {/* Right Column: Activity Hub */}
                 <div className="lg:col-span-1 space-y-6">
                   <ActivityHub
-                    notifications={notifications}
                     currentRole={currentRole}
-                    onMarkAllRead={handleMarkAllRead}
                   />
                 </div>
               </div>
