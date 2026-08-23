@@ -9,12 +9,13 @@ import { TopNavbar } from '../components/TopNavbar';
 import { WelcomeBanner } from '../components/WelcomeBanner';
 import { ApplicationsGrid } from '../components/ApplicationsGrid';
 import { EventCard } from '../components/EventCard';
+import { ZenithNewsletterWidget } from '../components/ZenithNewsletterWidget';
 import { ActivityHub } from '../components/ActivityHub';
 
 import { ApplicationsPage } from '../pages/ApplicationsPage';
 import { ProfilePage } from '../pages/ProfilePage';
 
-import { ShieldCheck, ExternalLink, X, ArrowRight } from 'lucide-react';
+import { ShieldCheck, ExternalLink, X } from 'lucide-react';
 
 export const MainApp: React.FC = () => {
   // Global Role & User State
@@ -99,11 +100,9 @@ export const MainApp: React.FC = () => {
                 />
               </div>
 
-              {/* 2. Main Dashboard Content Grid: 2/3 Feed + 1/3 Activity Hub Sidebar */}
+              {/* 2. Row 1: Single Sign-On Applications Grid (2 Cols) + Notice Board Card (1 Col) */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-                {/* Left 2 Columns: Main Feed (Applications, Timeline, Events) */}
-                <div className="lg:col-span-2 space-y-6">
-                  {/* Single Sign-On Applications Grid */}
+                <div className="lg:col-span-2">
                   <ApplicationsGrid
                     applications={applications}
                     currentRole={currentRole}
@@ -111,28 +110,17 @@ export const MainApp: React.FC = () => {
                     onToggleFavorite={handleToggleFavorite}
                     onViewAllApps={() => setCurrentNav('applications')}
                   />
+                </div>
 
-                  {/* Academic Management Quick Actions for Faculty */}
-                  {currentRole === 'faculty' && (
-                    <div className="bg-white rounded-2xl border border-navy-100 p-6 shadow-sm">
-                      <h3 className="text-base font-extrabold text-navy-900 mb-3">Academic Management Quick Actions</h3>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        {['Manage Courses', 'View Students', 'Upload Materials', 'Review Assignments', 'Enter Marks', 'Research Grants'].map((action, i) => (
-                          <button
-                            key={i}
-                            onClick={() => alert(`Opening faculty action: ${action}`)}
-                            className="p-3 rounded-xl bg-navy-50 hover:bg-navy-800 hover:text-white transition-all text-xs font-bold text-navy-800 border border-navy-200/80 text-left flex items-center justify-between group"
-                          >
-                            <span>{action}</span>
-                            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                <div className="lg:col-span-1">
+                  <ActivityHub currentRole={currentRole} />
+                </div>
+              </div>
 
-                  {/* Upcoming Campus & Academic Events */}
-                  <div className="bg-white rounded-2xl border border-navy-100 p-6 shadow-sm">
+              {/* 3. Row 2: Upcoming Events Box (2 Cols) + Zenith Campus Newsletter Box (1 Col) - Matched Symmetrical Row */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+                <div className="lg:col-span-2 bg-white rounded-2xl border border-navy-100 p-6 shadow-sm flex flex-col justify-between h-full">
+                  <div>
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-base font-extrabold text-navy-900">Upcoming Campus & Academic Events</h3>
                       <button
@@ -151,11 +139,8 @@ export const MainApp: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Right Column: Activity Hub */}
-                <div className="lg:col-span-1 space-y-6">
-                  <ActivityHub
-                    currentRole={currentRole}
-                  />
+                <div className="lg:col-span-1 h-full">
+                  <ZenithNewsletterWidget />
                 </div>
               </div>
             </div>
