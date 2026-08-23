@@ -31,10 +31,10 @@ export const ApplicationsGrid: React.FC<ApplicationsGridProps> = ({
             <div className="p-1.5 rounded-lg bg-navy-800 text-white">
               <Grid className="w-5 h-5" />
             </div>
-            <h2 className="text-xl font-extrabold text-navy-900 tracking-tight">My Applications</h2>
+            <h2 className="text-lg font-bold text-navy-900 tracking-tight">University Portals & Applications</h2>
           </div>
           <p className="text-xs text-navy-500 mt-1">
-            Single Sign-On enabled university services (Juno, UniSync, LMS, ERP, Library, Exams).
+            Access your learning management systems, student services, and academic portals.
           </p>
         </div>
 
