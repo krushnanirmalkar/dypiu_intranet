@@ -229,8 +229,8 @@ Keycloak
 * [x] Validate returned tokens.
 * [x] Create server-side session.
 * [x] Create secure cookie.
-* [ ] Implement logout.
-* [ ] Test expired sessions.
+* [x] Implement logout.
+* [x] Test expired sessions.
 
 Expected flow:
 
