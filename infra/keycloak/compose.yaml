@@ -24,7 +24,11 @@ services:
 
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.7.1
+    build:
+      context: .
+      dockerfile: Dockerfile.keycloak
+
+    image: dypiu-keycloak:26.7.1
     restart: unless-stopped
 
     depends_on:
@@ -37,6 +41,8 @@ services:
       KC_DB_USERNAME: ${KEYCLOAK_DB_USER}
       KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
 
+      DIRECTORY_ROLE_SERVICE_URL: "http://directory-role-service:3002"
+      DIRECTORY_LOOKUP_TOKEN: ${DIRECTORY_LOOKUP_TOKEN}
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD}
 
@@ -52,6 +58,19 @@ services:
 
     ports:
       - "127.0.0.1:8080:8080"
+
+  directory-role-service:
+    build:
+      context: ./directory-role-service
+
+    restart: unless-stopped
+
+    environment:
+      GOOGLE_DIRECTORY_ADMIN: ${GOOGLE_DIRECTORY_ADMIN}
+      DIRECTORY_LOOKUP_TOKEN: ${DIRECTORY_LOOKUP_TOKEN}
+
+    volumes:
+      - /etc/dypiu/google-directory.json:/run/secrets/google-directory.json:ro
 
 volumes:
   keycloak_db_data:
