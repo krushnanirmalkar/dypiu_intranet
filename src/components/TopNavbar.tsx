@@ -1,14 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import type { UserProfile, UserRole, NotificationItem } from '../types';
+import type { UserProfile, NotificationItem } from '../types';
 import { NotificationPanel } from './NotificationPanel';
 import { 
-  Search, Bell, Menu, User, Settings, RefreshCw, LogOut, ChevronDown, Check
+  Search, Bell, Menu, User, Settings, LogOut, ChevronDown
 } from 'lucide-react';
 
 interface TopNavbarProps {
   user: UserProfile;
   currentNav: string;
-  onRoleSwitch: (newRole: UserRole) => void;
   onToggleMobileSidebar: () => void;
   unreadNotifCount: number;
   onNavigate: (navId: string) => void;
@@ -21,7 +20,6 @@ interface TopNavbarProps {
 export const TopNavbar: React.FC<TopNavbarProps> = ({
   user,
   currentNav,
-  onRoleSwitch,
   onToggleMobileSidebar,
   unreadNotifCount,
   onNavigate,
@@ -131,11 +129,17 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             className="flex items-center space-x-2.5 p-1 rounded-lg hover:bg-navy-50 transition-colors focus:outline-none"
           >
-            <img
-              src={user.avatar}
-              alt={user.name}
-              className="w-8 h-8 rounded-full object-cover border border-navy-200"
-            />
+            <div
+              className="w-8 h-8 rounded-full bg-navy-800 text-white border border-navy-700 flex items-center justify-center text-[10px] font-black shrink-0"
+              title={user.name}
+            >
+              {user.name
+                .split(/\\s+/)
+                .filter(Boolean)
+                .slice(0, 2)
+                .map((part) => part.charAt(0).toUpperCase())
+                .join('')}
+            </div>
             <div className="hidden lg:block text-left">
               <div className="text-xs font-bold text-navy-900 leading-tight">{user.name}</div>
               <div className="text-[10px] font-medium text-navy-500 capitalize">{user.role}</div>
@@ -170,38 +174,6 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
                   <Settings className="w-4 h-4 text-navy-500" />
                   <span>Preferences & SSO Settings</span>
                 </button>
-              </div>
-
-              {/* Role Switcher Demo */}
-              <div className="px-4 py-2 border-t border-b border-navy-100 bg-navy-50/30">
-                <div className="text-[10px] font-bold text-navy-400 uppercase tracking-wider mb-1.5 flex items-center space-x-1">
-                  <RefreshCw className="w-3 h-3 text-navy-500" />
-                  <span>Demo: Switch Role</span>
-                </div>
-                <div className="grid grid-cols-2 gap-1.5">
-                  <button
-                    onClick={() => { onRoleSwitch('student'); setIsDropdownOpen(false); }}
-                    className={`px-2.5 py-1.5 text-xs rounded font-medium flex items-center justify-between border transition-all ${
-                      user.role === 'student' 
-                        ? 'bg-navy-800 text-white border-navy-800 font-bold' 
-                        : 'bg-white text-navy-800 border-navy-200 hover:border-navy-400'
-                    }`}
-                  >
-                    <span>Student</span>
-                    {user.role === 'student' && <Check className="w-3 h-3" />}
-                  </button>
-                  <button
-                    onClick={() => { onRoleSwitch('faculty'); setIsDropdownOpen(false); }}
-                    className={`px-2.5 py-1.5 text-xs rounded font-medium flex items-center justify-between border transition-all ${
-                      user.role === 'faculty' 
-                        ? 'bg-navy-800 text-white border-navy-800 font-bold' 
-                        : 'bg-white text-navy-800 border-navy-200 hover:border-navy-400'
-                    }`}
-                  >
-                    <span>Faculty</span>
-                    {user.role === 'faculty' && <Check className="w-3 h-3" />}
-                  </button>
-                </div>
               </div>
 
               <div className="pt-1">

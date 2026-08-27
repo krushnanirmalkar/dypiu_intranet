@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import type { ApplicationItem, UserRole, UserProfile } from '../types';
 import {
-  mockUsers,
   mockApplications,
   mockEvents,
   mockNotifications,
@@ -33,6 +32,22 @@ export const MainApp: React.FC = () => {
     window.location.pathname === '/signed-out';
 
   // =========================================================
+  // PORTAL STATE
+  // =========================================================
+
+  const [currentRole, setCurrentRole] =
+    useState<UserRole>('student');
+
+  const [currentNav, setCurrentNav] =
+    useState<string>('dashboard');
+
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] =
+    useState<boolean>(false);
+
+  const [searchQuery, setSearchQuery] =
+    useState<string>('');
+
+  // =========================================================
   // REAL SSO AUTHENTICATION STATE
   // =========================================================
 
@@ -43,6 +58,7 @@ export const MainApp: React.FC = () => {
     sub: string;
     name: string;
     email: string;
+    roles: string[];
   } | null>(null);
 
   useEffect(() => {
@@ -64,7 +80,40 @@ export const MainApp: React.FC = () => {
           const data = await response.json();
 
           if (data.authenticated && data.user) {
-            setAuthenticatedUser(data.user);
+            const roles: string[] = Array.isArray(data.user.roles)
+              ? data.user.roles
+              : [];
+
+            let resolvedRole: UserRole | null = null;
+
+            // Role precedence:
+            // admin > faculty > student
+            if (roles.includes('admin')) {
+              resolvedRole = 'admin';
+            } else if (roles.includes('faculty')) {
+              resolvedRole = 'faculty';
+            } else if (roles.includes('student')) {
+              resolvedRole = 'student';
+            }
+
+            if (!resolvedRole) {
+              console.error(
+                'Authenticated user has no supported DYPIU role:',
+                roles
+              );
+
+              window.location.href = '/signed-out';
+              return;
+            }
+
+            setAuthenticatedUser({
+              sub: data.user.sub,
+              name: data.user.name,
+              email: data.user.email,
+              roles,
+            });
+
+            setCurrentRole(resolvedRole);
             setAuthenticated(true);
             setAuthLoading(false);
             return;
@@ -87,22 +136,6 @@ export const MainApp: React.FC = () => {
   }, [isSignedOutPage]);
 
   // =========================================================
-  // PORTAL STATE
-  // =========================================================
-
-  const [currentRole, setCurrentRole] =
-    useState<UserRole>('student');
-
-  const [currentNav, setCurrentNav] =
-    useState<string>('dashboard');
-
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] =
-    useState<boolean>(false);
-
-  const [searchQuery, setSearchQuery] =
-    useState<string>('');
-
-  // =========================================================
   // DATA STATE
   // =========================================================
 
@@ -117,45 +150,34 @@ export const MainApp: React.FC = () => {
     useState<ApplicationItem | null>(null);
 
   /*
-   * IMPORTANT:
-   * Authentication is REAL through /api/me.
+   * Authentication, identity and base role come from the
+   * authenticated server-side SSO session.
    *
-   * Name, email and identity ID come from the authenticated
-   * SSO session.
-   *
-   * Role and remaining university profile data are still
-   * temporary mock data until university profile/RBAC
-   * mapping is implemented.
+   * Additional university profile attributes will be populated
+   * when a trusted university profile source is connected.
    */
-
-  const baseUser = mockUsers[currentRole];
-
-  const currentUser: UserProfile = authenticatedUser
-    ? {
-        ...baseUser,
-        id: authenticatedUser.sub,
-        name: authenticatedUser.name,
-        email: authenticatedUser.email,
-
-        // Temporary until university profile mapping is implemented
-        collegeId: authenticatedUser.email.split('@')[0],
-      }
-    : baseUser;
-
-  // =========================================================
-  // ROLE SWITCHER
-  // =========================================================
-
-  const handleRoleSwitch = (newRole: UserRole) => {
-    setCurrentRole(newRole);
-
-    if (
-      currentNav === 'students' &&
-      newRole === 'student'
-    ) {
-      setCurrentNav('dashboard');
-    }
+  const currentUser: UserProfile = {
+    id: authenticatedUser?.sub ?? '',
+    name: authenticatedUser?.name ?? '',
+    email: authenticatedUser?.email ?? '',
+    role: currentRole,
+    roleTitle:
+      currentRole === 'student'
+        ? 'Student'
+        : currentRole === 'faculty'
+          ? 'Faculty'
+          : 'Administrator',
+    avatar: '',
+    collegeId:
+      authenticatedUser?.email?.split('@')[0] ?? '',
+    department: '',
+    program: undefined,
+    yearOrDesignation: '',
+    bio: '',
+    joinedYear: '',
+    phone: '',
   };
+
 
   // =========================================================
   // APPLICATION FAVORITES
@@ -234,7 +256,7 @@ export const MainApp: React.FC = () => {
    * confirms that a valid server-side session exists.
    */
 
-  if (authLoading || !authenticated) {
+  if (authLoading || !authenticated || !authenticatedUser) {
     return (
       <div className="min-h-screen bg-navy-50 flex items-center justify-center">
         <div className="text-center space-y-3">
@@ -282,7 +304,6 @@ export const MainApp: React.FC = () => {
         <TopNavbar
           user={currentUser}
           currentNav={currentNav}
-          onRoleSwitch={handleRoleSwitch}
           onToggleMobileSidebar={() =>
             setIsMobileSidebarOpen(true)
           }
@@ -326,9 +347,13 @@ export const MainApp: React.FC = () => {
                   <ApplicationsGrid
                     applications={applications}
                     currentRole={currentRole}
-                    onOpenApp={(app) =>
-                      setSimulatedApp(app)
-                    }
+                    onOpenApp={(app) => {
+                      window.open(
+                        app.url,
+                        '_blank',
+                        'noopener,noreferrer'
+                      );
+                    }}
                     onToggleFavorite={
                       handleToggleFavorite
                     }
@@ -439,9 +464,13 @@ export const MainApp: React.FC = () => {
             <ApplicationsPage
               applications={applications}
               currentRole={currentRole}
-              onOpenApp={(app) =>
-                setSimulatedApp(app)
-              }
+              onOpenApp={(app) => {
+                window.open(
+                  app.url,
+                  '_blank',
+                  'noopener,noreferrer'
+                );
+              }}
               onToggleFavorite={
                 handleToggleFavorite
               }
@@ -458,9 +487,6 @@ export const MainApp: React.FC = () => {
             <ProfilePage
               user={currentUser}
               currentRole={currentRole}
-              onRoleSwitch={
-                handleRoleSwitch
-              }
             />
 
           )}
@@ -630,8 +656,10 @@ export const MainApp: React.FC = () => {
 
               <button
                 onClick={() => {
-                  alert(
-                    `In production, this opens ${simulatedApp.name} portal directly.`
+                  window.open(
+                    simulatedApp.url,
+                    '_blank',
+                    'noopener,noreferrer'
                   );
 
                   setSimulatedApp(null);
