@@ -17,8 +17,6 @@ import { ProfilePage } from '../pages/ProfilePage';
 
 import {
   ShieldCheck,
-  ExternalLink,
-  X,
   ArrowRight,
 } from 'lucide-react';
 
@@ -143,10 +141,6 @@ export const MainApp: React.FC = () => {
 
   const [notifications, setNotifications] =
     useState(mockNotifications);
-
-  // SSO application launcher demo state
-  const [simulatedApp, setSimulatedApp] =
-    useState<ApplicationItem | null>(null);
 
   /*
    * Authentication, identity and base role come from the
@@ -601,150 +595,7 @@ export const MainApp: React.FC = () => {
 
       </div>
 
-      {/* =====================================================
-          SSO APPLICATION LAUNCH SIMULATION
-      ====================================================== */}
 
-      {simulatedApp && (
-
-        <div className="fixed inset-0 z-50 bg-navy-950/70 backdrop-blur-md flex items-center justify-center p-4">
-
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-navy-100 relative animate-in fade-in zoom-in-95 duration-150 text-center">
-
-            {/* Close */}
-
-            <button
-              onClick={() =>
-                setSimulatedApp(null)
-              }
-              className="absolute top-4 right-4 p-1 text-navy-400 hover:text-navy-900 rounded-lg hover:bg-navy-50"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            {/* SSO Icon */}
-
-            <div className="w-14 h-14 rounded-2xl bg-navy-800 text-white mx-auto flex items-center justify-center shadow-lg mb-4">
-
-              <ShieldCheck className="w-8 h-8" />
-
-            </div>
-
-            {/* Badge */}
-
-            <div className="inline-flex items-center space-x-1 px-3 py-1 rounded-full bg-navy-50 text-navy-800 text-[11px] font-bold mb-3 border border-navy-200">
-
-              <ShieldCheck className="w-3.5 h-3.5" />
-
-              <span>
-                SSO Handshake Token Executed
-              </span>
-
-            </div>
-
-            <h3 className="text-xl font-black text-navy-900 mb-1">
-
-              Redirecting to {simulatedApp.name}...
-
-            </h3>
-
-            <p className="text-xs text-navy-500 mb-6 leading-relaxed">
-
-              Authenticating{' '}
-
-              <strong className="text-navy-900">
-                {currentUser.email}
-              </strong>{' '}
-
-              via University Single Sign-On.
-              Direct access granted without requiring
-              password.
-
-            </p>
-
-            {/* SSO Details */}
-
-            <div className="p-4 bg-navy-50 rounded-xl border border-navy-100 text-left text-xs space-y-2 mb-6 font-mono">
-
-              <div className="flex justify-between">
-
-                <span className="text-navy-400">
-                  Target App:
-                </span>
-
-                <span className="font-bold text-navy-900">
-                  {simulatedApp.name}
-                </span>
-
-              </div>
-
-              <div className="flex justify-between">
-
-                <span className="text-navy-400">
-                  User Identity:
-                </span>
-
-                <span className="font-bold text-navy-900">
-                  {currentUser.collegeId}
-                </span>
-
-              </div>
-
-              <div className="flex justify-between">
-
-                <span className="text-navy-400">
-                  Active Role:
-                </span>
-
-                <span className="font-bold text-navy-800 capitalize">
-                  {currentRole}
-                </span>
-
-              </div>
-
-            </div>
-
-            {/* Buttons */}
-
-            <div className="flex space-x-3">
-
-              <button
-                onClick={() =>
-                  setSimulatedApp(null)
-                }
-                className="flex-1 py-2.5 rounded-xl bg-navy-50 text-navy-700 font-bold text-xs hover:bg-navy-100"
-              >
-                Close Demo
-              </button>
-
-              <button
-                onClick={() => {
-                  window.open(
-                    simulatedApp.url,
-                    '_blank',
-                    'noopener,noreferrer'
-                  );
-
-                  setSimulatedApp(null);
-                }}
-                className="flex-1 py-2.5 rounded-xl bg-navy-800 text-white font-bold text-xs hover:bg-navy-900 shadow-md flex items-center justify-center space-x-1.5"
-              >
-
-                <span>
-                  Proceed to {simulatedApp.name}
-                </span>
-
-                <ExternalLink className="w-3.5 h-3.5" />
-
-              </button>
-
-            </div>
-
-          </div>
-
-        </div>
-
-      )}
 
     </div>
   );
