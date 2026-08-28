@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import type { ApplicationItem, UserRole, UserProfile } from '../types';
 import {
-  mockApplications,
   mockEvents,
   mockNotifications,
 } from '../data/mockData';
@@ -140,7 +139,7 @@ export const MainApp: React.FC = () => {
   // =========================================================
 
   const [applications, setApplications] =
-    useState<ApplicationItem[]>(mockApplications);
+    useState<ApplicationItem[]>([]);
 
   const [notifications, setNotifications] =
     useState(mockNotifications);
@@ -178,6 +177,72 @@ export const MainApp: React.FC = () => {
     phone: '',
   };
 
+
+  // =========================================================
+  // AUTHORIZED APPLICATIONS
+  // =========================================================
+
+  useEffect(() => {
+    if (!authenticated || isSignedOutPage) {
+      return;
+    }
+
+    const loadApplications = async () => {
+      try {
+        const response = await fetch('/api/applications', {
+          method: 'GET',
+          credentials: 'include',
+        });
+
+        if (response.status === 401) {
+          window.location.href = '/login';
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error(
+            `Application request failed with status ${response.status}`
+          );
+        }
+
+        const data = await response.json();
+
+        const backendApplications: Array<{
+          id: string;
+          name: string;
+          description: string;
+          category: ApplicationItem['category'];
+          icon?: string;
+          url: string;
+        }> = Array.isArray(data.applications)
+          ? data.applications
+          : [];
+
+        const mappedApplications: ApplicationItem[] =
+          backendApplications.map((app) => ({
+            id: app.id,
+            name: app.name,
+            description: app.description,
+            category: app.category,
+            iconName: app.icon || 'LayoutDashboard',
+            ssoEnabled: true,
+            isFavorite: false,
+            url: app.url,
+          }));
+
+        setApplications(mappedApplications);
+      } catch (error) {
+        console.error(
+          'Failed to load authorized applications:',
+          error
+        );
+
+        setApplications([]);
+      }
+    };
+
+    loadApplications();
+  }, [authenticated, isSignedOutPage]);
 
   // =========================================================
   // APPLICATION FAVORITES
@@ -346,7 +411,6 @@ export const MainApp: React.FC = () => {
 
                   <ApplicationsGrid
                     applications={applications}
-                    currentRole={currentRole}
                     onOpenApp={(app) => {
                       window.open(
                         app.url,
@@ -463,7 +527,6 @@ export const MainApp: React.FC = () => {
 
             <ApplicationsPage
               applications={applications}
-              currentRole={currentRole}
               onOpenApp={(app) => {
                 window.open(
                   app.url,

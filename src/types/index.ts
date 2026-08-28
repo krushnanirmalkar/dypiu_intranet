@@ -26,7 +26,6 @@ export interface ApplicationItem {
   isFavorite: boolean;
   badgeText?: string;
   url: string;
-  targetRoles: UserRole[];
   highlightColor?: string;
 }
 

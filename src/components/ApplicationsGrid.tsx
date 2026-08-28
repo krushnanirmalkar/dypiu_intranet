@@ -1,11 +1,10 @@
 import React from 'react';
-import type { ApplicationItem, UserRole } from '../types';
+import type { ApplicationItem } from '../types';
 import { ApplicationCard } from './ApplicationCard';
 import { Grid, ArrowRight } from 'lucide-react';
 
 interface ApplicationsGridProps {
   applications: ApplicationItem[];
-  currentRole: UserRole;
   onOpenApp: (app: ApplicationItem) => void;
   onToggleFavorite: (appId: string) => void;
   onViewAllApps: () => void;
@@ -13,15 +12,10 @@ interface ApplicationsGridProps {
 
 export const ApplicationsGrid: React.FC<ApplicationsGridProps> = ({
   applications,
-  currentRole,
   onOpenApp,
   onToggleFavorite,
   onViewAllApps,
 }) => {
-  const roleFilteredApps = applications.filter((app) =>
-    app.targetRoles.includes(currentRole)
-  );
-
   return (
     <section className="bg-white rounded-2xl border border-navy-100 p-6 shadow-sm">
       {/* Section Header */}
@@ -42,14 +36,14 @@ export const ApplicationsGrid: React.FC<ApplicationsGridProps> = ({
           onClick={onViewAllApps}
           className="px-3.5 py-1.5 rounded-lg bg-navy-50 text-navy-800 font-semibold text-xs hover:bg-navy-100 transition-colors flex items-center space-x-1 border border-navy-200"
         >
-          <span>All Applications ({roleFilteredApps.length})</span>
+          <span>All Applications ({applications.length})</span>
           <ArrowRight className="w-3.5 h-3.5" />
         </button>
       </div>
 
       {/* Grid of Application Cards - Max 3 Cards per Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {roleFilteredApps.slice(0, 6).map((app) => (
+        {applications.slice(0, 6).map((app) => (
           <ApplicationCard
             key={app.id}
             app={app}

@@ -1,49 +1,37 @@
 module.exports = [
   {
-    id: "unisync",
-    name: "UniSync",
-    shortName: "UniSync",
-    description: "University ERP",
-    url: "https://unisync.dypiu.ac.in",
-    icon: "layout-dashboard",
+    id: "udms",
+    name: "UDMS",
+    shortName: "UDMS",
+    description: "University Digital Management System",
+    url: "https://udms.dypiu.ac.in",
+    icon: "LayoutDashboard",
+    category: "Administration",
+    roles: ["student", "faculty"],
+    enabled: true
+  },
+
+  {
+    id: "juno",
+    name: "Juno",
+    shortName: "Juno",
+    description: "Student Information & Academic Lifecycle Services",
+    url: "https://erp.dypiu.ac.in",
+    icon: "GraduationCap",
     category: "Academic",
     roles: ["student", "faculty", "admin"],
     enabled: true
   },
 
   {
-    id: "lms",
-    name: "Learning Management System",
-    shortName: "LMS",
-    description: "Course materials and assignments",
-    url: "https://lms.dypiu.ac.in",
-    icon: "graduation-cap",
-    category: "Academic",
-    roles: ["student", "faculty"],
-    enabled: true
-  },
-
-  {
-    id: "library",
-    name: "Library",
-    shortName: "Library",
-    description: "Library services",
-    url: "https://library.dypiu.ac.in",
-    icon: "library",
-    category: "Academic",
-    roles: ["student", "faculty"],
-    enabled: true
-  },
-
-  {
-    id: "admin",
-    name: "Administration",
-    shortName: "Admin",
-    description: "Administration Portal",
-    url: "https://admin.dypiu.ac.in",
-    icon: "shield",
-    category: "Administration",
-    roles: ["admin"],
+    id: "unisync",
+    name: "UniSync",
+    shortName: "UniSync",
+    description: "Unified Campus Communication & Collaboration Hub",
+    url: "https://unisync.dypiu.ac.in",
+    icon: "Share2",
+    category: "Productivity",
+    roles: ["student", "faculty", "admin"],
     enabled: true
   }
 ];

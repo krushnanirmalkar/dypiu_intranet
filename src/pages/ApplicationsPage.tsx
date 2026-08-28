@@ -1,18 +1,16 @@
 import React, { useState } from 'react';
-import type { ApplicationItem, UserRole } from '../types';
+import type { ApplicationItem } from '../types';
 import { ApplicationCard } from '../components/ApplicationCard';
 import { Search, Star, ShieldCheck } from 'lucide-react';
 
 interface ApplicationsPageProps {
   applications: ApplicationItem[];
-  currentRole: UserRole;
   onOpenApp: (app: ApplicationItem) => void;
   onToggleFavorite: (appId: string) => void;
 }
 
 export const ApplicationsPage: React.FC<ApplicationsPageProps> = ({
   applications,
-  currentRole,
   onOpenApp,
   onToggleFavorite,
 }) => {
@@ -22,11 +20,7 @@ export const ApplicationsPage: React.FC<ApplicationsPageProps> = ({
 
   const categories = ['All', 'Academic', 'Administration', 'Learning', 'Library', 'Examination', 'Career', 'Research', 'Productivity'];
 
-  const roleFiltered = applications.filter((app) =>
-    app.targetRoles.includes(currentRole)
-  );
-
-  const filtered = roleFiltered.filter((app) => {
+  const filtered = applications.filter((app) => {
     const matchesCategory = selectedCategory === 'All' || app.category === selectedCategory;
     const matchesSearch = app.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           app.description.toLowerCase().includes(searchQuery.toLowerCase());
