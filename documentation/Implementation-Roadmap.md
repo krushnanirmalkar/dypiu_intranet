@@ -395,10 +395,10 @@ Then expand into application-specific permissions.
 * [ ] Create university user model.
 * [ ] Map Google subject → university user.
 * [ ] Store PRN.
-* [ ] Store account status.
-* [ ] Store university role.
-* [ ] Define application roles.
-* [ ] Handle disabled users.
+* [x] Store account status.
+* [x] Store university role.
+* [x] Define application roles.
+* [x] Handle disabled users.
 * [ ] Handle expired users.
 * [ ] Handle missing identity records.
 
