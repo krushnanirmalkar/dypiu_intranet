@@ -1,190 +1,103 @@
-import React, { useState, useRef, useEffect } from 'react';
-import type { UserProfile, NotificationItem } from '../types';
+import React, { useEffect, useRef, useState } from 'react';
+import { Bell, ChevronDown, LogOut, Menu, Settings, User } from 'lucide-react';
+import type { NotificationItem, UserProfile } from '../types';
 import { NotificationPanel } from './NotificationPanel';
-import { 
-  Search, Bell, Menu, User, Settings, LogOut, ChevronDown
-} from 'lucide-react';
 
 interface TopNavbarProps {
   user: UserProfile;
-  currentNav: string;
   onToggleMobileSidebar: () => void;
   unreadNotifCount: number;
   onNavigate: (navId: string) => void;
-  searchQuery: string;
-  onSearchChange: (query: string) => void;
   notifications?: NotificationItem[];
   onMarkAllRead?: () => void;
 }
 
 export const TopNavbar: React.FC<TopNavbarProps> = ({
   user,
-  currentNav,
   onToggleMobileSidebar,
   unreadNotifCount,
   onNavigate,
-  searchQuery,
-  onSearchChange,
   notifications = [],
   onMarkAllRead = () => {},
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
-
   const dropdownRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
+  const initials = user.name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('') || '?';
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsDropdownOpen(false);
-      }
-      if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
-        setIsNotifOpen(false);
-      }
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setIsDropdownOpen(false);
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) setIsNotifOpen(false);
     };
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const navTitles: Record<string, string> = {
-    dashboard: 'Dashboard / Overview',
-    applications: 'Digital Workspace / Applications',
-    academics: 'Academic Services',
-    students: 'Student Management & Analytics',
-    events: 'Campus Life & Academic Events',
-    notifications: 'Notifications & Broadcasts',
-    documents: 'Document Vault & Transcripts',
-    profile: 'User Profile & Academic Record',
-    settings: 'Account Settings & SSO Preferences',
-    support: 'Help Desk & SSO Assistance',
-  };
-
   return (
-    <header className="h-16 bg-white border-b border-navy-100 sticky top-0 z-30 flex items-center justify-between px-4 sm:px-6 shadow-sm">
-      {/* Left: Mobile Toggle & Breadcrumb */}
-      <div className="flex items-center space-x-3">
-        <button
-          onClick={onToggleMobileSidebar}
-          className="p-2 rounded-lg text-navy-700 hover:bg-navy-50 lg:hidden focus:outline-none"
-          aria-label="Open Sidebar"
-        >
-          <Menu className="w-5 h-5" />
+    <header className="sticky top-0 z-30 border-b border-navy-100/80 bg-white/95 backdrop-blur-xl">
+      <div className="mx-auto flex h-16 w-full max-w-[1500px] items-center gap-2.5 px-4 sm:px-5 lg:px-6">
+        <button onClick={() => onNavigate('dashboard')} className="hidden w-[230px] shrink-0 items-center justify-start pl-8 sm:flex" aria-label="Go to dashboard">
+          <img src="/DYPIU colour logo 1.png" alt="D Y Patil International University" className="h-12 w-auto object-contain" />
         </button>
 
-        <div className="hidden sm:block">
-          <div className="text-xs font-semibold uppercase tracking-wider text-navy-400">
-            Intranet Portal
-          </div>
-          <div className="text-sm font-bold text-navy-900 tracking-tight">
-            {navTitles[currentNav] || 'Dashboard / Overview'}
-          </div>
-        </div>
-      </div>
+        <button onClick={onToggleMobileSidebar} className="rounded-xl p-2 text-navy-800 hover:bg-navy-50 sm:hidden" aria-label="Open menu">
+          <Menu className="h-5 w-5" />
+        </button>
 
-      {/* Center: Search Field */}
-      <div className="flex-1 max-w-md mx-4">
-        <div className="relative">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-navy-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search applications (Juno, LMS...), announcements, events..."
-            className="w-full pl-9 pr-4 py-1.5 bg-navy-50/70 border border-navy-200/70 rounded-lg text-xs sm:text-sm text-navy-900 placeholder:text-navy-400 focus:outline-none focus:bg-white focus:border-navy-800 transition-all"
-          />
-        </div>
-      </div>
+        <div className="flex-1" />
 
-      {/* Right Actions */}
-      <div className="flex items-center space-x-3">
-        {/* Notifications Bell Dropdown Container */}
-        <div className="relative" ref={notifRef}>
-          <button 
-            onClick={() => setIsNotifOpen(!isNotifOpen)}
-            className="relative p-2 rounded-lg text-navy-700 hover:bg-navy-50 hover:text-navy-900 transition-colors focus:outline-none"
-            title="Notifications"
-          >
-            <Bell className="w-5 h-5" />
+        <div ref={notifRef} className="relative ml-1 sm:ml-2">
+          <button onClick={() => setIsNotifOpen((open) => !open)} className="relative rounded-lg p-2 text-navy-700 hover:bg-navy-50" aria-label="Notifications">
+            <Bell className="h-[18px] w-[18px]" />
             {unreadNotifCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-navy-800 rounded-full ring-2 ring-white" />
+              <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-black text-white ring-2 ring-white">
+                {unreadNotifCount}
+              </span>
             )}
           </button>
-
-          {/* Notifications Dropdown Panel */}
           {isNotifOpen && (
-            <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-navy-100 p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-              <NotificationPanel
-                notifications={notifications}
-                currentRole={user.role}
-                onMarkAllRead={onMarkAllRead}
-              />
+            <div className="absolute right-0 mt-2 w-[min(24rem,calc(100vw-2rem))] rounded-2xl border border-navy-100 bg-white p-2 shadow-2xl">
+              <NotificationPanel notifications={notifications} currentRole={user.role} onMarkAllRead={onMarkAllRead} />
             </div>
           )}
         </div>
 
-        {/* User Profile Dropdown */}
-        <div className="relative" ref={dropdownRef}>
-          <button
-            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="flex items-center space-x-2.5 p-1 rounded-lg hover:bg-navy-50 transition-colors focus:outline-none"
-          >
-            <div
-              className="w-8 h-8 rounded-full bg-navy-800 text-white border border-navy-700 flex items-center justify-center text-[10px] font-black shrink-0"
-              title={user.name}
-            >
-              {user.name
-                .split(/\\s+/)
-                .filter(Boolean)
-                .slice(0, 2)
-                .map((part) => part.charAt(0).toUpperCase())
-                .join('')}
+        <div ref={dropdownRef} className="relative">
+          <button onClick={() => setIsDropdownOpen((open) => !open)} className="flex items-center gap-2.5 rounded-xl px-1.5 py-1 hover:bg-[#f3f7ff]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-gradient-to-b from-blue-100 to-blue-200 text-xs font-black text-navy-800 shadow-[0_2px_8px_rgba(15,35,75,0.12)]" title={user.name}>
+              {initials}
             </div>
-            <div className="hidden lg:block text-left">
-              <div className="text-xs font-bold text-navy-900 leading-tight">{user.name}</div>
-              <div className="text-[10px] font-medium text-navy-500 capitalize">{user.role}</div>
+            <div className="hidden min-w-[112px] text-left sm:block">
+              <p className="max-w-36 truncate text-[11px] font-extrabold leading-tight text-navy-950">{user.name}</p>
+              <p className="mt-0.5 text-[9px] font-medium capitalize leading-tight text-navy-500">{user.role}</p>
             </div>
-            <ChevronDown className="w-3.5 h-3.5 text-navy-400 hidden sm:block" />
+            <ChevronDown className="hidden h-3.5 w-3.5 text-navy-500 sm:block" />
           </button>
 
-          {/* Profile Dropdown Menu */}
           {isDropdownOpen && (
-            <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-navy-100 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-              <div className="px-4 py-2.5 border-b border-navy-100 bg-navy-50/50">
+            <div className="absolute right-0 mt-2 w-64 overflow-hidden rounded-xl border border-navy-100 bg-white shadow-xl">
+              <div className="border-b border-navy-100 bg-navy-50/60 px-4 py-3">
                 <p className="text-xs font-bold text-navy-900">{user.name}</p>
-                <p className="text-[11px] text-navy-500 truncate">{user.email}</p>
-                <div className="mt-1.5 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-navy-800 text-white tracking-wider">
-                  {user.role} Role
-                </div>
+                <p className="truncate text-[11px] text-navy-500">{user.email}</p>
               </div>
-
-              {/* Navigation Links */}
-              <div className="py-1">
-                <button
-                  onClick={() => { onNavigate('profile'); setIsDropdownOpen(false); }}
-                  className="w-full flex items-center space-x-2.5 px-4 py-2 text-xs text-navy-800 hover:bg-navy-50 font-medium transition-colors"
-                >
-                  <User className="w-4 h-4 text-navy-500" />
-                  <span>My Profile</span>
-                </button>
-                <button
-                  onClick={() => { onNavigate('settings'); setIsDropdownOpen(false); }}
-                  className="w-full flex items-center space-x-2.5 px-4 py-2 text-xs text-navy-800 hover:bg-navy-50 font-medium transition-colors"
-                >
-                  <Settings className="w-4 h-4 text-navy-500" />
-                  <span>Preferences & SSO Settings</span>
-                </button>
-              </div>
-
-              <div className="pt-1">
-                <button
-                  onClick={() => {setIsDropdownOpen(false);window.location.href = '/logout';}}
-                  className="w-full flex items-center space-x-2.5 px-4 py-2 text-xs text-navy-700 hover:bg-navy-50 hover:text-red-700 font-medium transition-colors"
-                >
-                  <LogOut className="w-4 h-4 text-navy-500" />
-                  <span>Sign Out</span>
-                </button>
-              </div>
+              <button onClick={() => { onNavigate('profile'); setIsDropdownOpen(false); }} className="flex w-full items-center gap-2.5 px-4 py-2.5 text-xs font-medium text-navy-800 hover:bg-navy-50">
+                <User className="h-4 w-4" />My Profile
+              </button>
+              <button onClick={() => { onNavigate('settings'); setIsDropdownOpen(false); }} className="flex w-full items-center gap-2.5 px-4 py-2.5 text-xs font-medium text-navy-800 hover:bg-navy-50">
+                <Settings className="h-4 w-4" />Preferences
+              </button>
+              <button onClick={() => { setIsDropdownOpen(false); window.location.href = '/logout'; }} className="flex w-full items-center gap-2.5 border-t border-navy-100 px-4 py-2.5 text-xs font-medium text-red-700 hover:bg-red-50">
+                <LogOut className="h-4 w-4" />Sign Out
+              </button>
             </div>
           )}
         </div>

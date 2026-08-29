@@ -1,200 +1,25 @@
 import React, { useState } from 'react';
+import { ArrowRight, ChevronRight, Megaphone, X } from 'lucide-react';
 import type { UserRole } from '../types';
-import { 
-  Megaphone, Pin, ArrowRight, Clock, ChevronRight, X, ExternalLink
-} from 'lucide-react';
 
-export interface AnnouncementItem {
-  id: string;
-  title: string;
-  category: 'Academic' | 'Administrative' | 'Campus' | 'Urgent';
-  date: string;
-  pinned?: boolean;
-  content: string;
-  author: string;
-  linkText?: string;
-  linkUrl?: string;
-}
+export interface AnnouncementItem { id: string; title: string; category: 'Academic' | 'Administrative' | 'Campus' | 'Urgent'; date: string; content: string; author: string; }
 
-const mockAnnouncements: AnnouncementItem[] = [
-  {
-    id: 'ann_1',
-    title: 'Mid-Term Semester Registration & Fee Payment Portal Open',
-    category: 'Urgent',
-    date: 'Today',
-    pinned: true,
-    author: 'Registrar Office',
-    content: 'Students are advised to complete mid-term registration and clear pending tuition dues before March 10, 2026.',
-    linkText: 'Open Student ERP Portal',
-    linkUrl: '/app/student-erp'
-  },
-  {
-    id: 'ann_2',
-    title: 'Central Library Operating Hours Extended Until Midnight',
-    category: 'Academic',
-    date: 'Yesterday',
-    pinned: true,
-    author: 'Library Administration',
-    content: 'Library reading halls will remain open until 12:00 AM for the upcoming mid-semester examinations.',
-    linkText: 'E-Library Portal',
-    linkUrl: '/app/library'
-  },
-  {
-    id: 'ann_3',
-    title: 'Scheduled Campus Network Maintenance (Saturday 02:00 AM - 04:00 AM)',
-    category: 'Administrative',
-    date: '18 Feb 2026',
-    author: 'IT Helpdesk',
-    content: 'Routine router maintenance will take place on Saturday midnight. Network connectivity may be briefly affected.',
-    linkText: 'Check Status',
-    linkUrl: '#status'
-  },
-  {
-    id: 'ann_4',
-    title: 'Applications Open for Student Innovation Seed Fund 2026',
-    category: 'Campus',
-    date: '16 Feb 2026',
-    author: 'Incubation Cell',
-    content: 'Applications are open for student startup grants up to ₹2,50,000. Last date to apply is March 25, 2026.',
-    linkText: 'Apply Now',
-    linkUrl: '/app/research'
-  }
+const announcements: AnnouncementItem[] = [
+  { id: 'ann_1', title: 'Mid-Term Semester Registration & Fee Payment Portal Open', category: 'Urgent', date: 'Today', author: 'Registrar Office', content: 'Students are advised to complete mid-term registration and clear pending tuition dues before the deadline.' },
+  { id: 'ann_2', title: 'Central Library Operating Hours Extended Until Midnight', category: 'Academic', date: 'Yesterday', author: 'Library Administration', content: 'Library reading halls will remain open until midnight for the upcoming mid-semester examinations.' },
+  { id: 'ann_3', title: 'Scheduled Campus Network Maintenance', category: 'Administrative', date: '18 Feb 2026', author: 'IT Helpdesk', content: 'Routine network maintenance will take place Saturday from 02:00 AM to 04:00 AM.' },
 ];
 
-interface AnnouncementSectionProps {
-  currentRole: UserRole;
-  onViewAll?: () => void;
-}
+interface AnnouncementSectionProps { currentRole: UserRole; onViewAll?: () => void; }
 
 export const AnnouncementSection: React.FC<AnnouncementSectionProps> = ({ onViewAll }) => {
-  const [selectedAnn, setSelectedAnn] = useState<AnnouncementItem | null>(null);
-
-  const getCategoryTag = (category: AnnouncementItem['category']) => {
-    switch (category) {
-      case 'Urgent':
-        return 'bg-red-50 text-red-700 border-red-200';
-      case 'Academic':
-        return 'bg-blue-50 text-blue-700 border-blue-200';
-      case 'Administrative':
-        return 'bg-amber-50 text-amber-800 border-amber-200';
-      case 'Campus':
-      default:
-        return 'bg-emerald-50 text-emerald-800 border-emerald-200';
-    }
-  };
-
+  const [selected, setSelected] = useState<AnnouncementItem | null>(null);
+  const tag = (category: AnnouncementItem['category']) => category === 'Urgent' ? 'bg-red-50 text-red-600' : category === 'Academic' ? 'bg-blue-50 text-blue-600' : category === 'Administrative' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700';
   return (
-    <div className="bg-white rounded-xl border border-navy-100 p-4 shadow-sm space-y-3">
-      {/* Section Header */}
-      <div className="flex items-center justify-between pb-2.5 border-b border-navy-100">
-        <div className="flex items-center space-x-2">
-          <Megaphone className="w-4 h-4 text-navy-800" />
-          <h3 className="text-sm font-bold text-navy-900">Notice Board</h3>
-        </div>
-        
-        {onViewAll && (
-          <button 
-            onClick={onViewAll}
-            className="text-xs font-medium text-navy-700 hover:text-navy-950 flex items-center space-x-1"
-          >
-            <span>View All</span>
-            <ArrowRight className="w-3 h-3" />
-          </button>
-        )}
-      </div>
-
-      {/* Announcements List */}
-      <div className="space-y-2">
-        {mockAnnouncements.map((item) => (
-          <div 
-            key={item.id}
-            onClick={() => setSelectedAnn(item)}
-            className="p-3 rounded-lg bg-navy-50/50 hover:bg-navy-50 border border-navy-100 transition-colors flex items-start space-x-3 group cursor-pointer"
-          >
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center space-x-2 mb-1">
-                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${getCategoryTag(item.category)}`}>
-                  {item.category}
-                </span>
-
-                {item.pinned && (
-                  <span className="text-[10px] font-medium text-amber-700 flex items-center">
-                    <Pin className="w-2.5 h-2.5 mr-0.5 fill-current" />
-                    Pinned
-                  </span>
-                )}
-
-                <span className="text-[10px] text-navy-400 font-medium ml-auto flex items-center">
-                  <Clock className="w-2.5 h-2.5 mr-0.5 text-navy-400" />
-                  {item.date}
-                </span>
-              </div>
-
-              <h4 className="text-xs font-semibold text-navy-900 group-hover:text-navy-800 leading-snug line-clamp-2">
-                {item.title}
-              </h4>
-            </div>
-
-            <ChevronRight className="w-4 h-4 text-navy-300 group-hover:text-navy-700 shrink-0 self-center" />
-          </div>
-        ))}
-      </div>
-
-      {/* Announcement Detail Modal */}
-      {selectedAnn && (
-        <div className="fixed inset-0 z-50 bg-navy-950/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl max-w-lg w-full p-5 shadow-xl border border-navy-100 relative space-y-3">
-            <button
-              onClick={() => setSelectedAnn(null)}
-              className="absolute top-4 right-4 p-1 text-navy-400 hover:text-navy-900 rounded-md hover:bg-navy-50"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div className="flex items-center space-x-2">
-              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${getCategoryTag(selectedAnn.category)}`}>
-                {selectedAnn.category}
-              </span>
-              <span className="text-xs text-navy-400">
-                {selectedAnn.date}
-              </span>
-            </div>
-
-            <h3 className="text-base font-bold text-navy-900">
-              {selectedAnn.title}
-            </h3>
-
-            <div className="text-xs text-navy-500 pb-2 border-b border-navy-100">
-              Issued by: <span className="font-semibold text-navy-800">{selectedAnn.author}</span>
-            </div>
-
-            <p className="text-xs text-navy-700 leading-relaxed bg-navy-50/60 p-3 rounded-lg border border-navy-100">
-              {selectedAnn.content}
-            </p>
-
-            <div className="flex justify-end space-x-2 pt-2">
-              <button
-                onClick={() => setSelectedAnn(null)}
-                className="px-3 py-1.5 rounded-lg bg-navy-50 text-navy-700 font-semibold text-xs hover:bg-navy-100"
-              >
-                Close
-              </button>
-              {selectedAnn.linkText && (
-                <button
-                  onClick={() => {
-                    alert(`Opening ${selectedAnn.linkText}`);
-                    setSelectedAnn(null);
-                  }}
-                  className="px-3 py-1.5 rounded-lg bg-navy-800 text-white font-semibold text-xs hover:bg-navy-900 flex items-center space-x-1"
-                >
-                  <span>{selectedAnn.linkText}</span>
-                  <ExternalLink className="w-3 h-3" />
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+    <section className="rounded-[14px] border border-[#e5ebf5] bg-white p-3 shadow-[0_3px_12px_rgba(15,35,75,0.03)]">
+      <div className="flex items-center justify-between border-b border-navy-100 pb-2.5"><div className="flex items-center gap-1.5"><Megaphone className="h-4 w-4 text-navy-800" /><h3 className="text-[12px] font-extrabold text-navy-950">Notice Board</h3></div><button onClick={onViewAll} className="flex items-center gap-1 text-[8px] font-bold text-blue-600">View all <ArrowRight className="h-2.5 w-2.5" /></button></div>
+      <div>{announcements.map((item) => <button key={item.id} onClick={() => setSelected(item)} className="group flex w-full items-center gap-2 border-b border-navy-100 py-2.5 text-left last:border-0"><span className={`h-10 w-[3px] shrink-0 rounded-full ${item.category === 'Urgent' ? 'bg-red-500' : item.category === 'Academic' ? 'bg-blue-500' : 'bg-amber-500'}`} /><span className="min-w-0 flex-1"><span className={`inline-flex rounded px-1.5 py-px text-[7px] font-bold ${tag(item.category)}`}>{item.category}</span><span className="mt-0.5 block text-[9px] font-extrabold leading-3.5 text-navy-950">{item.title}</span></span><span className="shrink-0 text-[7px] font-medium text-navy-400">{item.date}</span><ChevronRight className="h-3 w-3 text-navy-300 group-hover:text-navy-700" /></button>)}</div>
+      {selected && <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-950/55 p-4 backdrop-blur-sm"><div className="relative w-full max-w-lg rounded-2xl border border-navy-100 bg-white p-6 shadow-2xl"><button onClick={() => setSelected(null)} className="absolute right-4 top-4 rounded-lg p-1.5 text-navy-400 hover:bg-navy-50"><X className="h-4 w-4" /></button><span className={`inline-flex rounded-md px-2 py-1 text-[10px] font-bold ${tag(selected.category)}`}>{selected.category}</span><h3 className="mt-3 pr-8 text-lg font-black text-navy-950">{selected.title}</h3><p className="mt-1 text-xs font-semibold text-navy-500">Issued by {selected.author} · {selected.date}</p><p className="mt-4 rounded-xl bg-navy-50 p-4 text-sm leading-6 text-navy-700">{selected.content}</p></div></div>}
+    </section>
   );
 };

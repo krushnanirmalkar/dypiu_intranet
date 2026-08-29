@@ -42,7 +42,7 @@ export const ApplicationsPage: React.FC<ApplicationsPageProps> = ({
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-navy-900 tracking-tight">University Digital Services & Applications</h1>
           <p className="text-navy-500 text-sm mt-1 max-w-2xl">
-            Access all university digital services (Juno, UniSync, Canvas LMS, ERP, Examination, Library) without re-authenticating.
+            Access the university digital services assigned to your authenticated account.
           </p>
         </div>
       </div>
