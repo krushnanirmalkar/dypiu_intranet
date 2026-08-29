@@ -67,6 +67,47 @@ function roleFromOrgUnit(orgUnitPath) {
 }
 
 
+function prnFromEmail(email, baseRole) {
+  if (baseRole !== "student") {
+    return null;
+  }
+
+  const localPart =
+    String(email || "")
+      .split("@")[0]
+      .trim();
+
+  if (!/^\d+$/.test(localPart)) {
+    return null;
+  }
+
+  return localPart;
+}
+
+
+function buildUniversityIdentity(user, directoryRole) {
+  const email =
+    String(user.primaryEmail || "")
+      .trim()
+      .toLowerCase();
+
+  const status =
+    user.suspended ? "disabled" : "active";
+
+  return {
+    email,
+    prn: prnFromEmail(email, directoryRole),
+    status,
+    type: directoryRole,
+    roles:
+      status === "active" && directoryRole
+        ? [directoryRole]
+        : [],
+    orgUnitPath: user.orgUnitPath || null
+  };
+}
+
+
 function requireInternalToken(req, res, next) {
   const authorization = req.get("authorization");
 
@@ -109,7 +150,7 @@ app.post(
       const response =
         await directory.users.get({
           userKey: email,
-          projection: "basic"
+          projection: "full"
         });
 
       const user = response.data;
@@ -117,13 +158,20 @@ app.post(
       const orgUnitPath =
         user.orgUnitPath || null;
 
-      const baseRole =
+      const directoryRole =
         roleFromOrgUnit(orgUnitPath);
+
+      const baseRole =
+        user.suspended ? null : directoryRole;
+
+      const universityIdentity =
+        buildUniversityIdentity(user, directoryRole);
 
       return res.json({
         email: user.primaryEmail,
         orgUnitPath,
-        baseRole
+        baseRole,
+        universityIdentity
       });
 
     } catch (err) {
