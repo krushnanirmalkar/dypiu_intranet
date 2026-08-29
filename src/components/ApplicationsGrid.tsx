@@ -24,7 +24,7 @@ export const ApplicationsGrid: React.FC<ApplicationsGridProps> = ({
         <Grid2X2 className="h-[18px] w-[18px] text-blue-700" />
         <h2 className="text-[13px] font-extrabold text-navy-950">Your Applications</h2>
       </div>
-      <button onClick={onViewAllApps} className="flex items-center gap-1 text-[10px] font-bold text-blue-600 hover:text-navy-900">
+      <button onClick={onViewAllApps} className="flex items-center gap-1 text-[12px] font-bold text-blue-600 hover:text-navy-900">
         View all applications <ArrowRight className="h-3 w-3" />
       </button>
     </div>

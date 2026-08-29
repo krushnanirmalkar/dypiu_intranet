@@ -292,9 +292,9 @@ export const MainApp: React.FC = () => {
                     <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-navy-950/95 via-navy-900/30 to-transparent" />
                     <div className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-white/60 bg-white/90 text-navy-900 shadow-sm backdrop-blur-sm"><Newspaper className="h-5 w-5" /></div>
                     <div className="relative mt-auto drop-shadow-sm">
-                      <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-blue-100">College Newspaper</p>
+                      <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-blue-100">College Newspaper</p>
                       <div className="mt-1.5 flex items-end justify-between gap-2">
-                        <div><h3 className="text-2xl font-black leading-none text-white">Zenith</h3><p className="mt-2 text-[9px] font-medium text-white/75">Stories from across campus</p></div>
+                        <div><h3 className="text-2xl font-black leading-none text-white">Zenith</h3><p className="mt-2 text-[11px] font-medium text-white/75">Stories from across campus</p></div>
                         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/60 bg-white/15 text-white backdrop-blur-sm transition group-hover:bg-white group-hover:text-navy-900"><ArrowUpRight className="h-4 w-4" /></span>
                       </div>
                     </div>
@@ -306,26 +306,23 @@ export const MainApp: React.FC = () => {
                       <div className="relative flex items-start justify-between">
                         <div className="flex items-start gap-3">
                           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-navy-800 text-white shadow-sm"><MessageSquare className="h-5 w-5" /></span>
-                          <div><p className="text-[9px] font-bold uppercase tracking-[0.16em] text-blue-600">Student support</p><h3 className="mt-1 text-lg font-black text-navy-950">Grievance Cell</h3></div>
+                          <div><p className="text-[11px] font-bold uppercase tracking-[0.16em] text-blue-600">Student support</p><h3 className="mt-1 text-lg font-black text-navy-950">Grievance Cell</h3></div>
                         </div>
-                        <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[8px] font-bold text-emerald-700"><ShieldCheck className="h-3 w-3" />Confidential</span>
+                        
                       </div>
-                      <p className="relative mt-4 max-w-md text-[10px] leading-relaxed text-navy-600">Raise an academic, administrative, campus, or conduct-related concern through a safe and transparent process.</p>
-                      <div className="relative mt-3 flex flex-wrap gap-1.5">
-                        {['Academic', 'Administrative', 'Campus facilities', 'Conduct'].map((category) => <span key={category} className="rounded-full border border-navy-100 bg-white px-2.5 py-1 text-[8px] font-semibold text-navy-600 shadow-sm">{category}</span>)}
-                      </div>
+                      <p className="relative mt-4 max-w-md text-[12px] leading-relaxed text-navy-600">Raise an academic, administrative, campus, or conduct-related concern through a safe and transparent process.</p>
                       <div className="relative mt-auto flex items-center gap-2 border-t border-navy-100 pt-4">
-                        <button onClick={() => setCurrentNav('support')} className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-navy-800 px-4 py-2.5 text-[10px] font-bold text-white transition hover:bg-navy-700">Report a concern <ArrowRight className="h-3.5 w-3.5" /></button>
-                        <button onClick={() => setCurrentNav('support')} className="rounded-lg border border-navy-200 bg-white px-4 py-2.5 text-[10px] font-bold text-navy-700 transition hover:bg-navy-50">Track report</button>
+                        <button onClick={() => setCurrentNav('support')} className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-navy-800 px-4 py-2.5 text-[12px] font-bold text-white transition hover:bg-navy-700">Report a concern <ArrowRight className="h-3.5 w-3.5" /></button>
+                        <button onClick={() => setCurrentNav('support')} className="rounded-lg border border-navy-200 bg-white px-4 py-2.5 text-[12px] font-bold text-navy-700 transition hover:bg-navy-50">Track report</button>
                       </div>
                     </section>
                   ) : (
                     <section className="relative flex min-h-[260px] flex-col overflow-hidden rounded-[14px] border border-[#dfe7f3] bg-white p-5 shadow-[0_3px_12px_rgba(15,35,75,0.04)] lg:min-h-[280px]">
                       <div aria-hidden="true" className="absolute -right-14 -top-14 h-40 w-40 rounded-full bg-blue-50/80" />
                       <div className="relative border-b border-navy-100 pb-3">
-                        <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-blue-600">University essentials</p>
+                        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-blue-600">University essentials</p>
                         <h3 className="mt-1 text-lg font-black text-navy-950">Campus Resources</h3>
-                        <p className="mt-1 text-[9px] text-navy-500">Common services for faculty and staff</p>
+                        <p className="mt-1 text-[11px] text-navy-500">Common services for faculty and staff</p>
                       </div>
                       <div className="relative grid flex-1 grid-cols-2 divide-x divide-y divide-navy-100">
                         {[
@@ -336,7 +333,7 @@ export const MainApp: React.FC = () => {
                         ].map(({ label, sub, icon: Icon, nav, color }) => (
                           <button key={label} onClick={() => setCurrentNav(nav)} className="group flex min-w-0 items-center gap-2.5 px-3 py-3 text-left transition hover:bg-navy-50/70">
                             <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${color}`}><Icon className="h-4 w-4" /></span>
-                            <span className="min-w-0 flex-1"><span className="block truncate text-[10px] font-extrabold text-navy-950">{label}</span><span className="mt-0.5 block text-[7px] leading-snug text-navy-500">{sub}</span></span>
+                            <span className="min-w-0 flex-1"><span className="block truncate text-[12px] font-extrabold text-navy-950">{label}</span><span className="mt-0.5 block text-[7px] leading-snug text-navy-500">{sub}</span></span>
                             <ArrowUpRight className="h-3 w-3 shrink-0 text-navy-300 transition group-hover:text-blue-600" />
                           </button>
                         ))}
@@ -352,7 +349,7 @@ export const MainApp: React.FC = () => {
                   <CalendarDays aria-hidden="true" className="pointer-events-none absolute -bottom-5 -right-3 h-24 w-24 rotate-[8deg] text-blue-100/80" />
                   <div className="relative z-10 flex items-center justify-between border-b border-navy-100 pb-2.5">
                     <h3 className="flex items-center gap-1.5 text-[12px] font-extrabold text-navy-950"><CalendarDays className="h-4 w-4 text-navy-800" />Upcoming Events</h3>
-                    <button onClick={() => setCurrentNav('events')} className="text-[9px] font-bold text-blue-600">View calendar →</button>
+                    <button onClick={() => setCurrentNav('events')} className="text-[11px] font-bold text-blue-600">View calendar →</button>
                   </div>
                   <div className="relative z-10">{mockEvents.slice(0, 2).map((event) => <EventCard key={event.id} event={event} />)}</div>
                 </section>
@@ -362,12 +359,12 @@ export const MainApp: React.FC = () => {
             <section className="overflow-hidden rounded-[14px] border border-[#e5ebf5] bg-white shadow-[0_3px_12px_rgba(15,35,75,0.03)]">
               <div className="grid grid-cols-2 divide-x divide-y divide-navy-100 sm:grid-cols-[150px_repeat(4,minmax(0,1fr))] sm:divide-y-0">
                 <div className="col-span-2 flex items-center px-4 py-3 sm:col-span-1">
-                  <div><p className="text-[8px] font-bold uppercase tracking-[0.14em] text-blue-600">Shortcuts</p><h3 className="mt-0.5 text-[12px] font-extrabold text-navy-950">Quick Access</h3></div>
+                  <div><p className="text-[12px] font-bold uppercase tracking-[0.14em] text-blue-600">Shortcuts</p><h3 className="mt-0.5 text-[12px] font-extrabold text-navy-950">Quick Access</h3></div>
                 </div>
                 {quickAccessItems.map(({ label, sub, icon: Icon, nav, color }) => (
                   <button key={label} onClick={() => setCurrentNav(nav)} className="group flex min-h-[68px] items-center gap-3 px-4 py-3 text-left transition hover:bg-navy-50">
                     <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${color}`}><Icon className="h-4 w-4" /></span>
-                    <span className="min-w-0 flex-1"><span className="block text-[10px] font-extrabold text-navy-950">{label}</span><span className="mt-0.5 block text-[8px] text-navy-500">{sub}</span></span>
+                    <span className="min-w-0 flex-1"><span className="block text-[12px] font-extrabold text-navy-950">{label}</span><span className="mt-0.5 block text-[12px] text-navy-500">{sub}</span></span>
                     <ArrowRight className="h-3 w-3 shrink-0 text-navy-300 transition group-hover:translate-x-0.5 group-hover:text-blue-600" />
                   </button>
                 ))}

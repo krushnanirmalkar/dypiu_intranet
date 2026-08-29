@@ -12,7 +12,7 @@ export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({ user }) => {
 
   return (
     <section className="relative h-[218px] overflow-hidden rounded-[18px] border border-navy-100 bg-white shadow-[0_8px_24px_rgba(15,35,75,0.045)] sm:h-[232px] lg:h-[242px]">
-      <img src="/dypiu-campus-banner-v2.png" alt="Panoramic view of the D Y Patil International University campus entrance" className="absolute inset-0 h-full w-full object-cover object-center" />
+      <img src="/dypiu-campus-banner-v2.png" alt="Panoramic view of the D Y Patil International University campus entrance" className="absolute inset-0 h-full w-full object-cover object-[center_42%]" />
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.32)_0%,rgba(255,255,255,0.14)_24%,rgba(255,255,255,0)_42%)]" />
       <svg
         aria-hidden="true"

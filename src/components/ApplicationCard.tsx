@@ -12,8 +12,8 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({ app, onOpenApp
       <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border bg-gradient-to-br ${highlightClass}`}><DynamicIcon name={app.iconName} className="h-6 w-6" /></span>
       <span className="min-w-0 flex-1 pt-0.5">
         <span className="block text-[13px] font-extrabold text-navy-950">{app.name}</span>
-        <span className={`mt-0.5 block text-[10px] font-bold ${app.category === 'Academic' ? 'text-blue-600' : app.category === 'Productivity' ? 'text-emerald-600' : 'text-amber-600'}`}>{app.category}</span>
-        <span className="mt-3 block text-[9px] leading-3.5 text-navy-600">{app.description}</span>
+        <span className={`mt-0.5 block text-[12px] font-bold ${app.category === 'Academic' ? 'text-blue-600' : app.category === 'Productivity' ? 'text-emerald-600' : 'text-amber-600'}`}>{app.category}</span>
+        <span className="mt-3 block text-[11px] leading-3.5 text-navy-600">{app.description}</span>
       </span>
       <span className="absolute bottom-3 right-3 flex h-7 w-7 items-center justify-center rounded-lg border border-blue-200 text-blue-600 transition group-hover:bg-blue-600 group-hover:text-white"><ArrowRight className="h-3.5 w-3.5" /></span>
     </button>
