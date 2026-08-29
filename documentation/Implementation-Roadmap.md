@@ -300,15 +300,14 @@ Authorization
 
 ## Features
 
-* [ ] Login
-* [ ] Dashboard
-* [ ] User profile
-* [ ] Application launcher
-* [ ] Search applications
-* [ ] Role-based application visibility
-* [ ] Logout
+* [x] Login
+* [x] Dashboard
+* [x] User profile
+* [x] Application launcher
+* [x] Role-based application visibility
+* [x] Logout
 * [ ] Global logout
-* [ ] Session expiry handling
+* [x] Session expiry handling
 
 Example:
 
