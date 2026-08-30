@@ -29,7 +29,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
       <aside className={`
         fixed top-0 left-0 bottom-0 z-50 w-72 bg-white border-r border-navy-100 flex flex-col justify-between
         transition-transform duration-300 ease-in-out
-        ${isOpenMobile ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        ${isOpenMobile ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="flex flex-col h-full overflow-hidden">
           {/* Header Brand - Clickable to return to Dashboard */}

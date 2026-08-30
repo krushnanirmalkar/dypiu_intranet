@@ -24,10 +24,31 @@
 }
 
 body {
-  background-color: var(--color-navy-50);
+  margin: 0;
+  min-width: 320px;
+  background-color: #F7F9FD;
   color: var(--color-navy-900);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+@media (min-width: 900px) {
+  .dashboard-layout {
+    grid-template-columns: minmax(0, 2.125fr) minmax(280px, 1fr);
+  }
+
+  .applications-card-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 /* Custom Scrollbars */

@@ -1,5 +1,8 @@
 require("dotenv").config();
 
+const applications = require("./applications");
+const { requireAuth } = require("./middleware/auth");
+
 const express = require("express");
 const session = require("express-session");
 const crypto = require("crypto");
@@ -89,6 +92,7 @@ app.get("/login", (req, res) => {
   req.session.oauthState = state;
   req.session.oidcNonce = nonce;
   req.session.codeVerifier = verifier;
+
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
     redirect_uri: REDIRECT_URI,
@@ -102,11 +106,10 @@ app.get("/login", (req, res) => {
     // Skip Keycloak login UI completely
     kc_idp_hint: "google",
 
-    // Require Fresh authentication when a new session portal is created
+    // Require fresh authentication when a new portal session is created
     prompt: "login"
   });
 
-  
   res.redirect(
     `${ISSUER}/protocol/openid-connect/auth?${params}`
   );
@@ -114,7 +117,7 @@ app.get("/login", (req, res) => {
 
 
 // -------------------------
-// OIDC callback
+// OIDC Callback
 // -------------------------
 
 app.get("/auth/callback", async (req, res) => {
@@ -159,6 +162,10 @@ app.get("/auth/callback", async (req, res) => {
       return res.status(500).send("Token exchange failed.");
     }
 
+    // -------------------------
+    // Verify ID Token
+    // -------------------------
+
     const { payload } = await jwtVerify(
       tokens.id_token,
       JWKS,
@@ -172,6 +179,49 @@ app.get("/auth/callback", async (req, res) => {
       return res.status(400).send("Invalid OIDC nonce.");
     }
 
+    // -------------------------
+    // Verify Access Token
+    // -------------------------
+
+    const { payload: accessPayload } = await jwtVerify(
+      tokens.access_token,
+      JWKS,
+      {
+        issuer: ISSUER
+      }
+    );
+
+    // Access token currently has:
+    // aud = account
+    // azp = dypiu-intranet
+    //
+    // Therefore verify the authorized party separately.
+    if (accessPayload.azp !== CLIENT_ID) {
+      return res.status(401).send("Invalid access token client.");
+    }
+
+    // -------------------------
+    // Extract Trusted DYPIU Roles
+    // -------------------------
+
+    const allowedRoles = [
+      "student",
+      "faculty",
+      "admin"
+    ];
+
+    const roles = Array.isArray(
+      accessPayload.realm_access?.roles
+    )
+      ? accessPayload.realm_access.roles.filter((role) =>
+          allowedRoles.includes(role)
+        )
+      : [];
+
+    // -------------------------
+    // Create Authenticated Session
+    // -------------------------
+
     req.session.regenerate((err) => {
       if (err) {
         console.error(err);
@@ -181,7 +231,8 @@ app.get("/auth/callback", async (req, res) => {
       req.session.user = {
         sub: payload.sub,
         name: payload.name,
-        email: payload.email
+        email: payload.email,
+        roles
       };
 
       // Keep tokens server-side only
@@ -202,7 +253,7 @@ app.get("/auth/callback", async (req, res) => {
 
 
 // -------------------------
-// Current user
+// Current User
 // -------------------------
 
 app.get("/api/me", (req, res) => {
@@ -215,6 +266,29 @@ app.get("/api/me", (req, res) => {
   res.json({
     authenticated: true,
     user: req.session.user
+  });
+});
+
+
+// -------------------------
+// Applications
+// -------------------------
+
+app.get("/api/applications", requireAuth, (req, res) => {
+  const userRoles = req.session.user.roles || [];
+
+  const visibleApplications = applications.filter((app) => {
+    if (!app.enabled) {
+      return false;
+    }
+
+    return app.roles.some((role) =>
+      userRoles.includes(role)
+    );
+  });
+
+  res.json({
+    applications: visibleApplications
   });
 });
 
@@ -262,6 +336,11 @@ app.get("/logout", (req, res) => {
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
+
+
+// -------------------------
+// Start Server
+// -------------------------
 
 async function startServer() {
   try {

@@ -1,0 +1,6 @@
+FROM quay.io/keycloak/keycloak:26.7.1
+
+COPY directory-role-authenticator/target/directory-role-authenticator-1.0.0.jar \
+     /opt/keycloak/providers/directory-role-authenticator-1.0.0.jar
+
+RUN /opt/keycloak/bin/kc.sh build
