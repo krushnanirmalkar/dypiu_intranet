@@ -58,9 +58,11 @@ function roleFromOrgUnit(orgUnitPath) {
 
   if (
     orgUnitPath === "/Faculty" ||
-    orgUnitPath.startsWith("/Faculty/")
+    orgUnitPath.startsWith("/Faculty/") ||
+    orgUnitPath === "/Staff" ||
+    orgUnitPath.startsWith("/Staff/")
   ) {
-    return "faculty";
+    return "staff";
   }
 
   return null;

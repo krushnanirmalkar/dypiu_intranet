@@ -114,18 +114,18 @@ public class DirectoryRoleAuthenticator implements Authenticator {
         RoleModel studentRole =
             realm.getRole("student");
 
-        RoleModel facultyRole =
-            realm.getRole("faculty");
+        RoleModel staffRole =
+            realm.getRole("staff");
 
-        if (studentRole == null || facultyRole == null) {
+        if (studentRole == null || staffRole == null) {
             throw new IllegalStateException(
-                "Required realm roles student/faculty do not exist."
+                "Required realm roles student/staff do not exist."
             );
         }
 
         if ("student".equals(baseRole)) {
-            if (user.hasRole(facultyRole)) {
-                user.deleteRoleMapping(facultyRole);
+            if (user.hasRole(staffRole)) {
+                user.deleteRoleMapping(staffRole);
             }
 
             if (!user.hasRole(studentRole)) {
@@ -135,13 +135,13 @@ public class DirectoryRoleAuthenticator implements Authenticator {
             return;
         }
 
-        if ("faculty".equals(baseRole)) {
+        if ("staff".equals(baseRole)) {
             if (user.hasRole(studentRole)) {
                 user.deleteRoleMapping(studentRole);
             }
 
-            if (!user.hasRole(facultyRole)) {
-                user.grantRole(facultyRole);
+            if (!user.hasRole(staffRole)) {
+                user.grantRole(staffRole);
             }
 
             return;
@@ -153,8 +153,8 @@ public class DirectoryRoleAuthenticator implements Authenticator {
             user.deleteRoleMapping(studentRole);
         }
 
-        if (user.hasRole(facultyRole)) {
-            user.deleteRoleMapping(facultyRole);
+        if (user.hasRole(staffRole)) {
+            user.deleteRoleMapping(staffRole);
         }
     }
 
@@ -167,8 +167,8 @@ public class DirectoryRoleAuthenticator implements Authenticator {
             return "student";
         }
 
-        if (json.contains("\"baseRole\":\"faculty\"")) {
-            return "faculty";
+        if (json.contains("\"baseRole\":\"staff\"")) {
+            return "staff";
         }
 
         return null;

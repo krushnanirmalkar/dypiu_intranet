@@ -23,7 +23,7 @@ interface SessionUser {
 
 const resolveRoleByPrecedence = (roles: readonly string[]): UserRole | null => {
   if (roles.includes('admin')) return 'admin';
-  if (roles.includes('faculty')) return 'faculty';
+  if (roles.includes('staff')) return 'staff';
   if (roles.includes('student')) return 'student';
   return null;
 };
@@ -56,11 +56,11 @@ const buildProfile = (user: SessionUser, role: UserRole): UserProfile => ({
   name: user.name,
   email: user.email,
   role,
-  roleTitle: role === 'faculty' ? 'Faculty' : role === 'admin' ? 'Administrator' : 'Student',
+  roleTitle: role === 'staff' ? 'Staff' : role === 'admin' ? 'Administrator' : 'Student',
   avatar: '',
   collegeId: user.email.split('@')[0],
   department: 'D Y Patil International University',
-  yearOrDesignation: role === 'student' ? 'Student' : role === 'faculty' ? 'Faculty' : 'Administration',
+  yearOrDesignation: role === 'student' ? 'Student' : role === 'staff' ? 'Staff' : 'Administration',
   bio: 'Member of the DYPIU campus community.',
   joinedYear: '',
   phone: '',

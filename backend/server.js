@@ -206,7 +206,7 @@ app.get("/auth/callback", async (req, res) => {
 
     const allowedRoles = [
       "student",
-      "faculty",
+      "staff",
       "admin"
     ];
 

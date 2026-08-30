@@ -66,7 +66,7 @@ export const mockAchievements: AchievementItem[] = [
     description: 'Recognized for pioneering paper on Federated Learning in Privacy-Preserving Health Networks.',
     verified: true,
     badgeType: 'Trophy',
-    role: 'faculty',
+    role: 'staff',
   },
   {
     id: 'ach_fac_2',
@@ -77,7 +77,7 @@ export const mockAchievements: AchievementItem[] = [
     description: 'Awarded 3-year research funding for AI in Climate Modeling and Smart Grid Energy Systems.',
     verified: true,
     badgeType: 'ShieldCheck',
-    role: 'faculty',
+    role: 'staff',
   },
   {
     id: 'ach_fac_3',
@@ -88,7 +88,7 @@ export const mockAchievements: AchievementItem[] = [
     description: 'Delivered invited keynote address on "Ethics in Generative Autonomous Systems".',
     verified: true,
     badgeType: 'Scroll',
-    role: 'faculty',
+    role: 'staff',
   }
 ];
 
@@ -148,7 +148,7 @@ export const mockNotifications: NotificationItem[] = [
     timestamp: '2 hours ago',
     category: 'Examination',
     isRead: false,
-    targetRoles: ['student', 'faculty'],
+    targetRoles: ['student', 'staff'],
   },
   {
     id: 'notif_3',
@@ -157,7 +157,7 @@ export const mockNotifications: NotificationItem[] = [
     timestamp: '5 hours ago',
     category: 'System',
     isRead: false,
-    targetRoles: ['faculty'],
+    targetRoles: ['staff'],
   },
   {
     id: 'notif_4',
@@ -166,7 +166,7 @@ export const mockNotifications: NotificationItem[] = [
     timestamp: '1 day ago',
     category: 'Achievement',
     isRead: true,
-    targetRoles: ['student', 'faculty'],
+    targetRoles: ['student', 'staff'],
   }
 ];
 

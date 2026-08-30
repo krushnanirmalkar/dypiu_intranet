@@ -59,7 +59,7 @@ public class DirectoryRoleAuthenticatorFactory
 
     @Override
     public String getHelpText() {
-        return "Synchronizes student/faculty realm roles "
+        return "Synchronizes student/staff realm roles "
             + "from Google Workspace OU classification.";
     }
 
