@@ -1,7 +1,7 @@
 require("dotenv").config();
 
 const applications = require("./applications");
-const { requireAuth } = require("./middleware/auth");
+const { requireAuth, requireRole } = require("./middleware/auth");
 
 const express = require("express");
 const session = require("express-session");
@@ -256,13 +256,7 @@ app.get("/auth/callback", async (req, res) => {
 // Current User
 // -------------------------
 
-app.get("/api/me", (req, res) => {
-  if (!req.session.user) {
-    return res.status(401).json({
-      authenticated: false
-    });
-  }
-
+app.get("/api/me", requireAuth, (req, res) => {
   res.json({
     authenticated: true,
     user: req.session.user
