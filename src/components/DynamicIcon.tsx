@@ -5,7 +5,7 @@ import {
   FileText, ShieldCheck, Trophy, Medal, Scroll, CheckCircle, ExternalLink,
   Search, Bell, Settings, User, LogOut, ChevronRight, Filter, Plus, Calendar,
   Clock, MapPin, Check, Sparkles, LayoutDashboard, Grid, Book, Star, HelpCircle,
-  FileCheck2, Shield, Eye, ArrowUpRight, X, AlertCircle, Bookmark, Radio, Layers
+  FileCheck2, Shield, Eye, ArrowUpRight, X, AlertCircle, Bookmark, Radio, Layers, Target, BarChart3
 } from 'lucide-react';
 
 const iconMap: Record<string, React.ElementType> = {
@@ -55,7 +55,9 @@ const iconMap: Record<string, React.ElementType> = {
   AlertCircle,
   Bookmark,
   Radio,
-  Layers
+  Layers,
+  Target,
+  BarChart3
 };
 
 interface DynamicIconProps {
