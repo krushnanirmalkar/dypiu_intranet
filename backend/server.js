@@ -189,7 +189,7 @@ app.get("/auth/callback", async (req, res) => {
 
     if (!tokenResponse.ok) {
       console.error(tokens);
-      return res.status(500).send("Token exchange failed.");
+      return res.status(401).send("Authentication failed.");
     }
 
     // -------------------------
