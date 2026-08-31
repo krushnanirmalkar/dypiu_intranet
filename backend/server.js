@@ -11,8 +11,10 @@ const { RedisStore } = require("connect-redis");
 const { createRemoteJWKSet, jwtVerify } = require("jose");
 
 const app = express();
+app.disable("x-powered-by");
 
 const PORT = Number(process.env.PORT || 3001);
+const ABSOLUTE_SESSION_MAX_AGE = 5 * 60 * 60 * 1000;
 
 // -------------------------
 // Redis Session Store
@@ -64,6 +66,7 @@ app.use(
     secret: SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
+    rolling: true,
     cookie: {
       secure: true,
       httpOnly: true,
@@ -73,6 +76,33 @@ app.use(
     }
   })
 );
+
+// Absolute session timeout
+app.use((req, res, next) => {
+  if (
+    req.session.user &&
+    req.session.authenticatedAt &&
+    Date.now() - req.session.authenticatedAt > ABSOLUTE_SESSION_MAX_AGE
+  ) {
+    return req.session.destroy((err) => {
+      if (err) {
+        console.error("Failed to destroy expired session:", err);
+        return res.status(500).send("Session expiry failed.");
+      }
+
+      res.clearCookie("__Host-dypiu-session", {
+        path: "/",
+        secure: true,
+        httpOnly: true,
+        sameSite: "lax"
+      });
+
+      return res.redirect("/signed-out");
+    });
+  }
+
+  next();
+});
 
 
 // -------------------------
@@ -234,6 +264,8 @@ app.get("/auth/callback", async (req, res) => {
         email: payload.email,
         roles
       };
+
+      req.session.authenticatedAt = Date.now();
 
       // Keep tokens server-side only
       req.session.tokens = {
