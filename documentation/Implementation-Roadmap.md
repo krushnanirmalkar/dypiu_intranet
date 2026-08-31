@@ -611,6 +611,27 @@ Test:
 * [ ] Direct backend access.
 * [ ] Fake browser headers.
 
+## Phase 11 Verification Status
+
+Evidence collected during implementation and controlled testing:
+
+* Normal logout — tested with an authenticated synthetic Redis session. Local session was destroyed, the session cookie was cleared, and the browser was redirected to the Keycloak logout endpoint.
+* Global logout — implementation verified. The logout request includes the fixed `client_id`, fixed `post_logout_redirect_uri`, and `id_token_hint` when available. Full browser SSO invalidation remains pending a controlled authenticated-user test.
+* Session expiry — tested for the absolute session timeout path using an authenticated synthetic Redis session older than the configured maximum age. The session was destroyed, the cookie was cleared, and the request was redirected to `/signed-out`.
+* Invalid token — tested. Rejected authorization-code exchange and invalid-signature validation are denied.
+* Expired token — tested at the JOSE validation layer and classified as an authentication failure.
+* Invalid audience — tested at the JOSE validation layer and classified as an authentication failure.
+* Invalid issuer — tested at the JOSE validation layer and classified as an authentication failure.
+* Disabled account — fail-closed implementation verified. Suspended or otherwise role-less directory identities cannot receive a valid `student` or `staff` role. Full end-to-end testing remains pending a controlled disabled test account.
+* Missing university record — tested. The directory role service returns a controlled `404`, and the REQUIRED Keycloak authenticator rejects non-success responses.
+* Google unavailable — pending a safe dependency-outage or controlled test-environment scenario. Production Google Workspace availability was not intentionally disrupted.
+* Keycloak unavailable — dependency-failure classification tested safely using an unreachable JWKS endpoint. Full production Keycloak outage testing was not performed.
+* Application unavailable — deferred with Phase 8 application integration because the current portal exposes role-filtered external application links rather than integrated application sessions.
+* Direct backend access — tested. Protected backend endpoints deny unauthenticated direct requests.
+* Fake browser headers — tested. Spoofed identity and role headers do not bypass backend authentication.
+
+Pending scenarios are intentionally retained for later controlled end-to-end or production-readiness testing rather than simulating disruptive outages in the live environment.
+
 Expected principle:
 
 ```text
