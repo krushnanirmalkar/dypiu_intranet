@@ -88,6 +88,17 @@ public class DirectoryRoleAuthenticator implements Authenticator {
             String baseRole =
                 extractBaseRole(response.body());
 
+            if (
+                !"student".equals(baseRole) &&
+                !"staff".equals(baseRole)
+            ) {
+                fail(
+                    context,
+                    "No valid university role available."
+                );
+                return;
+            }
+
             synchronizeBaseRole(
                 context.getRealm(),
                 user,

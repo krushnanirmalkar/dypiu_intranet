@@ -177,9 +177,22 @@ app.post(
       });
 
     } catch (err) {
+      const upstreamStatus =
+        err.response?.status;
+
+      if (upstreamStatus === 404) {
+        console.warn(
+          "University directory record not found."
+        );
+
+        return res.status(404).json({
+          error: "University record not found."
+        });
+      }
+
       console.error(
         "Directory lookup failed:",
-        err.response?.status || err.message
+        upstreamStatus || err.message
       );
 
       return res.status(502).json({
