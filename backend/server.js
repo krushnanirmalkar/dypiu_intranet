@@ -8,7 +8,17 @@ const session = require("express-session");
 const crypto = require("crypto");
 const { createClient } = require("redis");
 const { RedisStore } = require("connect-redis");
-const { createRemoteJWKSet, jwtVerify } = require("jose");
+const {
+  createRemoteJWKSet,
+  jwtVerify,
+  errors: {
+    JWTExpired,
+    JWTClaimValidationFailed,
+    JWSSignatureVerificationFailed,
+    JWTInvalid,
+    JWSInvalid
+  }
+} = require("jose");
 
 const app = express();
 app.disable("x-powered-by");
@@ -278,8 +288,23 @@ app.get("/auth/callback", async (req, res) => {
     });
 
   } catch (err) {
+    if (
+      err instanceof JWTExpired ||
+      err instanceof JWTClaimValidationFailed ||
+      err instanceof JWSSignatureVerificationFailed ||
+      err instanceof JWTInvalid ||
+      err instanceof JWSInvalid
+    ) {
+      console.warn(
+        "OIDC token validation rejected:",
+        err.code || err.name
+      );
+
+      return res.status(401).send("Authentication failed.");
+    }
+
     console.error(err);
-    res.status(500).send("OIDC validation failed.");
+    return res.status(500).send("OIDC validation failed.");
   }
 });
 
