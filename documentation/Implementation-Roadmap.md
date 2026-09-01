@@ -697,6 +697,10 @@ Verification notes:
 * CSRF — no authenticated data-mutating POST/PUT/PATCH/DELETE routes currently
   exist. SameSite=Lax is enabled on the session cookie. Logout intentionally
   remains a GET endpoint, so full CSRF hardening is not marked complete.
+* Admin account separation — the `dypiu` realm has a dedicated `admin` role,
+  separate from `student` and `staff`. No current realm user is assigned to
+  `admin`. A controlled process for creating/assigning named administrator
+  accounts is still outstanding, so this item remains incomplete.
 * Secret/key rotation — storage and permissions were reviewed, but existing
   secrets and Keycloak signing keys were intentionally left unchanged.
 * Backup — a PostgreSQL custom-format logical backup of the production Keycloak
