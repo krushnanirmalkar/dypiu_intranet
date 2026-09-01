@@ -682,6 +682,19 @@ Implement:
 
 Verification notes:
 
+* MFA — an isolated post-broker MFA flow was created with the existing
+  `DYPIU Directory Base Role` authenticator followed by a REQUIRED Keycloak
+  OTP Form. Controlled testing with `20240802084@dypiu.ac.in` verified TOTP
+  enrollment, creation of an `otp` credential, automatic removal of the
+  `CONFIGURE_TOTP` required action, and presentation of an OTP challenge on a
+  subsequent Google login. The post-broker flow then failed to complete with
+  Keycloak event `IDENTITY_PROVIDER_POST_LOGIN_ERROR` / `Failed to verify
+  login action`. Google was immediately rebound to the stable
+  `DYPIU Post Broker Login` flow. MFA remains intentionally deferred and the
+  isolated MFA flow remains unbound for future diagnosis.
+* Phishing-resistant MFA — WebAuthn capability exists in Keycloak, but no
+  privileged administrator account is currently provisioned and no
+  phishing-resistant MFA policy has been activated. This remains deferred.
 * CORS — cross-origin requests and preflight responses expose no permissive
   `Access-Control-Allow-*` policy; the application remains same-origin.
 * CSP/clickjacking/secure headers — production responses verified with CSP,
