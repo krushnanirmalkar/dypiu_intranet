@@ -729,6 +729,13 @@ Verification notes:
   HTTP 200 both directly and through the public endpoint after recovery.
   Production-mode image hardening remains outstanding.
 
+Phase 12 is closed for the current implementation scope. Remaining unchecked
+items are explicitly deferred or intentionally incomplete and must not be
+treated as implemented: MFA, phishing-resistant MFA for privileged
+administrators, full CSRF protection while logout remains GET, operational
+admin account provisioning/separation, secret rotation, key rotation, and
+Keycloak optimized production-mode startup.
+
 The production security requirements are explicitly listed in the specification.
 
 ---
