@@ -827,30 +827,45 @@ The IT team can investigate security and authentication events.
 
 ## Functional Testing
 
-* [ ] Student login.
+* [x] Student login.
 * [ ] Faculty login.
-* [ ] Staff login.
+* [x] Staff login.
 * [ ] Admin login.
 * [ ] Multiple applications.
 * [ ] SSO behaviour.
-* [ ] Logout.
-* [ ] Session expiry.
-* [ ] Role restrictions.
+* [x] Logout.
+* [x] Session expiry.
+* [x] Role restrictions.
 
 ## Security Testing
 
-* [ ] Token manipulation.
-* [ ] Invalid issuer.
-* [ ] Invalid audience.
-* [ ] Expired token.
-* [ ] Fake headers.
-* [ ] Direct backend access.
+* [x] Token manipulation.
+* [x] Invalid issuer.
+* [x] Invalid audience.
+* [x] Expired token.
+* [x] Fake headers.
+* [x] Direct backend access.
 * [ ] CSRF.
-* [ ] CORS.
-* [ ] Open redirects.
-* [ ] Privilege escalation.
-* [ ] Session fixation.
+* [x] CORS.
+* [x] Open redirects.
+* [x] Privilege escalation.
+* [x] Session fixation.
 * [ ] Session theft scenarios.
+
+## Phase 14 Verification Notes
+
+The detailed verification record is maintained in `documentation/phase14-testing.md`.
+
+Items intentionally left incomplete:
+
+* Faculty login — controlled faculty regression validation pending.
+* Admin login — no operational administrator account provisioned.
+* Multiple applications — downstream application integrations remain deferred with Phase 8.
+* SSO behaviour — intranet SSO verified; cross-application SSO remains pending downstream integrations.
+* CSRF — logout remains a state-changing GET endpoint.
+* Session theft scenarios — cookie/session protections verified; active stolen-session replay not performed.
+
+Phase 14 is substantially complete for the current implementation scope. Final validation must be repeated on the combined final `dev` revision after parallel frontend work is merged, before promotion to `main`.
 
 ## Deliverable
 
