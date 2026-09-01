@@ -667,18 +667,50 @@ Implement:
 * [ ] MFA.
 * [ ] Phishing-resistant MFA for privileged administrators.
 * [ ] CSRF protection.
-* [ ] CORS policy.
-* [ ] Content Security Policy.
-* [ ] Clickjacking protection.
-* [ ] Open-redirect protection.
-* [ ] Rate limiting.
-* [ ] Secure headers.
-* [ ] Audit logging.
+* [x] CORS policy.
+* [x] Content Security Policy.
+* [x] Clickjacking protection.
+* [x] Open-redirect protection.
+* [x] Rate limiting.
+* [x] Secure headers.
+* [x] Audit logging.
 * [ ] Admin account separation.
 * [ ] Secret rotation.
 * [ ] Key rotation.
-* [ ] Backup.
-* [ ] Restore testing.
+* [x] Backup.
+* [x] Restore testing.
+
+Verification notes:
+
+* CORS — cross-origin requests and preflight responses expose no permissive
+  `Access-Control-Allow-*` policy; the application remains same-origin.
+* CSP/clickjacking/secure headers — production responses verified with CSP,
+  `X-Frame-Options`, HSTS, `X-Content-Type-Options`, and Referrer Policy.
+* Open redirects — authentication/logout redirect targets are server-controlled.
+* Rate limiting — `/login` is limited by NGINX per client IP; controlled burst
+  testing verified HTTP 429 responses after the configured burst allowance.
+* Audit logging — structured security events are written to journald without
+  tokens or session identifiers. Rejected-login and logout paths were verified
+  in production. Successful-login logging is implemented but was not exercised
+  with a real university account during this phase. Authorization-denial
+  logging is implemented but no current live route uses `requireRole()`.
+* CSRF — no authenticated data-mutating POST/PUT/PATCH/DELETE routes currently
+  exist. SameSite=Lax is enabled on the session cookie. Logout intentionally
+  remains a GET endpoint, so full CSRF hardening is not marked complete.
+* Secret/key rotation — storage and permissions were reviewed, but existing
+  secrets and Keycloak signing keys were intentionally left unchanged.
+* Backup — a PostgreSQL custom-format logical backup of the production Keycloak
+  database was created with restrictive file permissions and validated with
+  PostgreSQL 18 `pg_restore`.
+* Restore — the Keycloak backup was restored successfully into an isolated
+  temporary PostgreSQL 18 container. The restored database contained 100
+  application tables and expected core Keycloak tables. The temporary restore
+  environment was removed afterward; production data was not modified.
+* Keycloak production mode — migration from `start-dev` to optimized production
+  startup was attempted but the existing image contained incompatible persisted
+  build-time options. The change was rolled back. OIDC discovery was verified
+  HTTP 200 both directly and through the public endpoint after recovery.
+  Production-mode image hardening remains outstanding.
 
 The production security requirements are explicitly listed in the specification.
 
