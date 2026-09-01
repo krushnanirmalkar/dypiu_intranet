@@ -772,6 +772,39 @@ IP / request metadata
 
 Protect audit logs from unauthorized modification.
 
+## Implementation Status
+
+Current audit event coverage:
+
+* [x] Login success — `login_success`.
+* [x] Login failure — `login_rejected`.
+* [x] Logout — `logout_success`.
+* [ ] Role change — no application role-change operation currently exists; defer until an administrative role-management path is introduced.
+* [ ] Account disabled — account disabling currently occurs upstream in the university directory/Keycloak path; no backend account-disable operation currently exists.
+* [ ] Privileged action — no privileged administrative mutation endpoint currently exists; add audit events when such operations are introduced.
+* [x] Authorization failure — `authorization_denied`.
+* [x] Token validation failure — `token_validation_failure`.
+
+Administration/audit access:
+
+* [x] Read-only `/api/admin/audit` endpoint implemented.
+* [x] Endpoint restricted to the `admin` realm role using `requireRole("admin")`.
+* [x] Anonymous access verified to return HTTP 401.
+* [x] Audit records expose timestamp, user, application, action, result, and request metadata.
+* [x] Request metadata records client IP, HTTP method, and request path only.
+* [x] Sensitive authentication material such as tokens, cookies, session IDs, state, nonce values, query strings, and authorization headers is not included in audit metadata.
+* [x] Live request-metadata logging verified using a controlled logout event.
+
+Audit-log protection:
+
+* [x] Structured `security_audit` records are retained by persistent systemd journald storage.
+* [x] Audit records are stored outside the application repository and application-controlled files.
+* [x] The audit API is read-only and provides no audit-log mutation operation.
+* [x] No additional sudo, sudoers, or journal permission changes were introduced for the audit API.
+* [x] Journal access uses `execFile` with fixed `journalctl` arguments and no shell interpolation.
+
+The successful admin HTTP 200 path remains pending until an operational administrator account is formally provisioned. No administrator account or role assignment is created solely for testing.
+
 ## Deliverable
 
 The IT team can investigate security and authentication events.
