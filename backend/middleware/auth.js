@@ -27,6 +27,15 @@ function requireRole(...allowedRoles) {
     );
 
     if (!authorized) {
+      console.warn(JSON.stringify({
+        type: "security_audit",
+        event: "authorization_denied",
+        timestamp: new Date().toISOString(),
+        email: req.session.user?.email || null,
+        userRoles,
+        requiredRoles: allowedRoles
+      }));
+
       return res.status(403).json({
         authenticated: true,
         message: "Forbidden."

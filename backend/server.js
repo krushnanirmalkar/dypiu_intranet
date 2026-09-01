@@ -50,6 +50,15 @@ const CLIENT_ID = "dypiu-intranet";
 const REDIRECT_URI =
   "https://intranet.dypiu.ac.in/auth/callback";
 
+function audit(event, details = {}) {
+  console.log(JSON.stringify({
+    type: "security_audit",
+    event,
+    timestamp: new Date().toISOString(),
+    ...details
+  }));
+}
+
 const POST_LOGOUT_REDIRECT_URI =
   "https://intranet.dypiu.ac.in/signed-out";
 
@@ -198,7 +207,18 @@ app.get("/auth/callback", async (req, res) => {
     const tokens = await tokenResponse.json();
 
     if (!tokenResponse.ok) {
-      console.error(tokens);
+      const reason =
+        tokens?.error || `HTTP ${tokenResponse.status}`;
+
+      console.warn(
+        "OIDC token exchange rejected:",
+        reason
+      );
+
+      audit("login_rejected", {
+        reason
+      });
+
       return res.status(401).send("Authentication failed.");
     }
 
@@ -284,6 +304,11 @@ app.get("/auth/callback", async (req, res) => {
         idToken: tokens.id_token
       };
 
+      audit("login_success", {
+        email: payload.email || null,
+        roles
+      });
+
       res.redirect("/");
     });
 
@@ -350,12 +375,17 @@ app.get("/api/applications", requireAuth, (req, res) => {
 
 app.get("/logout", (req, res) => {
   const idToken = req.session.tokens?.idToken;
+  const email = req.session.user?.email || null;
 
   req.session.destroy((err) => {
     if (err) {
       console.error(err);
       return res.status(500).send("Logout failed.");
     }
+
+    audit("logout_success", {
+      email
+    });
 
     res.clearCookie("__Host-dypiu-session", {
       path: "/",
