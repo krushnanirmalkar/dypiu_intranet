@@ -4,6 +4,7 @@ import type { ApplicationItem, UserProfile, UserRole } from '../types';
 import { mockEvents, mockNotifications } from '../data/mockData';
 import { DEV_PREVIEW_APPLICATIONS, DEV_PREVIEW_USER, type AuthenticatedUser } from '../data/devPreviewData';
 import { ApplicationsPage } from '../pages/ApplicationsPage';
+import { AuditPage } from '../pages/AuditPage';
 import { ProfilePage } from '../pages/ProfilePage';
 import { ActivityHub } from './ActivityHub';
 import { ApplicationsGrid } from './ApplicationsGrid';
@@ -374,6 +375,7 @@ export const MainApp: React.FC = () => {
         )}
 
         {currentNav === 'applications' && <ApplicationsPage applications={applications} onOpenApp={openApplication} onToggleFavorite={() => {}} />}
+        {currentNav === 'audit' && currentRole === 'admin' && <AuditPage />}
         {currentNav === 'profile' && <ProfilePage user={currentUser} currentRole={currentRole} />}
         {['academics', 'events', 'notifications', 'documents', 'settings', 'support'].includes(currentNav) && (
           <div className="rounded-[18px] border border-navy-100 bg-white p-8 text-center shadow-sm">
