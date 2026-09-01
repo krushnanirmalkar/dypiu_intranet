@@ -805,6 +805,18 @@ Audit-log protection:
 
 The successful admin HTTP 200 path remains pending until an operational administrator account is formally provisioned. No administrator account or role assignment is created solely for testing.
 
+Administration/audit UI:
+
+* [x] Admin-only Security Audit Logs page implemented in the existing frontend navigation model.
+* [x] Audit page consumes `/api/admin/audit` and displays timestamp, user, application, action, result, and request metadata.
+* [x] Audit navigation and rendering are restricted in the frontend to the `admin` role; backend `requireRole("admin")` remains the authoritative authorization boundary.
+* [x] Loading, empty, authorization-error, and request-error states implemented.
+* [x] Production frontend build and deployment verified at commit `37ff4ba`.
+* [x] Public frontend and signed-out routes verified HTTP 200 after deployment.
+* [ ] Live audit-page rendering with an authenticated administrator remains pending until an operational administrator account is formally provisioned.
+
+Phase 13 is closed for the current implementation scope. Role-change, account-disabled, and privileged administrative mutation audit events remain deferred until corresponding administrative operations exist. Live administrator UI verification remains pending formal administrator provisioning and must not be treated as completed.
+
 ## Deliverable
 
 The IT team can investigate security and authentication events.
