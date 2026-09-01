@@ -1,6 +1,6 @@
 import React from 'react';
 import type { UserRole } from '../types';
-import { HelpCircle, LogOut, Phone, Calendar, BookMarked } from 'lucide-react';
+import { HelpCircle, LogOut, Phone, Calendar, BookMarked, ShieldCheck } from 'lucide-react';
 import { MiniCalendar } from './MiniCalendar';
 
 interface AppSidebarProps {
@@ -12,6 +12,7 @@ interface AppSidebarProps {
 }
 
 export const AppSidebar: React.FC<AppSidebarProps> = ({
+  currentRole,
   onNavigate,
   isOpenMobile,
   onCloseMobile,
@@ -57,6 +58,15 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
               <h4 className="text-[11px] font-extrabold text-navy-900 uppercase tracking-wider">
                 Quick Links
               </h4>
+              {currentRole === 'admin' && (
+                <button
+                  onClick={() => { onNavigate('audit'); onCloseMobile(); }}
+                  className="w-full p-2 rounded-lg bg-navy-50/70 hover:bg-navy-100 border border-navy-100 flex items-center space-x-2 text-navy-800 font-medium group text-left transition-colors"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-navy-600 shrink-0" />
+                  <span className="truncate text-xs font-bold">Audit Logs</span>
+                </button>
+              )}
               <div className="flex flex-col space-y-1.5 text-xs">
                 <button
                   onClick={() => alert("Campus IT Helpdesk: support@dypiu.ac.in | Ext: 4040")}

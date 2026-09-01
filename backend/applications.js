@@ -7,7 +7,7 @@ module.exports = [
     url: "https://udms.dypiu.ac.in",
     icon: "LayoutDashboard",
     category: "Administration",
-    roles: ["student", "faculty"],
+    roles: ["student", "staff"],
     enabled: true
   },
 
@@ -19,7 +19,7 @@ module.exports = [
     url: "https://erp.dypiu.ac.in",
     icon: "GraduationCap",
     category: "Academic",
-    roles: ["student", "faculty", "admin"],
+    roles: ["student", "staff", "admin"],
     enabled: true
   },
 
@@ -31,7 +31,55 @@ module.exports = [
     url: "https://unisync.dypiu.ac.in",
     icon: "Share2",
     category: "Productivity",
-    roles: ["student", "faculty", "admin"],
+    roles: ["student", "staff", "admin"],
+    enabled: true
+  },
+
+  {
+    id: "faculty-appraisal",
+    name: "Faculty and Staff Appraisal",
+    shortName: "Appraisal",
+    description: "Faculty and Staff Appraisal System",
+    url: "https://pbas.dypiu.ac.in",
+    icon: "ClipboardCheck",
+    category: "Staff Services",
+    roles: ["staff"],
+    enabled: true
+  },
+
+  {
+    id: "academic-audit",
+    name: "Academic and Administrative Audit",
+    shortName: "Academic Audit",
+    description: "Academic and Administrative Audit System",
+    url: "https://pbas.dypiu.ac.in/AAA",
+    icon: "FileCheck",
+    category: "Staff Services",
+    roles: ["staff"],
+    enabled: true
+  },
+
+  {
+    id: "obe",
+    name: "OBE",
+    shortName: "OBE",
+    description: "OBE System",
+    url: "https://pbas.dypiu.ac.in/OBE",
+    icon: "Target",
+    category: "Staff Services",
+    roles: ["staff"],
+    enabled: true
+  },
+
+  {
+    id: "analytics",
+    name: "Analytics",
+    shortName: "Analytics",
+    description: "Analytics Operations",
+    url: "https://pbas.dypiu.ac.in/analytics",
+    icon: "BarChart3",
+    category: "Staff Services",
+    roles: ["staff"],
     enabled: true
   }
 ];

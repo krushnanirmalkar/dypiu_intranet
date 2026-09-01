@@ -4,6 +4,7 @@ import type { ApplicationItem, UserProfile, UserRole } from '../types';
 import { mockEvents, mockNotifications } from '../data/mockData';
 import { DEV_PREVIEW_APPLICATIONS, DEV_PREVIEW_USER, type AuthenticatedUser } from '../data/devPreviewData';
 import { ApplicationsPage } from '../pages/ApplicationsPage';
+import { AuditPage } from '../pages/AuditPage';
 import { ProfilePage } from '../pages/ProfilePage';
 import { ActivityHub } from './ActivityHub';
 import { ApplicationsGrid } from './ApplicationsGrid';
@@ -23,7 +24,7 @@ interface SessionUser {
 
 const resolveRoleByPrecedence = (roles: readonly string[]): UserRole | null => {
   if (roles.includes('admin')) return 'admin';
-  if (roles.includes('faculty')) return 'faculty';
+  if (roles.includes('staff')) return 'staff';
   if (roles.includes('student')) return 'student';
   return null;
 };
@@ -56,11 +57,11 @@ const buildProfile = (user: SessionUser, role: UserRole): UserProfile => ({
   name: user.name,
   email: user.email,
   role,
-  roleTitle: role === 'faculty' ? 'Faculty' : role === 'admin' ? 'Administrator' : 'Student',
+  roleTitle: role === 'staff' ? 'Staff' : role === 'admin' ? 'Administrator' : 'Student',
   avatar: '',
   collegeId: user.email.split('@')[0],
   department: 'D Y Patil International University',
-  yearOrDesignation: role === 'student' ? 'Student' : role === 'faculty' ? 'Faculty' : 'Administration',
+  yearOrDesignation: role === 'student' ? 'Student' : role === 'staff' ? 'Staff' : 'Administration',
   bio: 'Member of the DYPIU campus community.',
   joinedYear: '',
   phone: '',
@@ -374,6 +375,7 @@ export const MainApp: React.FC = () => {
         )}
 
         {currentNav === 'applications' && <ApplicationsPage applications={applications} onOpenApp={openApplication} onToggleFavorite={() => {}} />}
+        {currentNav === 'audit' && currentRole === 'admin' && <AuditPage />}
         {currentNav === 'profile' && <ProfilePage user={currentUser} currentRole={currentRole} />}
         {['academics', 'events', 'notifications', 'documents', 'settings', 'support'].includes(currentNav) && (
           <div className="rounded-[18px] border border-navy-100 bg-white p-8 text-center shadow-sm">

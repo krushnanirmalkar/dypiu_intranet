@@ -1,18 +1,31 @@
 require("dotenv").config();
 
 const applications = require("./applications");
-const { requireAuth } = require("./middleware/auth");
+const { requireAuth, requireRole } = require("./middleware/auth");
 
 const express = require("express");
 const session = require("express-session");
 const crypto = require("crypto");
+const { execFile } = require("child_process");
 const { createClient } = require("redis");
 const { RedisStore } = require("connect-redis");
-const { createRemoteJWKSet, jwtVerify } = require("jose");
+const {
+  createRemoteJWKSet,
+  jwtVerify,
+  errors: {
+    JWTExpired,
+    JWTClaimValidationFailed,
+    JWSSignatureVerificationFailed,
+    JWTInvalid,
+    JWSInvalid
+  }
+} = require("jose");
 
 const app = express();
+app.disable("x-powered-by");
 
 const PORT = Number(process.env.PORT || 3001);
+const ABSOLUTE_SESSION_MAX_AGE = 5 * 60 * 60 * 1000;
 
 // -------------------------
 // Redis Session Store
@@ -37,6 +50,23 @@ const CLIENT_ID = "dypiu-intranet";
 
 const REDIRECT_URI =
   "https://intranet.dypiu.ac.in/auth/callback";
+
+function audit(event, details = {}) {
+  console.log(JSON.stringify({
+    type: "security_audit",
+    event,
+    timestamp: new Date().toISOString(),
+    ...details
+  }));
+}
+
+function auditRequestMetadata(req) {
+  return {
+    ip: req.ip || null,
+    method: req.method || null,
+    path: req.path || null
+  };
+}
 
 const POST_LOGOUT_REDIRECT_URI =
   "https://intranet.dypiu.ac.in/signed-out";
@@ -64,6 +94,7 @@ app.use(
     secret: SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
+    rolling: true,
     cookie: {
       secure: true,
       httpOnly: true,
@@ -73,6 +104,33 @@ app.use(
     }
   })
 );
+
+// Absolute session timeout
+app.use((req, res, next) => {
+  if (
+    req.session.user &&
+    req.session.authenticatedAt &&
+    Date.now() - req.session.authenticatedAt > ABSOLUTE_SESSION_MAX_AGE
+  ) {
+    return req.session.destroy((err) => {
+      if (err) {
+        console.error("Failed to destroy expired session:", err);
+        return res.status(500).send("Session expiry failed.");
+      }
+
+      res.clearCookie("__Host-dypiu-session", {
+        path: "/",
+        secure: true,
+        httpOnly: true,
+        sameSite: "lax"
+      });
+
+      return res.redirect("/signed-out");
+    });
+  }
+
+  next();
+});
 
 
 // -------------------------
@@ -158,8 +216,20 @@ app.get("/auth/callback", async (req, res) => {
     const tokens = await tokenResponse.json();
 
     if (!tokenResponse.ok) {
-      console.error(tokens);
-      return res.status(500).send("Token exchange failed.");
+      const reason =
+        tokens?.error || `HTTP ${tokenResponse.status}`;
+
+      console.warn(
+        "OIDC token exchange rejected:",
+        reason
+      );
+
+      audit("login_rejected", {
+        reason,
+        ...auditRequestMetadata(req)
+      });
+
+      return res.status(401).send("Authentication failed.");
     }
 
     // -------------------------
@@ -176,6 +246,11 @@ app.get("/auth/callback", async (req, res) => {
     );
 
     if (payload.nonce !== req.session.oidcNonce) {
+      audit("token_validation_failure", {
+        reason: "nonce_mismatch",
+        ...auditRequestMetadata(req)
+      });
+
       return res.status(400).send("Invalid OIDC nonce.");
     }
 
@@ -197,6 +272,11 @@ app.get("/auth/callback", async (req, res) => {
     //
     // Therefore verify the authorized party separately.
     if (accessPayload.azp !== CLIENT_ID) {
+      audit("token_validation_failure", {
+        reason: "access_token_client_mismatch",
+        ...auditRequestMetadata(req)
+      });
+
       return res.status(401).send("Invalid access token client.");
     }
 
@@ -206,7 +286,7 @@ app.get("/auth/callback", async (req, res) => {
 
     const allowedRoles = [
       "student",
-      "faculty",
+      "staff",
       "admin"
     ];
 
@@ -235,6 +315,8 @@ app.get("/auth/callback", async (req, res) => {
         roles
       };
 
+      req.session.authenticatedAt = Date.now();
+
       // Keep tokens server-side only
       req.session.tokens = {
         accessToken: tokens.access_token,
@@ -242,12 +324,40 @@ app.get("/auth/callback", async (req, res) => {
         idToken: tokens.id_token
       };
 
+      audit("login_success", {
+        email: payload.email || null,
+        roles,
+        ...auditRequestMetadata(req)
+      });
+
       res.redirect("/");
     });
 
   } catch (err) {
+    if (
+      err instanceof JWTExpired ||
+      err instanceof JWTClaimValidationFailed ||
+      err instanceof JWSSignatureVerificationFailed ||
+      err instanceof JWTInvalid ||
+      err instanceof JWSInvalid
+    ) {
+      const reason = err.code || err.name;
+
+      console.warn(
+        "OIDC token validation rejected:",
+        reason
+      );
+
+      audit("token_validation_failure", {
+        reason,
+        ...auditRequestMetadata(req)
+      });
+
+      return res.status(401).send("Authentication failed.");
+    }
+
     console.error(err);
-    res.status(500).send("OIDC validation failed.");
+    return res.status(500).send("OIDC validation failed.");
   }
 });
 
@@ -256,13 +366,7 @@ app.get("/auth/callback", async (req, res) => {
 // Current User
 // -------------------------
 
-app.get("/api/me", (req, res) => {
-  if (!req.session.user) {
-    return res.status(401).json({
-      authenticated: false
-    });
-  }
-
+app.get("/api/me", requireAuth, (req, res) => {
   res.json({
     authenticated: true,
     user: req.session.user
@@ -294,17 +398,95 @@ app.get("/api/applications", requireAuth, (req, res) => {
 
 
 // -------------------------
+// Administration - Audit
+// -------------------------
+
+app.get("/api/admin/audit", requireRole("admin"), (req, res) => {
+  execFile(
+    "/usr/bin/journalctl",
+    [
+      "-u",
+      "dypiu-intranet-backend.service",
+      "--since",
+      "24 hours ago",
+      "--no-pager",
+      "-o",
+      "cat"
+    ],
+    {
+      encoding: "utf8",
+      maxBuffer: 1024 * 1024
+    },
+    (err, stdout) => {
+      if (err) {
+        console.error("Failed to read security audit journal:", err.message);
+        return res.status(500).json({
+          message: "Unable to retrieve audit events."
+        });
+      }
+
+      const events = stdout
+        .split("\n")
+        .filter(Boolean)
+        .map((line) => {
+          try {
+            return JSON.parse(line);
+          } catch {
+            return null;
+          }
+        })
+        .filter((entry) =>
+          entry &&
+          entry.type === "security_audit"
+        )
+        .map((entry) => ({
+          timestamp: entry.timestamp || null,
+          user: entry.email || null,
+          application: "dypiu-intranet",
+          action: entry.event || null,
+          result:
+            entry.event === "login_rejected" ||
+            entry.event === "authorization_denied" ||
+            entry.event === "token_validation_failure"
+              ? "failure"
+              : "success",
+          metadata: {
+            ip: entry.ip || null,
+            method: entry.method || null,
+            path: entry.path || null,
+            reason: entry.reason || null,
+            userRoles: entry.userRoles || null,
+            requiredRoles: entry.requiredRoles || null
+          }
+        }))
+        .reverse();
+
+      res.json({
+        events
+      });
+    }
+  );
+});
+
+
+// -------------------------
 // Logout
 // -------------------------
 
 app.get("/logout", (req, res) => {
   const idToken = req.session.tokens?.idToken;
+  const email = req.session.user?.email || null;
 
   req.session.destroy((err) => {
     if (err) {
       console.error(err);
       return res.status(500).send("Logout failed.");
     }
+
+    audit("logout_success", {
+      email,
+      ...auditRequestMetadata(req)
+    });
 
     res.clearCookie("__Host-dypiu-session", {
       path: "/",
