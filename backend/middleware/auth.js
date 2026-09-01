@@ -33,7 +33,10 @@ function requireRole(...allowedRoles) {
         timestamp: new Date().toISOString(),
         email: req.session.user?.email || null,
         userRoles,
-        requiredRoles: allowedRoles
+        requiredRoles: allowedRoles,
+        ip: req.ip || null,
+        method: req.method || null,
+        path: req.path || null
       }));
 
       return res.status(403).json({

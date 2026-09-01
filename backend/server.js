@@ -6,6 +6,7 @@ const { requireAuth, requireRole } = require("./middleware/auth");
 const express = require("express");
 const session = require("express-session");
 const crypto = require("crypto");
+const { execFile } = require("child_process");
 const { createClient } = require("redis");
 const { RedisStore } = require("connect-redis");
 const {
@@ -57,6 +58,14 @@ function audit(event, details = {}) {
     timestamp: new Date().toISOString(),
     ...details
   }));
+}
+
+function auditRequestMetadata(req) {
+  return {
+    ip: req.ip || null,
+    method: req.method || null,
+    path: req.path || null
+  };
 }
 
 const POST_LOGOUT_REDIRECT_URI =
@@ -216,7 +225,8 @@ app.get("/auth/callback", async (req, res) => {
       );
 
       audit("login_rejected", {
-        reason
+        reason,
+        ...auditRequestMetadata(req)
       });
 
       return res.status(401).send("Authentication failed.");
@@ -237,7 +247,8 @@ app.get("/auth/callback", async (req, res) => {
 
     if (payload.nonce !== req.session.oidcNonce) {
       audit("token_validation_failure", {
-        reason: "nonce_mismatch"
+        reason: "nonce_mismatch",
+        ...auditRequestMetadata(req)
       });
 
       return res.status(400).send("Invalid OIDC nonce.");
@@ -262,7 +273,8 @@ app.get("/auth/callback", async (req, res) => {
     // Therefore verify the authorized party separately.
     if (accessPayload.azp !== CLIENT_ID) {
       audit("token_validation_failure", {
-        reason: "access_token_client_mismatch"
+        reason: "access_token_client_mismatch",
+        ...auditRequestMetadata(req)
       });
 
       return res.status(401).send("Invalid access token client.");
@@ -314,7 +326,8 @@ app.get("/auth/callback", async (req, res) => {
 
       audit("login_success", {
         email: payload.email || null,
-        roles
+        roles,
+        ...auditRequestMetadata(req)
       });
 
       res.redirect("/");
@@ -336,7 +349,8 @@ app.get("/auth/callback", async (req, res) => {
       );
 
       audit("token_validation_failure", {
-        reason
+        reason,
+        ...auditRequestMetadata(req)
       });
 
       return res.status(401).send("Authentication failed.");
@@ -384,6 +398,78 @@ app.get("/api/applications", requireAuth, (req, res) => {
 
 
 // -------------------------
+// Administration - Audit
+// -------------------------
+
+app.get("/api/admin/audit", requireRole("admin"), (req, res) => {
+  execFile(
+    "/usr/bin/journalctl",
+    [
+      "-u",
+      "dypiu-intranet-backend.service",
+      "--since",
+      "24 hours ago",
+      "--no-pager",
+      "-o",
+      "cat"
+    ],
+    {
+      encoding: "utf8",
+      maxBuffer: 1024 * 1024
+    },
+    (err, stdout) => {
+      if (err) {
+        console.error("Failed to read security audit journal:", err.message);
+        return res.status(500).json({
+          message: "Unable to retrieve audit events."
+        });
+      }
+
+      const events = stdout
+        .split("\n")
+        .filter(Boolean)
+        .map((line) => {
+          try {
+            return JSON.parse(line);
+          } catch {
+            return null;
+          }
+        })
+        .filter((entry) =>
+          entry &&
+          entry.type === "security_audit"
+        )
+        .map((entry) => ({
+          timestamp: entry.timestamp || null,
+          user: entry.email || null,
+          application: "dypiu-intranet",
+          action: entry.event || null,
+          result:
+            entry.event === "login_rejected" ||
+            entry.event === "authorization_denied" ||
+            entry.event === "token_validation_failure"
+              ? "failure"
+              : "success",
+          metadata: {
+            ip: entry.ip || null,
+            method: entry.method || null,
+            path: entry.path || null,
+            reason: entry.reason || null,
+            userRoles: entry.userRoles || null,
+            requiredRoles: entry.requiredRoles || null
+          }
+        }))
+        .reverse();
+
+      res.json({
+        events
+      });
+    }
+  );
+});
+
+
+// -------------------------
 // Logout
 // -------------------------
 
@@ -398,7 +484,8 @@ app.get("/logout", (req, res) => {
     }
 
     audit("logout_success", {
-      email
+      email,
+      ...auditRequestMetadata(req)
     });
 
     res.clearCookie("__Host-dypiu-session", {
