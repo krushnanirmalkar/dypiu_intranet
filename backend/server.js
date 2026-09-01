@@ -236,6 +236,10 @@ app.get("/auth/callback", async (req, res) => {
     );
 
     if (payload.nonce !== req.session.oidcNonce) {
+      audit("token_validation_failure", {
+        reason: "nonce_mismatch"
+      });
+
       return res.status(400).send("Invalid OIDC nonce.");
     }
 
@@ -257,6 +261,10 @@ app.get("/auth/callback", async (req, res) => {
     //
     // Therefore verify the authorized party separately.
     if (accessPayload.azp !== CLIENT_ID) {
+      audit("token_validation_failure", {
+        reason: "access_token_client_mismatch"
+      });
+
       return res.status(401).send("Invalid access token client.");
     }
 
@@ -320,10 +328,16 @@ app.get("/auth/callback", async (req, res) => {
       err instanceof JWTInvalid ||
       err instanceof JWSInvalid
     ) {
+      const reason = err.code || err.name;
+
       console.warn(
         "OIDC token validation rejected:",
-        err.code || err.name
+        reason
       );
+
+      audit("token_validation_failure", {
+        reason
+      });
 
       return res.status(401).send("Authentication failed.");
     }
