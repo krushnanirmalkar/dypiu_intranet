@@ -90,6 +90,12 @@ NGINX provides:
 
 Each application should have an explicit upstream configuration.
 
+For the intranet, backend API endpoints must be explicitly proxied to the backend service and must not fall through to the frontend SPA. In particular, `/api/admin/audit` must route to the intranet backend at `/api/admin/audit`.
+
+NGINX performs routing only. Authentication and role authorization for this endpoint remain enforced by the intranet backend; unauthenticated requests must receive `401`, while authenticated users without the required administrator role must receive `403`.
+
+After changing production NGINX configuration, run `nginx -t` successfully before reloading NGINX.
+
 ---
 
 # 5. HTTPS
