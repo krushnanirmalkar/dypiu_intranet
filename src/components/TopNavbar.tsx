@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Bell, ChevronDown, LogOut, Menu, Settings, User } from 'lucide-react';
+import { Bell, LogOut, Menu, Settings, User } from 'lucide-react';
 import type { NotificationItem, UserProfile } from '../types';
 import { NotificationPanel } from './NotificationPanel';
 
@@ -8,6 +8,7 @@ interface TopNavbarProps {
   onToggleMobileSidebar: () => void;
   unreadNotifCount: number;
   onNavigate: (navId: string) => void;
+  overlaysHero?: boolean;
   notifications?: NotificationItem[];
   onMarkAllRead?: () => void;
 }
@@ -17,6 +18,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
   onToggleMobileSidebar,
   unreadNotifCount,
   onNavigate,
+  overlaysHero = false,
   notifications = [],
   onMarkAllRead = () => {},
 }) => {
@@ -43,23 +45,23 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
   }, []);
 
   return (
-    <header className="sticky top-0 z-30 border-b border-navy-100/80 bg-white/95 backdrop-blur-xl">
+    <header className={`sticky top-0 z-30 border-b transition-colors ${overlaysHero ? 'border-transparent bg-transparent' : 'border-navy-100/80 bg-white/95 backdrop-blur-xl'}`}>
       <div className="mx-auto flex h-16 w-full max-w-[1500px] items-center gap-2.5 px-4 sm:px-5 lg:px-6">
         <button onClick={() => onNavigate('dashboard')} className="hidden w-[230px] shrink-0 items-center justify-start pl-8 sm:flex" aria-label="Go to dashboard">
           <img src="/DYPIU colour logo 1.png" alt="D Y Patil International University" className="h-12 w-auto object-contain" />
         </button>
 
-        <button onClick={onToggleMobileSidebar} className="rounded-xl p-2 text-navy-800 hover:bg-navy-50 sm:hidden" aria-label="Open menu">
+        <button onClick={onToggleMobileSidebar} className={`rounded-xl p-2 text-navy-800 ${overlaysHero ? 'bg-white/45 hover:bg-white/70' : 'hover:bg-navy-50'} sm:hidden`} aria-label="Open menu">
           <Menu className="h-5 w-5" />
         </button>
 
         <div className="flex-1" />
 
         <div ref={notifRef} className="relative ml-1 sm:ml-2">
-          <button onClick={() => setIsNotifOpen((open) => !open)} className="relative rounded-lg p-2 text-navy-700 hover:bg-navy-50" aria-label="Notifications">
+          <button onClick={() => setIsNotifOpen((open) => !open)} className="relative rounded-full bg-navy-900/90 p-2.5 text-white shadow-[0_3px_10px_rgba(2,2,45,0.3)] transition hover:bg-navy-950" aria-label="Notifications">
             <Bell className="h-[18px] w-[18px]" />
             {unreadNotifCount > 0 && (
-              <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-black text-white ring-2 ring-white">
+              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-black text-white ring-2 ring-white">
                 {unreadNotifCount}
               </span>
             )}
@@ -72,15 +74,10 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
         </div>
 
         <div ref={dropdownRef} className="relative">
-          <button onClick={() => setIsDropdownOpen((open) => !open)} className="flex items-center gap-2.5 rounded-xl px-1.5 py-1 hover:bg-[#f3f7ff]">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-gradient-to-b from-blue-100 to-blue-200 text-xs font-black text-navy-800 shadow-[0_2px_8px_rgba(15,35,75,0.12)]" title={user.name}>
+          <button onClick={() => setIsDropdownOpen((open) => !open)} className={`rounded-full transition ${overlaysHero ? 'hover:ring-4 hover:ring-white/35' : 'hover:ring-4 hover:ring-navy-50'}`} aria-label={`Open profile menu for ${user.name}`}>
+            <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white/90 bg-navy-900 text-xs font-black text-white shadow-[0_3px_10px_rgba(2,2,45,0.3)] transition hover:bg-navy-950" title={user.name}>
               {initials}
             </div>
-            <div className="hidden min-w-[112px] text-left sm:block">
-              <p className="max-w-36 truncate text-[11px] font-extrabold leading-tight text-navy-950">{user.name}</p>
-              <p className="mt-0.5 text-[9px] font-medium capitalize leading-tight text-navy-500">{user.role}</p>
-            </div>
-            <ChevronDown className="hidden h-3.5 w-3.5 text-navy-500 sm:block" />
           </button>
 
           {isDropdownOpen && (
