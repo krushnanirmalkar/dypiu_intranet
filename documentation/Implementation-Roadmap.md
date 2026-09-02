@@ -867,6 +867,28 @@ Items intentionally left incomplete:
 
 Phase 14 is substantially complete for the current implementation scope. Final validation must be repeated on the combined final `dev` revision after parallel frontend work is merged, before promotion to `main`.
 
+## Phase 15 Completion Notes
+
+Production deployment has been verified for the current implementation.
+
+Completed verification:
+
+* [x] Backend service managed by systemd and configured for automatic restart.
+* [x] Frontend deployed successfully.
+* [x] HTTPS enabled with security headers.
+* [x] Redis session store operational.
+* [x] Keycloak and supporting services operational.
+* [x] Google Workspace authentication verified.
+* [x] Role-based authorization verified.
+* [x] Security audit logging verified.
+* [x] Deployment runbook created (`documentation/production-runbook.md`).
+
+Operational notes:
+
+* Backend health endpoint is available locally at `http://127.0.0.1:3001/health`.
+* No public `/health` endpoint is exposed through NGINX by design.
+* Future production changes should follow the documented deployment and rollback procedures.
+
 ## Deliverable
 
 Security and functional test report.
