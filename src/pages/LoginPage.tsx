@@ -1,129 +1,45 @@
-import React, { useState } from 'react';
-import { AlertCircle, Lock, Mail } from 'lucide-react';
+import React from 'react';
 
 export const LoginPage: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [message, setMessage] = useState<string | null>(null);
-
-  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setMessage('Username/password authentication will be available in a future release. Please continue with Google.');
-  };
-
-  const handleForgotPassword = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    setMessage('Username/password authentication will be available in a future release. Please continue with Google.');
-  };
-
   const handleGoogleSignIn = () => {
     window.location.href = '/login';
   };
 
   return (
-    <div className="relative min-h-screen w-full flex items-center justify-start bg-white font-sans antialiased text-navy-900 overflow-hidden">
-      {/* CAMPUS BANNER IMAGE WITH RIGHT FOCAL POINT (SLIDES PHOTO CONTENT TO THE LEFT) */}
+    <div className="relative min-h-screen w-full flex items-center justify-end bg-white font-sans antialiased text-navy-900 overflow-hidden">
+      {/* LOGIN BACKGROUND IMAGE */}
       <img
-        src="/dypiu-campus-banner-v2.png"
-        alt="DY Patil International University Campus Banner"
-        className="absolute inset-0 h-full w-full object-cover object-right z-0"
+        src="/Login.png"
+        alt="DYPIU Campus Login Background"
+        className="absolute inset-0 h-full w-full object-cover object-left z-0"
       />
 
-      {/* LEFT LOGIN CARD OVER THE LEFT SIDE OF THE IMAGE */}
-      <div className="relative z-10 flex w-full max-w-xl justify-start p-6 sm:p-10 lg:pl-16">
-        <div className="w-full max-w-md space-y-6 rounded-3xl border border-slate-200/80 bg-white/95 p-8 shadow-2xl backdrop-blur-md sm:p-10">
-          {/* Header Inside Card */}
-          <div className="text-center">
-            <div className="mx-auto mb-4 flex justify-center">
-              <img src="/DYPIU colour logo 1.png" alt="DYPIU Logo" className="h-12 w-auto object-contain" />
-            </div>
-            <h2 className="text-2xl font-black text-navy-950">Sign In</h2>
-            <p className="mt-1 text-xs text-slate-500">
-              Access your DYPIU Intranet workspace
-            </p>
+      {/* RIGHT LOGIN CARD */}
+      <div className="relative z-10 flex w-full max-w-xl justify-end p-6 sm:p-10 lg:pr-16">
+        <div className="w-full max-w-md space-y-6 rounded-3xl border border-slate-200/80 bg-white/95 p-8 shadow-2xl backdrop-blur-md sm:p-10 text-center">
+          {/* DYPIU Logo */}
+          <div className="mx-auto mb-2 flex justify-center">
+            <img src="/DYPIU colour logo 1.png" alt="DYPIU Logo" className="h-16 sm:h-20 w-auto object-contain" />
           </div>
 
-          {/* Alert Message for Email/Password Attempt */}
-          {message && (
-            <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50/90 p-4 text-xs text-amber-900 shadow-sm" role="alert">
-              <AlertCircle className="h-5 w-5 shrink-0 text-amber-600" />
-              <p className="font-medium leading-relaxed">{message}</p>
-            </div>
-          )}
+          {/* UniOne Brand Title */}
+          <div className="mt-2">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+              <span className="text-[#050554]">Uni</span>
+              <span className="text-[#E85116]">One</span>
+            </h1>
+          </div>
 
-          {/* Form */}
-          <form onSubmit={handleFormSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="email-input" className="block text-xs font-bold text-navy-900">
-                Email
-              </label>
-              <div className="relative mt-1.5">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                  <Mail className="h-4 w-4" />
-                </div>
-                <input
-                  id="email-input"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@dypiu.ac.in"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 pl-10 pr-4 text-sm font-medium text-navy-900 transition focus:border-navy-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-navy-800/20"
-                />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between">
-                <label htmlFor="password-input" className="block text-xs font-bold text-navy-900">
-                  Password
-                </label>
-                <button
-                  type="button"
-                  onClick={handleForgotPassword}
-                  className="text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500/20 rounded px-1"
-                >
-                  Forgot Password?
-                </button>
-              </div>
-              <div className="relative mt-1.5">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                  <Lock className="h-4 w-4" />
-                </div>
-                <input
-                  id="password-input"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 pl-10 pr-4 text-sm font-medium text-navy-900 transition focus:border-navy-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-navy-800/20"
-                />
-              </div>
-            </div>
-
-            {/* Primary Button */}
-            <button
-              type="submit"
-              className="w-full rounded-xl bg-navy-900 py-3 text-sm font-bold text-white shadow-md transition hover:bg-navy-800 focus:outline-none focus:ring-2 focus:ring-navy-900 focus:ring-offset-2 active:scale-[0.99]"
-            >
-              Sign In
-            </button>
-          </form>
-
-          {/* Secondary Separator */}
+          {/* Decorative Divider Line */}
           <div className="relative my-6 flex items-center justify-center">
-            <div className="absolute inset-0 flex items-center" aria-hidden="true">
-              <div className="w-full border-t border-slate-200" />
-            </div>
-            <div className="relative bg-white px-3 text-xs font-semibold uppercase text-slate-400">
-              OR
-            </div>
+            <div className="w-full border-t border-slate-200" />
           </div>
 
-          {/* Google Button */}
+          {/* Google Login Button */}
           <button
             type="button"
             onClick={handleGoogleSignIn}
-            className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-300 bg-white py-3 px-4 text-sm font-bold text-navy-900 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 active:scale-[0.99]"
+            className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-300 bg-white py-3.5 px-4 text-sm font-bold text-navy-900 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 active:scale-[0.99]"
           >
             <svg className="h-5 w-5" viewBox="0 0 24 24">
               <path
@@ -143,13 +59,13 @@ export const LoginPage: React.FC = () => {
                 fill="#EA4335"
               />
             </svg>
-            Continue with Google
+            Login
           </button>
 
           {/* Footer */}
-          <div className="pt-4 text-center text-xs text-slate-400">
+          <div className="pt-2 text-center text-xs text-slate-400">
             <p className="font-medium text-slate-500">Secure authentication powered by</p>
-            <div className="mt-1.5 flex items-center justify-center gap-3 font-semibold text-slate-600">
+            <div className="mt-1 flex items-center justify-center gap-2 font-semibold text-slate-600">
               <span>Google Workspace</span>
               <span>•</span>
               <span>Keycloak</span>
