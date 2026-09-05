@@ -5,6 +5,7 @@ import { mockEvents, mockNotifications } from '../data/mockData';
 import { DEV_PREVIEW_APPLICATIONS, DEV_PREVIEW_USER, type AuthenticatedUser } from '../data/devPreviewData';
 import { ApplicationsPage } from '../pages/ApplicationsPage';
 import { AuditPage } from '../pages/AuditPage';
+import { LoginPage } from '../pages/LoginPage';
 import { ProfilePage } from '../pages/ProfilePage';
 import { ActivityHub } from './ActivityHub';
 import { ApplicationsGrid } from './ApplicationsGrid';
@@ -13,6 +14,7 @@ import { EventCard } from './EventCard';
 import { TopNavbar } from './TopNavbar';
 import { WelcomeBanner } from './WelcomeBanner';
 
+const SHOW_DEV_LOGIN_PAGE = import.meta.env.DEV && import.meta.env.VITE_SHOW_LOGIN_PAGE === 'true';
 const USE_DEV_PREVIEW = import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_AUTH === 'true';
 
 interface SessionUser {
@@ -139,7 +141,7 @@ export const MainApp: React.FC = () => {
   const [notifications, setNotifications] = useState(mockNotifications);
 
   useEffect(() => {
-    if (isSignedOutPage) {
+    if (isSignedOutPage || SHOW_DEV_LOGIN_PAGE) {
       setAuthLoading(false);
       return;
     }
@@ -193,7 +195,7 @@ export const MainApp: React.FC = () => {
   }, [isSignedOutPage]);
 
   useEffect(() => {
-    if (isSignedOutPage) return;
+    if (isSignedOutPage || SHOW_DEV_LOGIN_PAGE) return;
 
     if (USE_DEV_PREVIEW) {
       setApplications(DEV_PREVIEW_APPLICATIONS);
@@ -241,6 +243,10 @@ export const MainApp: React.FC = () => {
     if (/^https?:\/\//i.test(app.url)) window.open(app.url, '_blank', 'noopener,noreferrer');
     else window.location.assign(app.url);
   };
+
+  if (SHOW_DEV_LOGIN_PAGE) {
+    return <LoginPage />;
+  }
 
   if (isSignedOutPage) {
     return (
