@@ -14,7 +14,6 @@ import { EventCard } from './EventCard';
 import { TopNavbar } from './TopNavbar';
 import { WelcomeBanner } from './WelcomeBanner';
 
-const SHOW_DEV_LOGIN_PAGE = import.meta.env.DEV && import.meta.env.VITE_SHOW_LOGIN_PAGE === 'true';
 const USE_DEV_PREVIEW = import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_AUTH === 'true';
 
 interface SessionUser {
@@ -141,7 +140,7 @@ export const MainApp: React.FC = () => {
   const [notifications, setNotifications] = useState(mockNotifications);
 
   useEffect(() => {
-    if (isSignedOutPage || SHOW_DEV_LOGIN_PAGE) {
+    if (isSignedOutPage) {
       setAuthLoading(false);
       return;
     }
@@ -184,10 +183,12 @@ export const MainApp: React.FC = () => {
           }
         }
 
-        window.location.href = '/login';
+        setAuthenticated(false);
+        setAuthLoading(false);
       } catch (error) {
         console.error('Authentication check failed:', error);
-        window.location.href = '/login';
+        setAuthenticated(false);
+        setAuthLoading(false);
       }
     };
 
@@ -195,7 +196,7 @@ export const MainApp: React.FC = () => {
   }, [isSignedOutPage]);
 
   useEffect(() => {
-    if (isSignedOutPage || SHOW_DEV_LOGIN_PAGE) return;
+    if (isSignedOutPage) return;
 
     if (USE_DEV_PREVIEW) {
       setApplications(DEV_PREVIEW_APPLICATIONS);
@@ -211,7 +212,7 @@ export const MainApp: React.FC = () => {
         const response = await fetch('/api/applications', { method: 'GET', credentials: 'include' });
 
         if (response.status === 401) {
-          window.location.href = '/login';
+          setAuthenticated(false);
           return;
         }
 
@@ -244,10 +245,6 @@ export const MainApp: React.FC = () => {
     else window.location.assign(app.url);
   };
 
-  if (SHOW_DEV_LOGIN_PAGE) {
-    return <LoginPage />;
-  }
-
   if (isSignedOutPage) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-navy-50 px-4">
@@ -261,8 +258,12 @@ export const MainApp: React.FC = () => {
     );
   }
 
-  if (authLoading || !authenticated || !authenticatedUser || !currentRole || !currentUser) {
+  if (authLoading) {
     return <div className="flex min-h-screen items-center justify-center bg-navy-50"><div className="text-center"><div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-navy-200 border-t-navy-800" /><p className="mt-3 text-sm font-semibold text-navy-700">Verifying university session...</p></div></div>;
+  }
+
+  if (!authenticated || !authenticatedUser || !currentRole || !currentUser) {
+    return <LoginPage />;
   }
 
   return (
