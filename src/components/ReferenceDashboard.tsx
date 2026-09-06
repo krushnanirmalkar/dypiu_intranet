@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import imgLogo from "../assets/dashboard/logo.png";
 import imgProfile from "../assets/dashboard/profile.png";
-import { Bell, AlertCircle, ChevronRight, BookOpen, GraduationCap, FileText, Laptop, Bookmark, Users, CheckCircle2, Briefcase, Award, HelpCircle, Clock, MapPin, Send, Sparkles, Search, Cake } from 'lucide-react';
+import { Bell, AlertCircle, ChevronRight, BookOpen, GraduationCap, FileText, Laptop, Bookmark, Users, CheckCircle2, Briefcase, Award, HelpCircle, Clock, MapPin, Send, Sparkles, Search, X, Cake, Gift, User, Settings, LogOut } from 'lucide-react';
 import type { ApplicationItem, UserProfile } from '../types';
 
 const APPLICATIONS = [
@@ -43,6 +43,39 @@ const BIRTHDAYS = [
   { name: 'Aarav Mehta', role: 'B.Tech CSE' },
   { name: 'Riya Kulkarni', role: 'Design Faculty' },
   { name: 'Neha Sharma', role: 'MBA Student' },
+] as const;
+
+const DUMMY_APPS: ApplicationItem[] = [
+  {
+    id: 'research-hub',
+    name: 'Research Hub',
+    description: 'Projects & publications',
+    category: 'Research',
+    iconName: 'Award',
+    ssoEnabled: false,
+    isFavorite: false,
+    url: '#',
+  },
+  {
+    id: 'hostel-desk',
+    name: 'Hostel Desk',
+    description: 'Rooms & requests',
+    category: 'Administration',
+    iconName: 'HelpCircle',
+    ssoEnabled: false,
+    isFavorite: false,
+    url: '#',
+  },
+  {
+    id: 'club-zone',
+    name: 'Club Zone',
+    description: 'Student clubs & events',
+    category: 'Productivity',
+    iconName: 'Users',
+    ssoEnabled: false,
+    isFavorite: false,
+    url: '#',
+  },
 ];
 
 function AppDoodle({ appId, category }: { appId: string; category: string }) {
@@ -160,6 +193,21 @@ interface DashboardProps {
   onOpenApp: (app: ApplicationItem) => void;
 }
 
+type WorkspaceApp = ApplicationItem & {
+  desc: string;
+  icon: typeof GraduationCap;
+  displayCategory: string;
+  isDummy?: boolean;
+};
+
+const toApplicationCategory = (category: string): ApplicationItem['category'] => {
+  if (category === 'Admin' || category === 'Support') return 'Administration';
+  if (category === 'Resources') return 'Library';
+  if (category === 'Comm' || category === 'Quality') return 'Productivity';
+  if (category === 'Career') return 'Career';
+  return 'Academic';
+};
+
 export default function ReferenceDashboard({ user, applications, loading, onNavigate, onOpenApp }: DashboardProps) {
   const [isGrievanceOpen, setIsGrievanceOpen] = useState(false);
   const [grievanceText, setGrievanceText] = useState(() => {
@@ -169,11 +217,26 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
   const [draftError, setDraftError] = useState('');
   const [grievanceSubmitted, setGrievanceSubmitted] = useState(false);
   const [isCommunicationOpen, setIsCommunicationOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [directorySearch, setDirectorySearch] = useState('');
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setIsProfileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const userName = user.name;
+  const currentHour = new Date().getHours();
+  const timeGreeting = currentHour < 12 ? 'Good morning' : currentHour < 17 ? 'Good afternoon' : 'Good evening';
   const userSubtitle = `${user.role === 'student' ? 'PRN' : 'Emp'}: ${user.collegeId}`;
-  const filteredApps = applications.map(app => {
+  const filteredApps: WorkspaceApp[] = applications.map(app => {
     const reference = APPLICATIONS.find(item => item.id === app.id || item.name.toLowerCase() === app.name.toLowerCase());
     return {
       ...app,
@@ -182,6 +245,37 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
       displayCategory: reference?.category ?? 'Workspace',
     };
   });
+  const supplementalApps = APPLICATIONS
+    .filter((app) => !filteredApps.some((assignedApp) => assignedApp.id === app.id))
+    .map((app): WorkspaceApp => ({
+      id: app.id,
+      name: app.name,
+      description: app.desc,
+      category: toApplicationCategory(app.category),
+      iconName: app.name,
+      ssoEnabled: false,
+      isFavorite: false,
+      url: '#',
+      desc: app.desc,
+      icon: app.icon,
+      displayCategory: app.category,
+      isDummy: true,
+    }));
+  const workspaceApps: WorkspaceApp[] = [
+    ...filteredApps,
+    ...supplementalApps,
+  ].slice(0, 3).concat(
+    DUMMY_APPS.map((app) => {
+      const reference = APPLICATIONS.find(item => item.id === app.id || item.name.toLowerCase() === app.name.toLowerCase());
+      return {
+        ...app,
+        desc: app.description,
+        icon: reference?.icon ?? (app.iconName === 'Users' ? Users : app.iconName === 'Award' ? Award : HelpCircle),
+        displayCategory: app.category === 'Research' ? 'Quality' : app.category === 'Administration' ? 'Support' : 'Comm',
+        isDummy: true,
+      };
+    })
+  );
   const filteredDirectory = DIRECTORY.filter((person) =>
     `${person.name} ${person.role}`.toLowerCase().includes(directorySearch.trim().toLowerCase())
   );
@@ -199,11 +293,22 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
   };
 
   return (
-    <div className="reference-dashboard w-full max-w-[1440px] min-h-screen bg-[#f9fafb] text-[#0c1e38] font-sans flex flex-col overflow-hidden mx-auto my-0 relative shadow-2xl">
+    <div className="reference-dashboard w-full max-w-[1440px] min-h-screen bg-[#f9fafb] text-[#0c1e38] font-sans flex flex-col overflow-x-hidden mx-auto my-0 relative shadow-2xl">
+      {(isCommunicationOpen || isGrievanceOpen) && (
+        <button
+          aria-label="Close open overlay"
+          onClick={() => {
+            setIsCommunicationOpen(false);
+            setIsGrievanceOpen(false);
+          }}
+          className="fixed inset-0 z-30 cursor-default bg-white/18 backdrop-blur-[5px]"
+        />
+      )}
+      
       
       {/* HEADER - CRISP WHITE & BRANDED */}
-      <header className="h-[64px] bg-white text-[#0c1e38] flex items-center justify-between px-8 shrink-0 z-20 shadow-sm relative border-b border-[#0c1e38]/10">
-        <div className="flex items-center gap-2">
+      <header className="h-[64px] bg-white text-[#0c1e38] flex items-center justify-between px-8 shrink-0 z-40 shadow-sm relative border-b border-[#0c1e38]/10">
+        <div className="dashboard-brand flex min-w-0 items-center gap-2">
           <img src={imgLogo} alt="DYPIU Logo" className="h-11 w-auto shrink-0 object-contain" />
           <div className="h-6 w-px bg-slate-200"></div>
           <div className="flex items-center select-none">
@@ -215,7 +320,61 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
         </div>
 
         {/* User Profile */}
-        <div className="flex items-center gap-4">
+        <div className="dashboard-header-actions flex min-w-0 items-center justify-end gap-3">
+          <div className="dashboard-nav-chat relative z-50">
+            {isCommunicationOpen && (
+              <div className="fixed right-6 top-[72px] w-[292px] rounded-2xl bg-white border border-slate-100 shadow-[0_20px_46px_rgb(12,30,56,0.18)] overflow-hidden z-50">
+                <div className="bg-[#0c1e38] text-white px-3.5 py-2.5 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-serif font-bold">Communication Channel</h3>
+                    <p className="text-[10px] text-white/70 mt-0.5">Search the campus directory</p>
+                  </div>
+                  <button
+                    aria-label="Close communication channel"
+                    onClick={() => setIsCommunicationOpen(false)}
+                    className="size-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
+                <div className="p-3">
+                  <label className="relative block">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+                    <input
+                      value={directorySearch}
+                      onChange={(event) => setDirectorySearch(event.target.value)}
+                      placeholder="Search directory names..."
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-xs font-medium text-[#0c1e38] outline-none focus:border-[#ec510d]/50 focus:bg-white"
+                    />
+                  </label>
+                  <div className="mt-3 space-y-1.5">
+                    {filteredDirectory.slice(0, 3).map((person) => (
+                      <button
+                        key={`${person.name}-${person.role}`}
+                        onClick={() => onNavigate('applications')}
+                        className="w-full rounded-xl bg-slate-50 px-3 py-1.5 text-left hover:bg-orange-50/60 transition-colors"
+                      >
+                        <span className="block text-xs font-bold text-[#0c1e38]">{person.name}</span>
+                        <span className="block text-[10px] font-medium text-slate-500 mt-0.5">{person.role}</span>
+                      </button>
+                    ))}
+                    {filteredDirectory.length === 0 && (
+                      <p className="rounded-xl bg-slate-50 px-3 py-3 text-xs font-medium text-slate-500">No directory match found.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+            <button
+              onClick={() => setIsCommunicationOpen((open) => !open)}
+              className="h-9 px-3 rounded-full bg-[#0c1e38] text-white hover:bg-[#142b4b] flex items-center gap-2 text-xs font-bold shadow-sm transition-colors"
+              aria-label="Open communication channel"
+            >
+              <Users className="size-4" />
+              <span className="dashboard-action-label">Communication</span>
+            </button>
+          </div>
+
           <button aria-label="Notifications" onClick={() => onNavigate('notifications')} className="relative p-2 text-slate-500 hover:text-slate-800 transition-colors rounded-full hover:bg-slate-100">
             <Bell className="size-4" />
             <span className="absolute top-1.5 right-1.5 size-2 bg-[#ec510d] rounded-full"></span>
@@ -223,13 +382,55 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
 
           <div className="h-6 w-px bg-slate-200"></div>
 
-          <button onClick={() => onNavigate('profile')} className="flex items-center gap-2 cursor-pointer group">
-            <div className="text-right leading-none">
-              <div className="text-xs font-bold text-[#0c1e38]">{userName}</div>
-              <div className="text-[10px] text-slate-500 font-medium mt-0.5">{userSubtitle}</div>
-            </div>
-            <img src={imgProfile} alt="User Avatar" className="size-8 rounded-full border border-slate-200 object-cover" />
-          </button>
+          <div ref={profileMenuRef} className="dashboard-profile-menu relative z-50">
+            <button
+              onClick={() => {
+                setIsProfileMenuOpen((open) => !open);
+                setIsCommunicationOpen(false);
+              }}
+              className="dashboard-profile flex items-center gap-2 cursor-pointer group"
+              aria-label="Open profile menu"
+              aria-expanded={isProfileMenuOpen}
+            >
+              <div className="text-right leading-none">
+                <div className="text-xs font-bold text-[#0c1e38]">{userName}</div>
+                <div className="text-[10px] text-slate-500 font-medium mt-0.5">{userSubtitle}</div>
+              </div>
+              <img src={imgProfile} alt="User Avatar" className="size-8 rounded-full border border-slate-200 object-cover" />
+            </button>
+
+            {isProfileMenuOpen && (
+              <div className="absolute right-0 top-[calc(100%+12px)] w-[372px] overflow-hidden rounded-b-2xl rounded-t-sm border border-slate-200 bg-white shadow-[0_18px_48px_rgb(12,30,56,0.16)]">
+                <div className="px-5 py-4 bg-white">
+                  <p className="text-base font-extrabold leading-tight text-[#02022D]">{userName}</p>
+                  <p className="mt-1 truncate text-sm font-medium text-blue-600">{user.email}</p>
+                </div>
+                <div className="border-t border-slate-200">
+                  <button
+                    onClick={() => { onNavigate('profile'); setIsProfileMenuOpen(false); }}
+                    className="flex w-full items-center gap-4 px-5 py-3.5 text-left text-base font-semibold text-[#02022D] hover:bg-slate-50 transition-colors"
+                  >
+                    <User className="size-5" />
+                    <span>My Profile</span>
+                  </button>
+                  <button
+                    onClick={() => { onNavigate('settings'); setIsProfileMenuOpen(false); }}
+                    className="flex w-full items-center gap-4 px-5 py-3.5 text-left text-base font-semibold text-[#02022D] hover:bg-slate-50 transition-colors"
+                  >
+                    <Settings className="size-5" />
+                    <span>Preferences</span>
+                  </button>
+                </div>
+                <button
+                  onClick={() => { setIsProfileMenuOpen(false); window.location.href = '/logout'; }}
+                  className="flex w-full items-center gap-4 border-t border-slate-200 px-5 py-3.5 text-left text-base font-semibold text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  <LogOut className="size-5" />
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -237,54 +438,55 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
       <main className="flex-1 p-8 gap-8 dashboard-canvas grid grid-cols-12 bg-[#f9fafb]">
         
         {/* LEFT COLUMN (8 Cols) */}
-        <div className="col-span-8 flex flex-col gap-8 min-h-0">
+        <div className="dashboard-left col-span-8 flex flex-col gap-3.5 min-h-0">
           
           {/* USER GREETING */}
-          <div className="dashboard-greeting flex items-center justify-between gap-5">
+          <section className="dashboard-greeting flex items-center justify-between gap-4 bg-white border border-slate-100 rounded-2xl px-5 py-3.5 shadow-[0_8px_24px_rgb(12,30,56,0.045)]">
             <div className="min-w-0">
               <h1 className="text-3xl font-serif font-bold text-[#0c1e38] tracking-tight">
-                Good morning, {userName.split(' ')[0]} 👋
+                {timeGreeting}, {userName.split(' ')[0]} 👋
               </h1>
               <p className="text-[15px] font-medium text-slate-500 mt-2">
                 Here is what's happening across the campus today.
               </p>
             </div>
-            <section className="dashboard-thought shrink-0 w-[320px] bg-white border border-orange-100 rounded-2xl px-4 py-3 shadow-[0_12px_34px_rgb(12,30,56,0.08)] relative overflow-hidden">
-              <div className="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-[#0c1e38] to-[#ec510d]"></div>
-              <div className="absolute -right-8 -top-8 size-20 rounded-full bg-orange-100/70"></div>
+            <div className="dashboard-thought shrink-0 w-[310px] bg-orange-50/45 border border-orange-100/80 rounded-2xl px-4 py-2.5 relative overflow-hidden">
+              <div className="absolute inset-y-3 left-0 w-1 rounded-r-full bg-[#ec510d]"></div>
+              <div className="absolute -right-10 -top-10 size-20 rounded-full bg-orange-100/45"></div>
               <div className="relative z-10 flex items-center justify-between gap-3 mb-1.5">
                 <div className="flex items-center gap-2">
-                  <span className="size-7 rounded-full bg-orange-50 text-[#ec510d] flex items-center justify-center">
+                  <span className="size-7 rounded-full bg-white text-[#ec510d] flex items-center justify-center shadow-sm">
                     <Sparkles className="size-3.5" />
                   </span>
                   <h2 className="text-sm font-serif font-bold text-[#0c1e38]">Daily Thoughts</h2>
                 </div>
-                <span className="text-3xl font-serif leading-none text-[#ec510d]/20">“</span>
               </div>
               <p className="relative z-10 text-xs font-semibold leading-relaxed text-slate-600">
                 Small steps every day build the confidence for bigger ideas tomorrow.
               </p>
-            </section>
-          </div>
+            </div>
+          </section>
 
           {/* APPS LAUNCHER */}
-          <section className="dashboard-workspace bg-white rounded-3xl shadow-[0_8px_40px_rgb(12,30,56,0.06)] flex flex-col shrink-0 overflow-hidden relative border border-slate-100">
-            {/* Elegant Header Accent */}
-            <div className="absolute top-0 left-0 w-full h-[6px] bg-gradient-to-r from-[#0c1e38] via-indigo-800 to-[#ec510d] z-20"></div>
+          <section className="dashboard-workspace bg-[#E9EEF7] rounded-2xl shadow-[0_16px_38px_rgb(12,30,56,0.16)] flex flex-col shrink-0 overflow-hidden relative border border-[#172b4d]/35">
+            <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-[#0c1e38] via-[#314d83] to-[#ec510d] z-20"></div>
+            <div className="absolute -right-20 -top-24 size-56 rounded-full border border-[#0c1e38]/[0.04] pointer-events-none"></div>
+            <div className="absolute -left-16 -bottom-20 size-48 rounded-full border-[10px] border-violet-400/[0.035] pointer-events-none"></div>
+            <div className="absolute right-24 bottom-8 size-20 rotate-12 rounded-2xl border border-orange-400/[0.04] pointer-events-none"></div>
 
-            <div className="px-8 py-6 flex items-center justify-between border-b border-slate-50 relative z-10 bg-white">
-              <div className="flex items-center gap-4">
+            <div className="workspace-header px-5 py-3.5 flex items-center justify-between border-b border-slate-300/90 relative z-10 bg-[#dfe6f1]/95">
+              <div>
                 <h2 className="text-2xl font-serif font-bold text-[#0c1e38] tracking-tight">Your Workspace</h2>
+                <p className="text-xs font-medium text-slate-500 mt-1">Quick access to your campus tools</p>
               </div>
-              <a href="#applications" onClick={(event) => { event.preventDefault(); onNavigate('applications'); }} className="text-xs font-bold text-[#ec510d] hover:text-[#de4909] flex items-center gap-1 px-4 py-2 bg-orange-50 hover:bg-orange-100 rounded-xl transition-colors">
+              <a href="#applications" onClick={(event) => { event.preventDefault(); onNavigate('applications'); }} className="text-xs font-bold text-[#d94a0c] hover:text-[#c53e08] flex items-center gap-1 px-4 py-2.5 bg-white border border-orange-200 shadow-sm hover:shadow-md hover:bg-orange-50 rounded-xl transition-all">
                 View All Apps <ChevronRight className="size-3.5" />
               </a>
             </div>
 
-            <div className="p-8 pt-6 grid grid-cols-3 gap-6 relative z-10 bg-gradient-to-b from-white to-slate-50/30">
+            <div className="workspace-grid px-5 py-3.5 grid grid-cols-3 gap-3 relative z-10 bg-[#e8edf6]/70">
               {loading && <p role="status" className="col-span-full text-sm text-slate-500">Loading your workspace…</p>}
-              {!loading && filteredApps.length === 0 && <p className="col-span-full text-sm text-slate-500">No applications are assigned to your account.</p>}
-              {filteredApps.slice(0, 6).map((app) => {
+              {workspaceApps.map((app) => {
                 const getAppStyle = (category: string) => {
                   switch(category) {
                     case 'Academic': return {
@@ -327,30 +529,28 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
                 return (
                   <a
                     key={app.id}
-                    href={app.url} onClick={(event) => { event.preventDefault(); onOpenApp(app); }}
-                    className="workspace-app group border border-slate-200/70 rounded-[20px] p-5 flex flex-col justify-between h-[132px] transition-all duration-300 hover:-translate-y-1 hover:border-[#0c1e38]/20 shadow-[0_8px_22px_rgb(12,30,56,0.04)] hover:shadow-[0_16px_32px_rgb(12,30,56,0.08)] relative overflow-hidden bg-white"
+                    href={app.url} onClick={(event) => { event.preventDefault(); if (!app.isDummy) onOpenApp(app); }}
+                    className="workspace-app group border border-slate-200 rounded-xl p-3 flex items-center gap-3 h-[82px] transition-all duration-300 hover:-translate-y-0.5 hover:border-[#ec510d]/45 shadow-[0_5px_12px_rgb(12,30,56,0.07)] hover:shadow-[0_12px_24px_rgb(12,30,56,0.12)] relative overflow-hidden bg-white/95"
                   >
-                    <div className={`absolute inset-y-4 left-0 w-1 rounded-r-full ${appStyle.accent}`}></div>
+                    <div className={`absolute inset-y-3 left-0 w-1 rounded-r-full ${appStyle.accent}`}></div>
+                    <div className={`absolute -right-9 -bottom-9 size-18 rounded-full ${appStyle.accent} opacity-[0.045] group-hover:scale-125 transition-transform duration-300`}></div>
 
-                    <div className="relative z-10 flex items-start justify-between">
-                      <div className={`workspace-doodle-wrap rounded-2xl border shadow-sm group-hover:scale-105 transition-all duration-300 ${appStyle.doodle}`}>
-                        <AppDoodle appId={app.id} category={app.displayCategory} />
-                      </div>
-                      
-                      {/* Go Button */}
-                      <div className="size-8 rounded-full bg-white border border-slate-100 flex items-center justify-center opacity-0 group-hover:opacity-100 group-hover:bg-[#ec510d] transition-all duration-300 translate-x-4 group-hover:translate-x-0 shadow-sm">
-                        <ChevronRight className="size-4 text-white" />
-                      </div>
+                    <div className={`workspace-doodle-wrap relative z-10 rounded-xl border shadow-sm group-hover:scale-105 transition-all duration-300 ${appStyle.doodle}`}>
+                      <AppDoodle appId={app.id} category={app.displayCategory} />
                     </div>
                     
-                    <div className="relative z-10 mt-4">
-                      <h3 className="text-[15px] font-bold text-[#0c1e38] group-hover:text-[#ec510d] transition-colors leading-tight mb-1.5 truncate">
+                    <div className="relative z-10 min-w-0 flex-1">
+                      <h3 className="text-[14px] font-bold text-[#0c1e38] group-hover:text-[#ec510d] transition-colors leading-tight truncate">
                         {app.name}
                       </h3>
-                      <p className="text-xs font-medium text-slate-500 line-clamp-1 group-hover:text-slate-600 transition-colors">
+                      <p className="text-[11px] font-medium text-slate-500 line-clamp-2 group-hover:text-slate-600 transition-colors mt-1 leading-snug">
                         {app.desc}
                       </p>
                     </div>
+
+                    <span className="relative z-10 size-7 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-[#ec510d] group-hover:text-white group-hover:border-[#ec510d] transition-colors shrink-0">
+                      <ChevronRight className="size-3.5" />
+                    </span>
                   </a>
                 );
               })}
@@ -359,123 +559,62 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
 
           {/* QUICK ACTIONS */}
           <div className="dashboard-lower flex-1 min-h-0">
-            <section className="dashboard-action-stack grid grid-cols-[1.05fr_1.1fr_1.65fr] gap-3 items-start">
-              <div className="rounded-2xl border border-orange-100 bg-orange-50/40 p-3 shadow-sm">
-                <h3 className="text-sm font-serif font-bold text-[#0c1e38] tracking-tight mb-3">Campus Support</h3>
-                <div className="space-y-3">
-                  <div className="flex items-start gap-3">
-                    <span className="size-11 rounded-full bg-[#ec510d] text-white flex items-center justify-center shrink-0 shadow-sm">
-                      <AlertCircle className="size-5" />
+            <section className="dashboard-action-stack grid grid-cols-[0.38fr_0.62fr] gap-4 items-stretch">
+              <div className="dashboard-birthdays rounded-2xl bg-white border border-pink-100/90 shadow-sm px-4 py-2 relative overflow-hidden">
+                <div className="absolute right-7 top-3 text-[38px] leading-none text-pink-300/70 rotate-[-16deg] pointer-events-none">♡</div>
+                <div className="absolute right-16 top-5 size-1.5 rounded-full bg-orange-300/60 pointer-events-none"></div>
+                <div className="absolute right-[92px] top-10 size-1.5 rounded-full bg-pink-300/65 pointer-events-none"></div>
+                <div className="absolute right-4 top-12 size-1.5 rounded-full bg-orange-300/60 pointer-events-none"></div>
+                <div className="relative z-10 flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    <span className="size-9 rounded-xl bg-pink-50 text-rose-500 flex items-center justify-center">
+                      <Gift className="size-4" />
                     </span>
-                    <div className="min-w-0 flex-1">
-                      <h4 className="text-xs font-bold text-[#0c1e38]">Grievance Cell</h4>
-                      <p className="text-[10px] font-medium text-slate-600 leading-snug">Have an issue or concern? We are here to help.</p>
-                    </div>
+                    <h3 className="text-[20px] font-serif font-bold text-[#0c1e38] tracking-tight">Birthdays Today</h3>
                   </div>
-                  {grievanceSubmitted ? (
-                    <div className="rounded-xl bg-white px-3 py-2 text-xs font-bold text-[#ec510d] flex items-center justify-center gap-2 border border-orange-100">
-                      <CheckCircle2 className="size-4" /> Draft saved
-                      <button onClick={() => setGrievanceSubmitted(false)} className="underline">Edit</button>
-                    </div>
-                  ) : isGrievanceOpen ? (
-                    <form onSubmit={handleRaiseGrievance} className="space-y-2 rounded-xl bg-white p-3 border border-orange-100">
-                      {draftError && <p role="alert" className="text-xs text-[#ec510d]">{draftError}</p>}
-                      <textarea
-                        value={grievanceText}
-                        onChange={(e) => setGrievanceText(e.target.value)}
-                        aria-label="Describe your concern"
-                        placeholder="Describe your concern..."
-                        className="w-full h-14 bg-slate-50 text-[#0c1e38] text-xs p-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-100 resize-none placeholder-slate-500"
-                      />
-                      <div className="flex items-center justify-end gap-2">
-                        <button type="button" onClick={() => setIsGrievanceOpen(false)} className="text-xs font-bold text-slate-500 hover:text-[#0c1e38] px-2 py-1">Cancel</button>
-                        <button type="submit" className="bg-[#ec510d] hover:bg-[#de4909] text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5">
-                          <Send className="size-3" /> Save
-                        </button>
-                      </div>
-                    </form>
-                  ) : (
-                    <button onClick={() => setIsGrievanceOpen(true)} className="w-full bg-[#ff4f12] hover:bg-[#de4909] text-white text-xs font-bold py-2.5 px-3 rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm">
-                      Raise a Ticket <ChevronRight className="size-3.5" />
-                    </button>
-                  )}
-                  <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-3">
-                    <div className="flex items-start gap-3">
-                      <span className="size-10 rounded-full bg-white text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
-                        <Users className="size-5" />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <h4 className="text-xs font-bold text-[#0c1e38]">Communication Channel</h4>
-                        <p className="text-[10px] font-medium text-slate-600 leading-snug">Connect with the university community for updates and announcements.</p>
-                      </div>
-                    </div>
-                    {!isCommunicationOpen ? (
-                      <button onClick={() => setIsCommunicationOpen(true)} className="mt-3 w-full bg-white text-blue-700 border border-blue-200 hover:border-blue-300 text-xs font-bold py-2 rounded-lg flex items-center justify-center gap-2 transition-colors">
-                        Open Channel <ChevronRight className="size-3.5" />
-                      </button>
-                    ) : (
-                      <div className="mt-3 rounded-xl bg-white border border-blue-100 p-2">
-                        <label className="relative block">
-                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-slate-400" />
-                          <input value={directorySearch} onChange={(event) => setDirectorySearch(event.target.value)} placeholder="Search directory names..." className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-8 pr-3 text-xs font-medium text-[#0c1e38] outline-none focus:border-blue-300 focus:bg-white" />
-                        </label>
-                        <div className="mt-2 space-y-1.5">
-                          {filteredDirectory.slice(0, 3).map((person) => (
-                            <button key={`${person.name}-${person.role}`} onClick={() => onNavigate('applications')} className="w-full rounded-lg bg-slate-50 px-2.5 py-1.5 text-left hover:bg-blue-50 transition-colors">
-                              <span className="block text-[11px] font-bold text-[#0c1e38]">{person.name}</span>
-                              <span className="block text-[9px] font-medium text-slate-500">{person.role}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="dashboard-birthdays rounded-2xl bg-gradient-to-br from-pink-50 via-white to-orange-50 border border-pink-100 shadow-sm px-4 py-3 relative overflow-hidden">
-                <div className="absolute -right-7 -top-7 size-20 rounded-full bg-pink-200/45 pointer-events-none"></div>
-                <div className="absolute right-9 top-9 size-3 rounded-full bg-[#ec510d]/25 pointer-events-none"></div>
-                <div className="absolute right-5 bottom-5 size-2 rounded-full bg-pink-400/30 pointer-events-none"></div>
-                <div className="relative z-10 flex items-center justify-between mb-3">
-                  <div className="flex items-center">
-                    <h3 className="text-sm font-serif font-bold text-[#0c1e38] tracking-tight">Birthdays Today</h3>
-                  </div>
-                  <a href="#birthdays" onClick={(event) => event.preventDefault()} className="text-[10px] font-bold text-blue-600 flex items-center gap-1">View All <ChevronRight className="size-3" /></a>
+                  <a href="#birthdays" onClick={(event) => event.preventDefault()} className="text-sm font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1">View All <ChevronRight className="size-4" /></a>
                 </div>
                 <div className="relative z-10 space-y-2">
-                  {BIRTHDAYS.map((person) => (
-                    <div key={person.name} className="flex items-center justify-between gap-2 rounded-xl bg-white/80 px-3 py-2 border border-white/70 shadow-[0_6px_16px_rgb(236,81,13,0.06)]">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="size-8 rounded-full bg-pink-100 text-pink-600 flex items-center justify-center text-[10px] font-bold shrink-0">
+                  {BIRTHDAYS.map((person, index) => {
+                    const variants = [
+                      'bg-rose-50/85 border-rose-100 text-rose-600 from-rose-100 to-pink-50',
+                      'bg-orange-50/70 border-orange-100 text-orange-600 from-orange-100 to-amber-50',
+                      'bg-purple-50/75 border-purple-100 text-purple-600 from-purple-100 to-violet-50',
+                    ];
+                    const variant = variants[index % variants.length];
+                    return (
+                    <div key={person.name} className={`birthday-row flex items-center justify-between gap-3 rounded-2xl border px-3 py-1.5 shadow-[0_5px_14px_rgb(12,30,56,0.035)] ${variant}`}>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className={`birthday-avatar size-9 rounded-full bg-gradient-to-br ${variant} flex items-center justify-center text-sm font-extrabold shrink-0`}>
                           {person.name.split(' ').map(part => part[0]).join('')}
                         </span>
                         <div className="min-w-0">
-                          <div className="text-xs font-bold text-[#0c1e38] truncate">{person.name}</div>
-                          <div className="text-[10px] font-medium text-slate-500 truncate">{person.role}</div>
+                          <div className="text-sm font-extrabold text-[#0c1e38] truncate">{person.name}</div>
+                          <div className="text-xs font-medium text-slate-500 truncate">{person.role}</div>
                         </div>
                       </div>
-                      <Cake className="size-4 text-[#ec510d] shrink-0" />
+                      <span className="birthday-cake size-9 rounded-full bg-white/55 flex items-center justify-center shrink-0">
+                        <Cake className="size-4" />
+                      </span>
                     </div>
-                  ))}
+                  )})}
                 </div>
               </div>
 
               <div className="dashboard-policy rounded-2xl bg-gradient-to-br from-[#0c1e38] via-[#132b4d] to-[#0c1e38] border border-[#0c1e38]/20 shadow-lg px-4 py-3 relative overflow-hidden">
                 <div className="absolute -right-8 -bottom-10 w-32 h-40 rounded-2xl border border-white/10 bg-white/5 rotate-[-10deg] pointer-events-none"></div>
                 <div className="absolute right-3 top-3 h-16 w-20 rounded-xl border border-white/10 pointer-events-none"></div>
-                <div className="relative z-10 flex items-center justify-between mb-3">
+                <div className="relative z-10 flex items-center justify-between mb-2">
                   <div className="flex items-center">
                     <h3 className="text-sm font-serif font-bold text-white tracking-tight">University Policy</h3>
                   </div>
                   <a href="#policies" onClick={(event) => event.preventDefault()} className="text-[10px] font-bold text-sky-200 hover:text-white flex items-center gap-1">View All <ChevronRight className="size-3" /></a>
                 </div>
-                <div className="relative z-10 space-y-2">
+                <div className="relative z-10 space-y-1.5">
                   {[
                     ['Code of Conduct Policy', 'Effective from 1 Sep 2025', 'Updated'],
                     ['Attendance Guidelines', 'For all students and faculty', 'Reminder'],
                     ['Academic Integrity Policy', 'Maintaining ethical standards', ''],
-                    ['Leave and Permission Policy', 'Applicable for staff and faculty', ''],
                   ].map(([title, detail, badge]) => (
                     <div key={title} className="flex items-center justify-between gap-3 rounded-xl bg-white/95 px-2.5 py-2 border border-white/20 hover:bg-white transition-colors">
                       <div className="flex items-center gap-2 min-w-0">
@@ -501,14 +640,14 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
         </div>
 
         {/* RIGHT COLUMN (4 Cols) */}
-        <div className="col-span-4 flex flex-col gap-6 min-h-0">
+        <div className="dashboard-right col-span-4 flex flex-col gap-4 min-h-0">
           
           {/* NOTICE BOARD */}
-          <section className="dashboard-notices flex flex-col overflow-hidden relative rounded-2xl border-8 border-black bg-black shadow-inner">
+          <section className="dashboard-notices flex flex-col overflow-hidden relative rounded-2xl border-8 border-[#252a32] bg-[#343a43] shadow-inner">
             {/* Pegboard dot pattern using highly performant CSS radial gradient */}
             <div className="absolute inset-0 z-0 opacity-35 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#475569 1.5px, transparent 1.5px)', backgroundSize: '16px 16px' }}></div>
             
-            <div className="flex items-center justify-between px-5 py-4 bg-black border-b border-white/10 relative z-10">
+            <div className="flex items-center justify-between px-5 py-4 bg-[#252a32] border-b border-white/10 relative z-10">
               <div className="flex items-center gap-3">
                 <h3 className="text-lg font-serif font-bold text-white tracking-tight">Notice Board</h3>
               </div>
@@ -555,7 +694,7 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
               </div>
             </div>
             <div className="flex-1 overflow-y-auto p-4 pt-0 space-y-3 relative z-10 scrollbar-hide [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-              {EVENTS.map((evt) => (
+              {EVENTS.slice(0, 3).map((evt) => (
                 <div key={evt.id} className="flex gap-4 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors border border-white/5">
                   <div className="rounded-lg bg-white/10 w-[52px] h-[60px] flex flex-col items-center justify-center shrink-0">
                     <div className="text-[10px] font-bold uppercase text-[#ec510d]">{evt.month}</div>
@@ -573,8 +712,76 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
             </div>
           </section>
 
+          <section className="dashboard-grievance rounded-2xl bg-[#fff3e8] border border-orange-200 shadow-[0_10px_28px_rgb(236,81,13,0.14)] px-4 py-3 flex items-center justify-between gap-3 relative overflow-hidden">
+            <div className="absolute inset-y-0 left-0 w-1.5 bg-[#ec510d] pointer-events-none"></div>
+            <div className="absolute -right-8 -top-10 size-24 rounded-full bg-orange-200/45 pointer-events-none"></div>
+            <div className="absolute right-10 bottom-2 size-8 rounded-full bg-white/55 pointer-events-none"></div>
+            <div className="relative z-10 flex items-center gap-3 min-w-0">
+              <span className="size-10 rounded-2xl bg-[#ec510d] text-white flex items-center justify-center shadow-sm shrink-0">
+                <AlertCircle className="size-5" />
+              </span>
+              <div className="min-w-0">
+                <h3 className="text-sm font-serif font-bold text-[#0c1e38] tracking-tight">Grievance Cell</h3>
+                <p className="text-[11px] font-medium text-slate-500 truncate">Have an issue or concern?</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsGrievanceOpen(true)}
+              className="relative z-10 bg-[#ec510d] hover:bg-[#de4909] text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-sm shrink-0"
+            >
+              Raise Ticket <ChevronRight className="size-3.5" />
+            </button>
+          </section>
+
         </div>
       </main>
+
+      {isGrievanceOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <form onSubmit={handleRaiseGrievance} className="w-full max-w-[460px] rounded-2xl bg-white border border-orange-100 shadow-[0_24px_70px_rgb(12,30,56,0.24)] overflow-hidden">
+            <div className="bg-gradient-to-r from-[#ec510d] to-[#de4909] text-white px-5 py-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-serif font-bold">Grievance Cell</h3>
+                <p className="text-xs text-white/80 mt-1">Fill your concern and save it as a draft.</p>
+              </div>
+              <button
+                type="button"
+                aria-label="Close grievance form"
+                onClick={() => setIsGrievanceOpen(false)}
+                className="size-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              {draftError && <p role="alert" className="rounded-xl bg-orange-50 px-3 py-2 text-xs font-medium text-[#ec510d]">{draftError}</p>}
+              {grievanceSubmitted && (
+                <div className="rounded-xl bg-green-50 px-3 py-2 text-xs font-bold text-green-700 flex items-center gap-2">
+                  <CheckCircle2 className="size-4" /> Draft saved on this device
+                </div>
+              )}
+              <label className="block">
+                <span className="text-xs font-bold text-[#0c1e38]">Describe your concern</span>
+                <textarea
+                  value={grievanceText}
+                  onChange={(e) => setGrievanceText(e.target.value)}
+                  aria-label="Describe your concern"
+                  placeholder="Write your academic, administrative, or hostel concern..."
+                  className="mt-2 w-full h-32 bg-slate-50 text-[#0c1e38] text-sm p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-100 focus:border-[#ec510d]/50 resize-none placeholder-slate-500"
+                />
+              </label>
+              <p className="text-xs font-medium text-slate-500">Draft only. University ticket submission is not connected yet.</p>
+              <div className="flex items-center justify-end gap-3">
+                <button type="button" onClick={() => setIsGrievanceOpen(false)} className="text-xs font-bold text-slate-500 hover:text-[#0c1e38] px-3 py-2">Cancel</button>
+                <button type="submit" className="bg-[#ec510d] hover:bg-[#de4909] text-white text-xs font-bold px-4 py-2.5 rounded-lg flex items-center gap-1.5 shadow-sm">
+                  <Send className="size-3.5" /> Save Draft
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      )}
+
     </div>
   );
 }
