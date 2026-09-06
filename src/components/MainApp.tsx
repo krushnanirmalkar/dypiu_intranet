@@ -11,6 +11,7 @@ import { ApplicationsGrid } from './ApplicationsGrid';
 import { AppSidebar } from './AppSidebar';
 import { EventCard } from './EventCard';
 import { TopNavbar } from './TopNavbar';
+import ReferenceDashboard from './ReferenceDashboard';
 import { WelcomeBanner } from './WelcomeBanner';
 
 const USE_DEV_PREVIEW = import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_AUTH === 'true';
@@ -257,6 +258,10 @@ export const MainApp: React.FC = () => {
 
   if (authLoading || !authenticated || !authenticatedUser || !currentRole || !currentUser) {
     return <div className="flex min-h-screen items-center justify-center bg-navy-50"><div className="text-center"><div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-navy-200 border-t-navy-800" /><p className="mt-3 text-sm font-semibold text-navy-700">Verifying university session...</p></div></div>;
+  }
+
+  if (currentNav === 'dashboard') {
+    return <ReferenceDashboard user={currentUser} applications={applications} loading={applicationsLoading} onNavigate={setCurrentNav} onOpenApp={openApplication} />;
   }
 
   return (
