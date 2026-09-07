@@ -323,7 +323,9 @@ app.get("/auth/callback", async (req, res) => {
         sub: payload.sub,
         name: payload.name,
         email: payload.email,
-        picture: normalizeProfilePicture(payload.picture),
+        picture: normalizeProfilePicture(
+          payload.picture || accessPayload.picture
+        ),
         roles
       };
 

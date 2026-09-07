@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import imgLogo from "../assets/dashboard/logo.png";
-import imgProfile from "../assets/dashboard/profile.png";
 import { Bell, AlertCircle, ChevronRight, BookOpen, GraduationCap, FileText, Laptop, Bookmark, Users, CheckCircle2, Briefcase, Award, HelpCircle, Clock, MapPin, Send, Sparkles, Search, X, Cake, Gift, User, Settings, LogOut } from 'lucide-react';
 import type { ApplicationItem, UserProfile } from '../types';
 
@@ -218,6 +217,7 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
   const [grievanceSubmitted, setGrievanceSubmitted] = useState(false);
   const [isCommunicationOpen, setIsCommunicationOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [failedProfilePhoto, setFailedProfilePhoto] = useState<string | null>(null);
   const [directorySearch, setDirectorySearch] = useState('');
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
@@ -233,6 +233,13 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
   }, []);
 
   const userName = user.name;
+  const userInitials = userName
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('') || '?';
   const currentHour = new Date().getHours();
   const timeGreeting = currentHour < 12 ? 'Good morning' : currentHour < 17 ? 'Good afternoon' : 'Good evening';
   const userSubtitle = `${user.role === 'student' ? 'PRN' : 'Emp'}: ${user.collegeId}`;
@@ -396,16 +403,22 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
                 <div className="text-xs font-bold text-[#0c1e38]">{userName}</div>
                 <div className="text-[10px] text-slate-500 font-medium mt-0.5">{userSubtitle}</div>
               </div>
-              <img
-                src={user.avatar || imgProfile}
-                alt={`${userName}'s profile`}
-                referrerPolicy="no-referrer"
-                onError={(event) => {
-                  event.currentTarget.onerror = null;
-                  event.currentTarget.src = imgProfile;
-                }}
-                className="size-8 rounded-full border border-slate-200 object-cover"
-              />
+              {user.avatar && failedProfilePhoto !== user.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt={`${userName}'s profile`}
+                  referrerPolicy="no-referrer"
+                  onError={() => setFailedProfilePhoto(user.avatar)}
+                  className="size-8 rounded-full border border-slate-200 object-cover"
+                />
+              ) : (
+                <span
+                  aria-label={`${userName}'s profile`}
+                  className="size-8 rounded-full border border-slate-200 bg-slate-100 text-[10px] font-extrabold text-[#0c1e38] flex items-center justify-center"
+                >
+                  {userInitials}
+                </span>
+              )}
             </button>
 
             {isProfileMenuOpen && (

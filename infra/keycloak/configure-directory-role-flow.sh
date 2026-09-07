@@ -5,6 +5,7 @@ REALM="${KEYCLOAK_REALM:-dypiu}"
 FLOW="DYPIU Post Broker Login"
 PROVIDER="dypiu-directory-role-authenticator"
 IDP="${KEYCLOAK_IDP:-google}"
+CLIENT_ID="${KEYCLOAK_CLIENT_ID:-dypiu-intranet}"
 KCADM="${KCADM:-/opt/keycloak/bin/kcadm.sh}"
 
 echo "Configuring DYPIU Directory role flow in realm: $REALM"
@@ -95,6 +96,81 @@ echo "Attaching flow to identity provider: $IDP"
     "identity-provider/instances/${IDP}" \
     -r "$REALM" \
     -s postBrokerLoginFlowAlias="$FLOW"
+
+# --------------------------------------------------
+# 5. Import Google's picture claim on every login
+# --------------------------------------------------
+
+PICTURE_IDP_MAPPER="Google picture"
+
+if "$KCADM" get \
+    "identity-provider/instances/${IDP}/mappers" \
+    -r "$REALM" \
+    --fields name \
+    | grep -Fq "\"name\" : \"$PICTURE_IDP_MAPPER\""; then
+
+    echo "Google picture identity-provider mapper already exists."
+
+else
+    echo "Creating Google picture identity-provider mapper"
+
+    "$KCADM" create \
+        "identity-provider/instances/${IDP}/mappers" \
+        -r "$REALM" \
+        -s name="$PICTURE_IDP_MAPPER" \
+        -s identityProviderAlias="$IDP" \
+        -s identityProviderMapper="oidc-user-attribute-idp-mapper" \
+        -s 'config."syncMode"=FORCE' \
+        -s 'config."claim"=picture' \
+        -s 'config."user.attribute"=picture'
+fi
+
+# --------------------------------------------------
+# 6. Emit the stored picture in this application's tokens
+# --------------------------------------------------
+
+CLIENT_UUID="$(
+    "$KCADM" get clients \
+        -r "$REALM" \
+        -q clientId="$CLIENT_ID" \
+        --fields id,clientId \
+        --format csv \
+        --noquotes \
+    | awk -F',' -v client="$CLIENT_ID" '$2 == client { print $1; exit }'
+)"
+
+if [ -z "$CLIENT_UUID" ]; then
+    echo "ERROR: Could not find Keycloak client: $CLIENT_ID" >&2
+    exit 1
+fi
+
+PICTURE_TOKEN_MAPPER="picture"
+
+if "$KCADM" get \
+    "clients/${CLIENT_UUID}/protocol-mappers/models" \
+    -r "$REALM" \
+    --fields name \
+    | grep -Fq "\"name\" : \"$PICTURE_TOKEN_MAPPER\""; then
+
+    echo "Picture token mapper already exists."
+
+else
+    echo "Creating picture token mapper for client: $CLIENT_ID"
+
+    "$KCADM" create \
+        "clients/${CLIENT_UUID}/protocol-mappers/models" \
+        -r "$REALM" \
+        -s name="$PICTURE_TOKEN_MAPPER" \
+        -s protocol="openid-connect" \
+        -s protocolMapper="oidc-usermodel-attribute-mapper" \
+        -s 'config."user.attribute"=picture' \
+        -s 'config."claim.name"=picture' \
+        -s 'config."jsonType.label"=String' \
+        -s 'config."id.token.claim"=true' \
+        -s 'config."access.token.claim"=true' \
+        -s 'config."userinfo.token.claim"=true' \
+        -s 'config."multivalued"=false'
+fi
 
 echo
 echo "DYPIU Directory role flow configured successfully."
