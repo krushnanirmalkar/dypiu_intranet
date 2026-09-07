@@ -21,6 +21,7 @@ interface SessionUser {
   sub: string;
   name: string;
   email: string;
+  picture?: string;
   roles: string[];
 }
 
@@ -46,7 +47,7 @@ const createPreviewSessionUser = (user: AuthenticatedUser): SessionUser => {
   };
 };
 
-const hasValidIdentity = (user: unknown): user is { sub: string; name: string; email: string; roles?: unknown } => {
+const hasValidIdentity = (user: unknown): user is { sub: string; name: string; email: string; picture?: unknown; roles?: unknown } => {
   if (typeof user !== 'object' || user === null) return false;
   const candidate = user as Record<string, unknown>;
   return typeof candidate.sub === 'string' && candidate.sub.length > 0
@@ -60,7 +61,7 @@ const buildProfile = (user: SessionUser, role: UserRole): UserProfile => ({
   email: user.email,
   role,
   roleTitle: role === 'staff' ? 'Staff' : role === 'admin' ? 'Administrator' : 'Student',
-  avatar: '',
+  avatar: user.picture ?? '',
   collegeId: user.email.split('@')[0],
   department: 'D Y Patil International University',
   yearOrDesignation: role === 'student' ? 'Student' : role === 'staff' ? 'Staff' : 'Administration',
@@ -175,6 +176,7 @@ export const MainApp: React.FC = () => {
               sub: data.user.sub,
               name: data.user.name,
               email: data.user.email,
+              picture: typeof data.user.picture === 'string' ? data.user.picture : undefined,
               roles,
             });
             setCurrentRole(resolvedRole);

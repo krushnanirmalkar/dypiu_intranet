@@ -396,7 +396,16 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
                 <div className="text-xs font-bold text-[#0c1e38]">{userName}</div>
                 <div className="text-[10px] text-slate-500 font-medium mt-0.5">{userSubtitle}</div>
               </div>
-              <img src={imgProfile} alt="User Avatar" className="size-8 rounded-full border border-slate-200 object-cover" />
+              <img
+                src={user.avatar || imgProfile}
+                alt={`${userName}'s profile`}
+                referrerPolicy="no-referrer"
+                onError={(event) => {
+                  event.currentTarget.onerror = null;
+                  event.currentTarget.src = imgProfile;
+                }}
+                className="size-8 rounded-full border border-slate-200 object-cover"
+              />
             </button>
 
             {isProfileMenuOpen && (

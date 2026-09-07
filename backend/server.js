@@ -68,6 +68,17 @@ function auditRequestMetadata(req) {
   };
 }
 
+function normalizeProfilePicture(value) {
+  if (typeof value !== "string" || value.length > 2048) return null;
+
+  try {
+    const pictureUrl = new URL(value);
+    return pictureUrl.protocol === "https:" ? pictureUrl.href : null;
+  } catch {
+    return null;
+  }
+}
+
 const POST_LOGOUT_REDIRECT_URI =
   "https://intranet.dypiu.ac.in/signed-out";
 
@@ -312,6 +323,7 @@ app.get("/auth/callback", async (req, res) => {
         sub: payload.sub,
         name: payload.name,
         email: payload.email,
+        picture: normalizeProfilePicture(payload.picture),
         roles
       };
 
