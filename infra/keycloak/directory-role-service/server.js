@@ -126,11 +126,116 @@ function requireInternalToken(req, res, next) {
 }
 
 
+function decodeGooglePhoto(photoData) {
+  if (typeof photoData !== "string" || !/^[A-Za-z0-9_.\-*]+$/.test(photoData)) {
+    return null;
+  }
+
+  const base64 = photoData
+    .replace(/_/g, "/")
+    .replace(/-/g, "+")
+    .replace(/[.*]/g, "=");
+
+  return Buffer.from(base64, "base64");
+}
+
+
+function photoContentType(mimeType) {
+  const suppliedType = String(mimeType || "").toLowerCase();
+  const allowedTypes = new Set([
+    "image/jpeg",
+    "image/png",
+    "image/gif",
+    "image/bmp",
+    "image/tiff"
+  ]);
+
+  if (allowedTypes.has(suppliedType)) {
+    return suppliedType;
+  }
+
+  const normalized = suppliedType.toUpperCase();
+  const contentTypes = {
+    JPEG: "image/jpeg",
+    JPG: "image/jpeg",
+    PNG: "image/png",
+    GIF: "image/gif",
+    BMP: "image/bmp",
+    TIFF: "image/tiff"
+  };
+
+  return contentTypes[normalized] || "image/jpeg";
+}
+
+
 app.get("/health", (req, res) => {
   res.json({
     status: "ok"
   });
 });
+
+
+app.post(
+  "/photo",
+  requireInternalToken,
+  async (req, res) => {
+    const email =
+      String(req.body?.email || "")
+        .trim()
+        .toLowerCase();
+
+    if (!email.endsWith("@dypiu.ac.in")) {
+      return res.status(400).json({
+        error: "Invalid DYPIU email address."
+      });
+    }
+
+    try {
+      const response =
+        await directory.users.photos.get({
+          userKey: email
+        });
+
+      const photo = decodeGooglePhoto(
+        response.data?.photoData
+      );
+
+      if (!photo || photo.length === 0) {
+        return res.status(404).json({
+          error: "Profile photo not found."
+        });
+      }
+
+      res.set({
+        "Content-Type": photoContentType(
+          response.data?.mimeType
+        ),
+        "Cache-Control": "private, max-age=3600",
+        "Content-Length": String(photo.length)
+      });
+
+      return res.send(photo);
+
+    } catch (err) {
+      const upstreamStatus = err.response?.status;
+
+      if (upstreamStatus === 404) {
+        return res.status(404).json({
+          error: "Profile photo not found."
+        });
+      }
+
+      console.error(
+        "Directory photo lookup failed:",
+        upstreamStatus || err.message
+      );
+
+      return res.status(502).json({
+        error: "Directory photo lookup failed."
+      });
+    }
+  }
+);
 
 
 app.post(

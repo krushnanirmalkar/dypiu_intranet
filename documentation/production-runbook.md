@@ -71,6 +71,8 @@ Backups
 
 1. Deploy backend code.
 2. Preserve `.env`.
+   Ensure it includes `DIRECTORY_ROLE_SERVICE_URL=http://127.0.0.1:3002`
+   and the same `DIRECTORY_LOOKUP_TOKEN` used by the Keycloak stack.
 3. Restart:
 
     sudo systemctl restart dypiu-intranet-backend

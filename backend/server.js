@@ -86,6 +86,10 @@ const ISSUER = `${KEYCLOAK_BASE}/realms/${REALM}`;
 
 const CLIENT_SECRET = process.env.KEYCLOAK_CLIENT_SECRET;
 const SESSION_SECRET = process.env.SESSION_SECRET;
+const DIRECTORY_ROLE_SERVICE_URL =
+  process.env.DIRECTORY_ROLE_SERVICE_URL;
+const DIRECTORY_LOOKUP_TOKEN =
+  process.env.DIRECTORY_LOOKUP_TOKEN;
 
 if (!CLIENT_SECRET || !SESSION_SECRET) {
   console.error("Missing required environment variables.");
@@ -383,8 +387,83 @@ app.get("/auth/callback", async (req, res) => {
 app.get("/api/me", requireAuth, (req, res) => {
   res.json({
     authenticated: true,
-    user: req.session.user
+    user: {
+      ...req.session.user,
+      picture: "/api/me/photo"
+    }
   });
+});
+
+
+app.get("/api/me/photo", requireAuth, async (req, res) => {
+  if (!DIRECTORY_ROLE_SERVICE_URL || !DIRECTORY_LOOKUP_TOKEN) {
+    return res.status(503).json({
+      error: "Directory photo service is not configured."
+    });
+  }
+
+  try {
+    const photoResponse = await fetch(
+      `${DIRECTORY_ROLE_SERVICE_URL.replace(/\/$/, "")}/photo`,
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${DIRECTORY_LOOKUP_TOKEN}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          email: req.session.user.email
+        })
+      }
+    );
+
+    if (photoResponse.status === 404) {
+      return res.status(404).json({
+        error: "Profile photo not found."
+      });
+    }
+
+    if (!photoResponse.ok) {
+      console.error(
+        "Directory photo service rejected request:",
+        photoResponse.status
+      );
+
+      return res.status(502).json({
+        error: "Profile photo is temporarily unavailable."
+      });
+    }
+
+    const photo = Buffer.from(
+      await photoResponse.arrayBuffer()
+    );
+
+    if (photo.length === 0 || photo.length > 2 * 1024 * 1024) {
+      return res.status(502).json({
+        error: "Invalid profile photo response."
+      });
+    }
+
+    res.set({
+      "Content-Type":
+        photoResponse.headers.get("content-type") ||
+        "image/jpeg",
+      "Cache-Control": "private, max-age=3600",
+      "Content-Length": String(photo.length)
+    });
+
+    return res.send(photo);
+
+  } catch (err) {
+    console.error(
+      "Directory photo request failed:",
+      err.message
+    );
+
+    return res.status(502).json({
+      error: "Profile photo is temporarily unavailable."
+    });
+  }
 });
 
 

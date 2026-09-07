@@ -72,5 +72,8 @@ services:
     volumes:
       - /etc/dypiu/google-directory.json:/run/secrets/google-directory.json:ro
 
+    ports:
+      - "127.0.0.1:3002:3002"
+
 volumes:
   keycloak_db_data:
