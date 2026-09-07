@@ -293,7 +293,7 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
   };
 
   return (
-    <div className="reference-dashboard w-full max-w-[1440px] min-h-screen bg-[#f9fafb] text-[#0c1e38] font-sans flex flex-col overflow-x-hidden mx-auto my-0 relative shadow-2xl">
+    <div className="reference-dashboard w-full min-w-0 min-h-screen bg-[#f9fafb] text-[#0c1e38] font-sans flex flex-col overflow-x-hidden relative">
       {(isCommunicationOpen || isGrievanceOpen) && (
         <button
           aria-label="Close open overlay"
@@ -435,10 +435,10 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
       </header>
 
       {/* MAIN DASHBOARD CANVAS */}
-      <main className="flex-1 p-8 gap-8 dashboard-canvas grid grid-cols-12 bg-[#f9fafb]">
+      <main className="flex-1 dashboard-canvas grid bg-[#f9fafb]">
         
         {/* LEFT COLUMN (8 Cols) */}
-        <div className="dashboard-left col-span-8 flex flex-col gap-3.5 min-h-0">
+        <div className="dashboard-left flex flex-col min-h-0 min-w-0">
           
           {/* USER GREETING */}
           <section className="dashboard-greeting flex items-center justify-between gap-4 bg-white border border-slate-100 rounded-2xl px-5 py-3.5 shadow-[0_8px_24px_rgb(12,30,56,0.045)]">
@@ -450,7 +450,7 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
                 Here is what's happening across the campus today.
               </p>
             </div>
-            <div className="dashboard-thought shrink-0 w-[310px] bg-orange-50/45 border border-orange-100/80 rounded-2xl px-4 py-2.5 relative overflow-hidden">
+            <div className="dashboard-thought shrink-0 bg-orange-50/45 border border-orange-100/80 rounded-2xl px-4 py-2.5 relative overflow-hidden">
               <div className="absolute inset-y-3 left-0 w-1 rounded-r-full bg-[#ec510d]"></div>
               <div className="absolute -right-10 -top-10 size-20 rounded-full bg-orange-100/45"></div>
               <div className="relative z-10 flex items-center justify-between gap-3 mb-1.5">
@@ -484,7 +484,7 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
               </a>
             </div>
 
-            <div className="workspace-grid px-5 py-3.5 grid grid-cols-3 gap-3 relative z-10 bg-[#e8edf6]/70">
+            <div className="workspace-grid px-5 py-3.5 grid gap-3 relative z-10 bg-[#e8edf6]/70">
               {loading && <p role="status" className="col-span-full text-sm text-slate-500">Loading your workspace…</p>}
               {workspaceApps.map((app) => {
                 const getAppStyle = (category: string) => {
@@ -601,14 +601,14 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
                 </div>
               </div>
 
-              <div className="dashboard-policy rounded-2xl bg-gradient-to-br from-[#0c1e38] via-[#132b4d] to-[#0c1e38] border border-[#0c1e38]/20 shadow-lg px-4 py-3 relative overflow-hidden">
-                <div className="absolute -right-8 -bottom-10 w-32 h-40 rounded-2xl border border-white/10 bg-white/5 rotate-[-10deg] pointer-events-none"></div>
-                <div className="absolute right-3 top-3 h-16 w-20 rounded-xl border border-white/10 pointer-events-none"></div>
+              <div className="dashboard-policy rounded-2xl bg-gradient-to-br from-[#fff1d6] via-[#fff8ea] to-[#f6e7c6] border border-[#e8b45f]/55 shadow-lg px-4 py-3 relative overflow-hidden">
+                <div className="absolute -right-8 -bottom-10 w-32 h-40 rounded-2xl border border-[#ec510d]/10 bg-[#ec510d]/[0.04] rotate-[-10deg] pointer-events-none"></div>
+                <div className="absolute right-3 top-3 h-16 w-20 rounded-xl border border-[#ec510d]/10 pointer-events-none"></div>
                 <div className="relative z-10 flex items-center justify-between mb-2">
                   <div className="flex items-center">
-                    <h3 className="text-sm font-serif font-bold text-white tracking-tight">University Policy</h3>
+                    <h3 className="text-sm font-serif font-bold text-[#0c1e38] tracking-tight">University Policy</h3>
                   </div>
-                  <a href="#policies" onClick={(event) => event.preventDefault()} className="text-[10px] font-bold text-sky-200 hover:text-white flex items-center gap-1">View All <ChevronRight className="size-3" /></a>
+                  <a href="#policies" onClick={(event) => event.preventDefault()} className="text-[10px] font-bold text-[#ec510d] hover:text-[#c8430b] flex items-center gap-1">View All <ChevronRight className="size-3" /></a>
                 </div>
                 <div className="relative z-10 space-y-1.5">
                   {[
@@ -640,7 +640,7 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
         </div>
 
         {/* RIGHT COLUMN (4 Cols) */}
-        <div className="dashboard-right col-span-4 flex flex-col gap-4 min-h-0">
+        <div className="dashboard-right flex flex-col min-h-0 min-w-0">
           
           {/* NOTICE BOARD */}
           <section className="dashboard-notices flex flex-col overflow-hidden relative rounded-2xl border-8 border-[#252a32] bg-[#343a43] shadow-inner">
@@ -686,7 +686,7 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
           </section>
 
           {/* UPCOMING EVENTS */}
-          <section className="dashboard-events bg-[#0c1e38] rounded-2xl shadow-lg flex flex-col shrink-0 overflow-hidden relative text-white h-[220px]">
+          <section className="dashboard-events bg-[#0c1e38] rounded-2xl shadow-lg flex flex-col shrink-0 overflow-hidden relative text-white">
             <div className="absolute -right-16 -bottom-16 w-64 h-64 border-[16px] border-white/5 rounded-full pointer-events-none z-0"></div>
             <div className="flex items-center justify-between px-5 py-4 relative z-10">
               <div className="flex items-center gap-2">
