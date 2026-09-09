@@ -6,7 +6,7 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="relative min-h-screen w-full flex items-center justify-end bg-white font-sans antialiased text-navy-900 overflow-hidden">
+    <div className="relative min-h-100dvh w-full flex items-center justify-center lg:justify-end bg-white font-sans antialiased text-navy-900 overflow-hidden">
       {/* LOGIN BACKGROUND IMAGE */}
       <img
         src="/Login.png"
@@ -15,23 +15,23 @@ export const LoginPage: React.FC = () => {
       />
 
       {/* RIGHT LOGIN CARD */}
-      <div className="relative z-10 flex w-full max-w-xl justify-end p-6 sm:p-10 lg:pr-16">
-        <div className="w-full max-w-md space-y-6 rounded-3xl border border-slate-200/80 bg-white/95 p-8 shadow-2xl backdrop-blur-md sm:p-10 text-center">
+      <div className="relative z-10 flex w-full max-w-xl justify-center lg:justify-end p-4 sm:p-6 lg:p-10 lg:pr-16">
+        <div className="w-full max-w-md space-y-5 sm:space-y-6 rounded-3xl border border-slate-200/80 bg-white/95 p-6 sm:p-8 lg:p-10 shadow-2xl backdrop-blur-md text-center">
           {/* DYPIU Logo */}
           <div className="mx-auto mb-2 flex justify-center">
-            <img src="/DYPIU colour logo 1.png" alt="DYPIU Logo" className="h-16 sm:h-20 w-auto object-contain" />
+            <img src="/DYPIU colour logo 1.png" alt="DYPIU Logo" className="h-14 sm:h-18 lg:h-20 w-auto object-contain" />
           </div>
 
           {/* UniOne Brand Title */}
           <div className="mt-2">
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight">
               <span className="text-[#050554]">Uni</span>
               <span className="text-[#E85116]">One</span>
             </h1>
           </div>
 
           {/* Decorative Divider Line */}
-          <div className="relative my-6 flex items-center justify-center">
+          <div className="relative my-4 sm:my-6 flex items-center justify-center">
             <div className="w-full border-t border-slate-200" />
           </div>
 
@@ -39,9 +39,9 @@ export const LoginPage: React.FC = () => {
           <button
             type="button"
             onClick={handleGoogleSignIn}
-            className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-300 bg-white py-3.5 px-4 text-sm font-bold text-navy-900 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 active:scale-[0.99]"
+            className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-300 bg-white py-3 sm:py-3.5 px-4 text-xs sm:text-sm font-bold text-navy-900 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 active:scale-[0.99]"
           >
-            <svg className="h-5 w-5" viewBox="0 0 24 24">
+            <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24">
               <path
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                 fill="#4285F4"
@@ -65,7 +65,7 @@ export const LoginPage: React.FC = () => {
           {/* Footer */}
           <div className="pt-2 text-center text-xs text-slate-400">
             <p className="font-medium text-slate-500">Secure authentication powered by</p>
-            <div className="mt-1 flex items-center justify-center gap-2 font-semibold text-slate-600">
+            <div className="mt-1 flex flex-wrap items-center justify-center gap-2 font-semibold text-slate-600">
               <span>Google Workspace</span>
               <span>•</span>
               <span>Keycloak</span>
