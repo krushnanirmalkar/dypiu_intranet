@@ -32,7 +32,7 @@ export const ApplicationsGrid: React.FC<ApplicationsGridProps> = ({
     {loading ? (
       <div className="flex min-h-48 items-center justify-center text-sm font-semibold text-navy-500">Loading applications…</div>
     ) : applications.length > 0 ? (
-      <div className="applications-card-grid grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+      <div className="applications-card-grid">
         {applications.slice(0, 6).map((app) => (
           <ApplicationCard key={app.id} app={app} onOpenApp={onOpenApp} onToggleFavorite={onToggleFavorite} />
         ))}

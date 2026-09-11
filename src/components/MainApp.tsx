@@ -15,7 +15,7 @@ import { TopNavbar } from './TopNavbar';
 import ReferenceDashboard from './ReferenceDashboard';
 import { WelcomeBanner } from './WelcomeBanner';
 
-const USE_DEV_PREVIEW = import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_AUTH === 'true';
+const USE_DEV_PREVIEW = false;
 
 interface SessionUser {
   sub: string;

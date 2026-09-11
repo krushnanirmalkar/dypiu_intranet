@@ -48,14 +48,14 @@ export const ApplicationsPage: React.FC<ApplicationsPageProps> = ({
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white rounded-xl border border-navy-100 p-4 shadow-sm space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between gap-4">
+      <div className="bg-white rounded-xl border border-navy-100 p-4 shadow-sm space-y-3 md:space-y-0 md:flex md:items-center md:justify-between gap-4">
         {/* Categories Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0">
+        <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 scrollbar-hide">
           {categories.map((cat) => (
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap shrink-0 ${
                 selectedCategory === cat 
                   ? 'bg-navy-800 text-white shadow-sm' 
                   : 'bg-navy-50 text-navy-700 hover:bg-navy-100 border border-navy-200/60'
@@ -67,10 +67,10 @@ export const ApplicationsPage: React.FC<ApplicationsPageProps> = ({
         </div>
 
         {/* Right Search & Favorite Filter */}
-        <div className="flex items-center space-x-3 w-full sm:w-auto">
+        <div className="flex items-center space-x-3 w-full md:w-auto shrink-0">
           <button
             onClick={() => setFavoritesOnly(!favoritesOnly)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1.5 border transition-all ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1.5 border transition-all shrink-0 ${
               favoritesOnly 
                 ? 'bg-navy-800 text-white border-navy-800' 
                 : 'bg-navy-50 text-navy-700 border-navy-200 hover:bg-navy-100'
@@ -80,7 +80,7 @@ export const ApplicationsPage: React.FC<ApplicationsPageProps> = ({
             <span>Favorites</span>
           </button>
 
-          <div className="relative flex-1 sm:w-56">
+          <div className="relative flex-1 md:w-56">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-navy-400" />
             <input
               type="text"
@@ -94,7 +94,7 @@ export const ApplicationsPage: React.FC<ApplicationsPageProps> = ({
       </div>
 
       {/* Grid of Applications */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+      <div className="applications-card-grid">
         {sortedApps.map((app) => (
           <ApplicationCard
             key={app.id}

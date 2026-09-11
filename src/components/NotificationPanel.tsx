@@ -6,12 +6,14 @@ interface NotificationPanelProps {
   notifications: NotificationItem[];
   currentRole: UserRole;
   onMarkAllRead: () => void;
+  onViewAll?: () => void;
 }
 
 export const NotificationPanel: React.FC<NotificationPanelProps> = ({
   notifications,
   currentRole,
   onMarkAllRead,
+  onViewAll,
 }) => {
   const roleNotifs = notifications.filter((n) =>
     n.targetRoles.includes(currentRole)
@@ -71,6 +73,17 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
           </div>
         ))}
       </div>
+
+      {onViewAll && (
+        <div className="mt-4 pt-3 border-t border-navy-100 text-center">
+          <button
+            onClick={onViewAll}
+            className="text-xs font-extrabold text-blue-600 hover:text-blue-800 transition-colors"
+          >
+            View all notifications →
+          </button>
+        </div>
+      )}
     </div>
   );
 };
