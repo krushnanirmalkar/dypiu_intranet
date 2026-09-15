@@ -6,13 +6,16 @@ export interface AuthenticatedUser {
   email: string;
   role?: UserRole;
   roles?: UserRole[];
+  isSuperAdmin?: boolean;
 }
 
 export const DEV_PREVIEW_USER: AuthenticatedUser = {
   sub: 'dev-preview-user',
   name: 'Krushna Nirmalkar',
   email: 'preview@dypiu.ac.in',
-  role: 'student',
+  role: 'staff',
+  roles: ['staff', 'super_admin'],
+  isSuperAdmin: true,
 };
 
 export const DEV_PREVIEW_APPLICATIONS: ApplicationItem[] = [

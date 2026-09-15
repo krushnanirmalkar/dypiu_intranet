@@ -1,4 +1,4 @@
-export type UserRole = 'student' | 'staff' | 'admin';
+export type UserRole = 'student' | 'staff' | 'admin' | 'super_admin';
 
 export interface UserProfile {
   id: string;
@@ -14,6 +14,7 @@ export interface UserProfile {
   bio: string;
   joinedYear: string;
   phone: string;
+  isSuperAdmin?: boolean;
 }
 
 export interface ApplicationItem {

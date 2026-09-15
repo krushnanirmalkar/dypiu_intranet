@@ -49,7 +49,13 @@ function requireRole(...allowedRoles) {
   };
 }
 
+function requireSuperAdmin(req, res, next) {
+  return requireRole("super_admin", "admin")(req, res, next);
+}
+
 module.exports = {
   requireAuth,
-  requireRole
+  requireRole,
+  requireSuperAdmin
 };
+
