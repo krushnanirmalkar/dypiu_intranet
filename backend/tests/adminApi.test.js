@@ -1,6 +1,7 @@
 const assert = require("assert");
-const { requireSuperAdmin } = require("../middleware/auth");
+const db = require("../db");
 const store = require("../data/store");
+const { requireSuperAdmin } = require("../middleware/auth");
 
 // Helper mock req/res
 function createMockReqRes({ user = null } = {}) {
@@ -32,7 +33,258 @@ function createMockReqRes({ user = null } = {}) {
   return { req, res };
 }
 
+// Check if Postgres is reachable locally or mock in test environment
+async function setupTestEnvironment() {
+  try {
+    await db.pool.query("SELECT 1");
+    console.log("[Test Suite] Running tests against real PostgreSQL instance.");
+  } catch (err) {
+    console.log("[Test Suite] Local PostgreSQL daemon unavailable. Injecting test double for db.query in unit test harness.");
+    setupDbMock();
+  }
+}
+
+function setupDbMock() {
+  const mockStore = {
+    applications: [],
+    notices: [],
+    policies: [],
+    access_rules: [],
+    audit_logs: []
+  };
+
+  db.initDatabase = async () => true;
+
+  db.query = async (text, params = []) => {
+    const sql = text.trim();
+
+    if (sql.includes("COUNT(*) FROM")) {
+      const tableName = sql.split("FROM")[1].trim().split(" ")[0];
+      const table = mockStore[tableName] || [];
+      return { rows: [{ count: String(table.length) }] };
+    }
+
+    if (sql.includes("FROM audit_logs")) {
+      return { rows: [...mockStore.audit_logs] };
+    }
+
+    if (sql.includes("FROM applications")) {
+      if (sql.includes("WHERE id = $1")) {
+        const item = mockStore.applications.find(a => a.id === params[0]);
+        return { rows: item ? [item] : [] };
+      }
+      const includeDisabled = params[0] === true;
+      const rows = mockStore.applications.filter(a => includeDisabled || a.enabled !== false);
+      return { rows };
+    }
+
+    if (sql.includes("INSERT INTO applications")) {
+      const newApp = {
+        id: params[0], name: params[1], shortName: params[2], description: params[3],
+        url: params[4], icon: params[5], category: params[6], roles: params[7],
+        enabled: params[8], displayOrder: params[9], ssoEnabled: params[10], highlightColor: params[11],
+        createdAt: params[12], updatedAt: params[13], createdBy: params[14], updatedBy: params[15]
+      };
+      const idx = mockStore.applications.findIndex(a => a.id === newApp.id);
+      if (idx >= 0) mockStore.applications[idx] = newApp;
+      else mockStore.applications.push(newApp);
+      return { rows: [newApp] };
+    }
+
+    if (sql.includes("UPDATE applications")) {
+      const id = params[13];
+      const idx = mockStore.applications.findIndex(a => a.id === id);
+      if (idx >= 0) {
+        mockStore.applications[idx] = {
+          ...mockStore.applications[idx],
+          name: params[0], shortName: params[1], description: params[2], url: params[3],
+          icon: params[4], category: params[5], roles: params[6], enabled: params[7],
+          displayOrder: params[8], ssoEnabled: params[9], highlightColor: params[10],
+          updatedAt: params[11], updatedBy: params[12]
+        };
+      }
+      return { rows: idx >= 0 ? [mockStore.applications[idx]] : [] };
+    }
+
+    if (sql.includes("DELETE FROM applications")) {
+      const id = params[0];
+      mockStore.applications = mockStore.applications.filter(a => a.id !== id);
+      return { rows: [] };
+    }
+
+    if (sql.includes("FROM notices")) {
+      if (sql.includes("WHERE id = $1")) {
+        const item = mockStore.notices.find(n => String(n.id) === String(params[0]));
+        return { rows: item ? [item] : [] };
+      }
+      const [category, audience, status, checkExpiry] = params;
+      let list = [...mockStore.notices];
+      if (category) list = list.filter(n => n.category === category);
+      if (audience) list = list.filter(n => n.audience === audience || n.audience === "All");
+      if (status) list = list.filter(n => n.status === status);
+      if (checkExpiry === true) {
+        const now = Date.now();
+        list = list.filter(n => {
+          if (n.publishAt && new Date(n.publishAt).getTime() > now) return false;
+          if (n.expiresAt && new Date(n.expiresAt).getTime() <= now) return false;
+          return true;
+        });
+      }
+      return { rows: list };
+    }
+
+    if (sql.includes("INSERT INTO notices")) {
+      const newNotice = {
+        id: params[0], title: params[1], content: params[2], category: params[3],
+        audience: params[4], priority: params[5], status: params[6], author: params[7],
+        publishAt: params[8], expiresAt: params[9], attachmentUrl: params[10],
+        attachmentName: params[11], attachmentSize: params[12], createdAt: params[13],
+        updatedAt: params[14], createdBy: params[15], updatedBy: params[16]
+      };
+      const idx = mockStore.notices.findIndex(n => n.id === newNotice.id);
+      if (idx >= 0) mockStore.notices[idx] = newNotice;
+      else mockStore.notices.unshift(newNotice);
+      return { rows: [newNotice] };
+    }
+
+    if (sql.includes("UPDATE notices")) {
+      const id = params[14];
+      const idx = mockStore.notices.findIndex(n => n.id === id);
+      if (idx >= 0) {
+        mockStore.notices[idx] = {
+          ...mockStore.notices[idx],
+          title: params[0], content: params[1], category: params[2], audience: params[3],
+          priority: params[4], status: params[5], author: params[6], publishAt: params[7],
+          expiresAt: params[8], attachmentUrl: params[9], attachmentName: params[10],
+          attachmentSize: params[11], updatedAt: params[12], updatedBy: params[13]
+        };
+      }
+      return { rows: idx >= 0 ? [mockStore.notices[idx]] : [] };
+    }
+
+    if (sql.includes("DELETE FROM notices")) {
+      const id = params[0];
+      mockStore.notices = mockStore.notices.filter(n => n.id !== id);
+      return { rows: [] };
+    }
+
+    if (sql.includes("FROM policies")) {
+      if (sql.includes("WHERE id = $1")) {
+        const item = mockStore.policies.find(p => String(p.id) === String(params[0]));
+        return { rows: item ? [item] : [] };
+      }
+      const [category, status] = params;
+      let list = [...mockStore.policies];
+      if (category) list = list.filter(p => p.category === category);
+      if (status) list = list.filter(p => p.status === status);
+      return { rows: list };
+    }
+
+    if (sql.includes("INSERT INTO policies")) {
+      const newPolicy = {
+        id: params[0], title: params[1], category: params[2], summary: params[3],
+        content: params[4], version: params[5], status: params[6], effectiveDate: params[7],
+        attachmentUrl: params[8], attachmentName: params[9], attachmentSize: params[10],
+        createdAt: params[11], updatedAt: params[12], createdBy: params[13], updatedBy: params[14]
+      };
+      const idx = mockStore.policies.findIndex(p => p.id === newPolicy.id);
+      if (idx >= 0) mockStore.policies[idx] = newPolicy;
+      else mockStore.policies.unshift(newPolicy);
+      return { rows: [newPolicy] };
+    }
+
+    if (sql.includes("UPDATE policies")) {
+      const id = params[12];
+      const idx = mockStore.policies.findIndex(p => p.id === id);
+      if (idx >= 0) {
+        mockStore.policies[idx] = {
+          ...mockStore.policies[idx],
+          title: params[0], category: params[1], summary: params[2], content: params[3],
+          version: params[4], status: params[5], effectiveDate: params[6], attachmentUrl: params[7],
+          attachmentName: params[8], attachmentSize: params[9], updatedAt: params[10], updatedBy: params[11]
+        };
+      }
+      return { rows: idx >= 0 ? [mockStore.policies[idx]] : [] };
+    }
+
+    if (sql.includes("DELETE FROM policies")) {
+      const id = params[0];
+      mockStore.policies = mockStore.policies.filter(p => p.id !== id);
+      return { rows: [] };
+    }
+
+    if (sql.includes("FROM access_rules")) {
+      if (sql.includes("WHERE id = $1")) {
+        const item = mockStore.access_rules.find(r => String(r.id) === String(params[0]));
+        return { rows: item ? [item] : [] };
+      }
+      if (sql.includes("WHERE status = 'active'")) {
+        const [normEmail, userRoles] = params;
+        const activeRules = mockStore.access_rules.filter(r => r.status === "active");
+        const matched = activeRules.filter(r => {
+          const targetType = (r.targetType || r.target_type || "").toLowerCase();
+          const targetValue = (r.targetValue || r.target_value || "").toLowerCase();
+          if (targetType === "email" || targetType === "gmail") {
+            return normEmail && targetValue === normEmail;
+          }
+          if (targetType === "role") {
+            return userRoles.includes(targetValue);
+          }
+          return false;
+        });
+        return { rows: matched };
+      }
+      return { rows: [...mockStore.access_rules] };
+    }
+
+    if (sql.includes("INSERT INTO access_rules")) {
+      const newRule = {
+        id: params[0], name: params[1], targetType: params[2], targetValue: params[3],
+        services: params[4], accessLevel: params[5], status: params[6], createdAt: params[7],
+        updatedAt: params[8], createdBy: params[9], updatedBy: params[10]
+      };
+      const idx = mockStore.access_rules.findIndex(r => r.id === newRule.id);
+      if (idx >= 0) mockStore.access_rules[idx] = newRule;
+      else mockStore.access_rules.unshift(newRule);
+      return { rows: [newRule] };
+    }
+
+    if (sql.includes("UPDATE access_rules")) {
+      const id = params[8];
+      const idx = mockStore.access_rules.findIndex(r => r.id === id);
+      if (idx >= 0) {
+        mockStore.access_rules[idx] = {
+          ...mockStore.access_rules[idx],
+          name: params[0], targetType: params[1], targetValue: params[2], services: params[3],
+          accessLevel: params[4], status: params[5], updatedAt: params[6], updatedBy: params[7]
+        };
+      }
+      return { rows: idx >= 0 ? [mockStore.access_rules[idx]] : [] };
+    }
+
+    if (sql.includes("DELETE FROM access_rules")) {
+      const id = params[0];
+      mockStore.access_rules = mockStore.access_rules.filter(r => r.id !== id);
+      return { rows: [] };
+    }
+
+    if (sql.includes("INSERT INTO audit_logs")) {
+      const event = {
+        id: params[0], timestamp: params[1], actorSub: params[2], actorEmail: params[3],
+        actorName: params[4], actorRole: params[5], action: params[6], resourceType: params[7],
+        resourceId: params[8], summary: params[9], details: params[10], ip: params[11]
+      };
+      mockStore.audit_logs.unshift(event);
+      return { rows: [event] };
+    }
+
+    return { rows: [] };
+  };
+}
+
 async function runTests() {
+  await setupTestEnvironment();
+
   console.log("==========================================");
   console.log("Running Super Admin & Security Tests...");
   console.log("==========================================");
@@ -265,6 +517,10 @@ async function runTests() {
   console.log("\n==========================================");
   console.log("ALL SUPER ADMIN TESTS PASSED SUCCESSFULLY!");
   console.log("==========================================");
+  process.exit(0);
 }
 
-runTests();
+runTests().catch(err => {
+  console.error("Test execution failed:", err);
+  process.exit(1);
+});

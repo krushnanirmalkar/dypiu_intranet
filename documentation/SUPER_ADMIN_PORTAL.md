@@ -34,14 +34,15 @@ To assign Super Admin privileges to a user in Keycloak:
 ## 3. Data Persistence & Storage
 
 ### Storage Architecture
-- **Location**: `backend/data/store.json`
+- **Database**: PostgreSQL (`dypiu_intranet`)
 - **Data Access Module**: `backend/data/store.js`
-- **Atomic Operations**: All writes execute atomically via a temporary file pattern (`write-to-tmp -> renameSync`) to eliminate data corruption during unexpected restarts.
+- **Database Abstraction**: `backend/db/index.js`
 - **Schema Collections**:
   - `applications`: Campus applications, role visibility, SSO configuration, and display order.
   - `notices`: Official campus notices with audience targeting (`All`, `Students`, `Staff`), categories (`Academic`, `Administrative`, `Campus`, `Urgent`), and lifecycle status (`draft`, `published`, `archived`).
   - `policies`: Governance policy documents with versioning, effective dates, and publication status.
-  - `auditLogs`: Append-only, immutable administrative audit events.
+  - `access_rules`: Role-based and email-based delegated service access control rules.
+  - `audit_logs`: Append-only, immutable administrative audit events.
 
 ---
 
