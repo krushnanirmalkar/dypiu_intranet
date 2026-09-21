@@ -67,7 +67,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
             <div className="flex items-center gap-2">
               <span className="text-lg font-black tracking-tight text-white">UniOne</span>
               <span className="rounded-full bg-blue-500/20 px-2.5 py-0.5 text-[11px] font-bold text-blue-200 border border-blue-400/30">
-                Admin Portal
+                {user.isSuperAdmin || user.role === 'admin' ? 'Admin Portal' : 'Service Portal'}
               </span>
             </div>
           </div>

@@ -575,18 +575,20 @@ function evaluateUserAccess(email, roles = []) {
   const allowedServices = new Set();
   let maxAccessLevel = "read";
 
-  const userRoles = Array.isArray(roles) ? roles : [];
+  const userRoles = Array.isArray(roles) ? roles.map((r) => String(r).trim().toLowerCase()) : [];
   const normEmail = (email || "").trim().toLowerCase();
 
   for (const rule of activeRules) {
     let matches = false;
+    const ruleTargetType = (rule.targetType || "").trim().toLowerCase();
+    const ruleTargetValue = (rule.targetValue || "").trim().toLowerCase();
 
-    if (rule.targetType === "email") {
-      if (rule.targetValue.toLowerCase() === normEmail) {
+    if (ruleTargetType === "email" || ruleTargetType === "gmail") {
+      if (normEmail && ruleTargetValue === normEmail) {
         matches = true;
       }
-    } else if (rule.targetType === "role") {
-      if (userRoles.includes(rule.targetValue)) {
+    } else if (ruleTargetType === "role") {
+      if (userRoles.includes(ruleTargetValue)) {
         matches = true;
       }
     }

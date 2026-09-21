@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import imgLogo from "../assets/dashboard/logo.png";
-import { Bell, AlertCircle, ChevronRight, BookOpen, GraduationCap, FileText, Laptop, Bookmark, Users, CheckCircle2, Briefcase, Award, HelpCircle, Clock, MapPin, Send, Sparkles, Search, X, Cake, Gift, User, Settings, LogOut, Paperclip, ExternalLink, ShieldCheck } from 'lucide-react';
+import { Bell, AlertCircle, ChevronRight, BookOpen, GraduationCap, FileText, Laptop, Bookmark, Users, CheckCircle2, Briefcase, Award, HelpCircle, Clock, MapPin, Send, Sparkles, Search, X, Cake, Gift, User, Settings, LogOut, Paperclip, ExternalLink, ShieldCheck, Key } from 'lucide-react';
 import type { ApplicationItem, UserProfile } from '../types';
 import { NotificationPanel } from './NotificationPanel';
 import { mockNotifications } from '../data/mockData';
@@ -652,7 +652,7 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
                   <p className="mt-1 truncate text-sm font-medium text-blue-600">{user.email}</p>
                 </div>
                 <div className="border-t border-slate-200">
-                  {(user.isSuperAdmin || user.role === 'admin' || user.hasAdminPortalAccess || Boolean(user.permissions?.allowedServices?.length)) && (
+                  {user.isSuperAdmin || user.role === 'admin' ? (
                     <button
                       onClick={() => { onNavigate('admin'); setIsProfileMenuOpen(false); }}
                       className="flex w-full items-center gap-4 px-5 py-3.5 text-left text-base font-semibold text-blue-700 bg-blue-50/60 hover:bg-blue-100/70 transition-colors"
@@ -660,7 +660,15 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
                       <ShieldCheck className="size-5 text-blue-600" />
                       <span>Admin Portal</span>
                     </button>
-                  )}
+                  ) : (user.hasAdminPortalAccess || Boolean(user.permissions?.allowedServices?.length)) ? (
+                    <button
+                      onClick={() => { onNavigate('admin'); setIsProfileMenuOpen(false); }}
+                      className="flex w-full items-center gap-4 px-5 py-3.5 text-left text-base font-semibold text-amber-700 bg-amber-50/60 hover:bg-amber-100/70 transition-colors"
+                    >
+                      <Key className="size-5 text-amber-600" />
+                      <span>Service Portal</span>
+                    </button>
+                  ) : null}
                   <button
                     onClick={() => { onNavigate('profile'); setIsProfileMenuOpen(false); }}
                     className="flex w-full items-center gap-4 px-5 py-3.5 text-left text-base font-semibold text-[#02022D] hover:bg-slate-50 transition-colors"
