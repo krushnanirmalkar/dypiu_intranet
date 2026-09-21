@@ -56,7 +56,7 @@ function requireSuperAdmin(req, res, next) {
 }
 
 function requireServicePermission(service, requiredLevel = "read") {
-  return (req, res, next) => {
+  return async (req, res, next) => {
     if (!req.session.user) {
       return res.status(401).json({
         authenticated: false,
@@ -71,7 +71,7 @@ function requireServicePermission(service, requiredLevel = "read") {
       return next();
     }
 
-    const access = store.evaluateUserAccess(user.email, userRoles);
+    const access = await store.evaluateUserAccess(user.email, userRoles);
     if (!access.allowedServices.includes(service)) {
       return res.status(403).json({
         authenticated: true,

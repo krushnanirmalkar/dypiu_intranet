@@ -3,6 +3,7 @@ require("dotenv").config();
 const applications = require("./applications");
 const { requireAuth, requireRole, requireSuperAdmin, requireServicePermission } = require("./middleware/auth");
 const store = require("./data/store");
+const db = require("./db");
 
 const express = require("express");
 const session = require("express-session");
@@ -411,12 +412,13 @@ app.get("/auth/callback", async (req, res) => {
 
 
 // -------------------------
+// -------------------------
 // Current User
 // -------------------------
 
-app.get("/api/me", requireAuth, (req, res) => {
+app.get("/api/me", requireAuth, async (req, res) => {
   const userRoles = Array.isArray(req.session.user?.roles) ? req.session.user.roles : [];
-  const permissions = store.evaluateUserAccess(req.session.user?.email, userRoles);
+  const permissions = await store.evaluateUserAccess(req.session.user?.email, userRoles);
   const isSuperAdmin = userRoles.includes("super_admin") || userRoles.includes("admin");
   const hasAdminPortalAccess = isSuperAdmin || (permissions.allowedServices && permissions.allowedServices.length > 0);
 
@@ -509,9 +511,9 @@ app.get("/api/me/photo", requireAuth, async (req, res) => {
 // User-Facing Applications, Notices, Policies
 // -------------------------
 
-app.get("/api/applications", requireAuth, (req, res) => {
+app.get("/api/applications", requireAuth, async (req, res) => {
   const userRoles = req.session.user.roles || [];
-  const allApps = store.getApplications(false); // only enabled
+  const allApps = await store.getApplications(false); // only enabled
 
   const visibleApplications = allApps.filter((appItem) => {
     const appRoles = Array.isArray(appItem.roles) ? appItem.roles : [];
@@ -523,11 +525,12 @@ app.get("/api/applications", requireAuth, (req, res) => {
   });
 });
 
-app.get("/api/notices", requireAuth, (req, res) => {
+app.get("/api/notices", requireAuth, async (req, res) => {
   const userRoles = req.session.user.roles || [];
   const primaryRole = userRoles.includes("staff") ? "Staff" : "Students";
 
-  const notices = store.getNotices({ status: "published", checkExpiry: true }).filter((notice) => {
+  const allNotices = await store.getNotices({ status: "published", checkExpiry: true });
+  const notices = allNotices.filter((notice) => {
     if (notice.audience === "All") return true;
     if (notice.audience === primaryRole) return true;
     if (userRoles.includes("admin") || userRoles.includes("super_admin")) return true;
@@ -537,8 +540,8 @@ app.get("/api/notices", requireAuth, (req, res) => {
   res.json({ notices });
 });
 
-app.get("/api/policies", requireAuth, (req, res) => {
-  const policies = store.getPolicies({ status: "published" });
+app.get("/api/policies", requireAuth, async (req, res) => {
+  const policies = await store.getPolicies({ status: "published" });
   res.json({ policies });
 });
 
@@ -549,11 +552,11 @@ app.get("/api/policies", requireAuth, (req, res) => {
 // -------------------------
 
 // Dashboard Summary
-app.get("/api/admin/dashboard", requireSuperAdmin, (req, res) => {
-  const allNotices = store.getNotices();
-  const allApps = store.getApplications(true);
-  const allPolicies = store.getPolicies();
-  const auditLogs = store.getAuditLogs();
+app.get("/api/admin/dashboard", requireSuperAdmin, async (req, res) => {
+  const allNotices = await store.getNotices();
+  const allApps = await store.getApplications(true);
+  const allPolicies = await store.getPolicies();
+  const auditLogs = await store.getAuditLogs();
 
   const activeNotices = allNotices.filter((n) => n.status === "published").length;
   const publishedApplications = allApps.filter((a) => a.enabled !== false).length;
@@ -574,13 +577,13 @@ app.get("/api/admin/dashboard", requireSuperAdmin, (req, res) => {
 
 
 // Notice Management
-app.get("/api/admin/notices", requireServicePermission("notices", "read"), (req, res) => {
+app.get("/api/admin/notices", requireServicePermission("notices", "read"), async (req, res) => {
   const { category, audience, status } = req.query;
-  const notices = store.getNotices({ category, audience, status });
+  const notices = await store.getNotices({ category, audience, status });
   res.json({ notices });
 });
 
-app.post("/api/admin/notices", requireServicePermission("notices", "write"), (req, res) => {
+app.post("/api/admin/notices", requireServicePermission("notices", "write"), async (req, res) => {
   const { title, content, category, audience, priority, status, publishAt, expiresAt, attachmentUrl, attachmentName, attachmentSize } = req.body || {};
 
   if (typeof title !== "string" || !title.trim() || title.trim().length > 300) {
@@ -600,7 +603,7 @@ app.post("/api/admin/notices", requireServicePermission("notices", "write"), (re
   const validPriorities = ["Low", "Medium", "High", "Urgent"];
   const validStatuses = ["draft", "published", "archived"];
 
-  const newNotice = store.createNotice(
+  const newNotice = await store.createNotice(
     {
       title: title.trim(),
       content: content.trim(),
@@ -621,16 +624,16 @@ app.post("/api/admin/notices", requireServicePermission("notices", "write"), (re
   res.status(201).json({ notice: newNotice });
 });
 
-app.get("/api/admin/notices/:id", requireServicePermission("notices", "read"), (req, res) => {
-  const notice = store.getNoticeById(req.params.id);
+app.get("/api/admin/notices/:id", requireServicePermission("notices", "read"), async (req, res) => {
+  const notice = await store.getNoticeById(req.params.id);
   if (!notice) {
     return res.status(404).json({ error: "Notice not found." });
   }
   res.json({ notice });
 });
 
-app.put("/api/admin/notices/:id", requireServicePermission("notices", "write"), (req, res) => {
-  const existing = store.getNoticeById(req.params.id);
+app.put("/api/admin/notices/:id", requireServicePermission("notices", "write"), async (req, res) => {
+  const existing = await store.getNoticeById(req.params.id);
   if (!existing) {
     return res.status(404).json({ error: "Notice not found." });
   }
@@ -674,28 +677,28 @@ app.put("/api/admin/notices/:id", requireServicePermission("notices", "write"), 
   if (publishAt !== undefined) updates.publishAt = publishAt;
   if (expiresAt !== undefined) updates.expiresAt = expiresAt;
 
-  const updatedNotice = store.updateNotice(req.params.id, updates, req);
+  const updatedNotice = await store.updateNotice(req.params.id, updates, req);
   res.json({ notice: updatedNotice });
 });
 
-app.delete("/api/admin/notices/:id", requireServicePermission("notices", "write"), (req, res) => {
-  const existing = store.getNoticeById(req.params.id);
+app.delete("/api/admin/notices/:id", requireServicePermission("notices", "write"), async (req, res) => {
+  const existing = await store.getNoticeById(req.params.id);
   if (!existing) {
     return res.status(404).json({ error: "Notice not found." });
   }
 
-  store.deleteNotice(req.params.id, req);
+  await store.deleteNotice(req.params.id, req);
   res.json({ success: true, message: "Notice deleted." });
 });
 
 
 // Application Management
-app.get("/api/admin/applications", requireSuperAdmin, (req, res) => {
-  const applicationsList = store.getApplications(true);
+app.get("/api/admin/applications", requireSuperAdmin, async (req, res) => {
+  const applicationsList = await store.getApplications(true);
   res.json({ applications: applicationsList });
 });
 
-app.post("/api/admin/applications", requireSuperAdmin, (req, res) => {
+app.post("/api/admin/applications", requireSuperAdmin, async (req, res) => {
   const { name, shortName, description, url, icon, category, roles, enabled, displayOrder, ssoEnabled, highlightColor } = req.body || {};
 
   if (typeof name !== "string" || !name.trim() || name.trim().length > 100) {
@@ -706,7 +709,7 @@ app.post("/api/admin/applications", requireSuperAdmin, (req, res) => {
     return res.status(400).json({ error: "Invalid or unsafe application URL." });
   }
 
-  const newApp = store.createApplication(
+  const newApp = await store.createApplication(
     {
       name: name.trim(),
       shortName: typeof shortName === "string" ? shortName.trim() : name.trim(),
@@ -726,16 +729,16 @@ app.post("/api/admin/applications", requireSuperAdmin, (req, res) => {
   res.status(201).json({ application: newApp });
 });
 
-app.get("/api/admin/applications/:id", requireSuperAdmin, (req, res) => {
-  const appItem = store.getApplicationById(req.params.id);
+app.get("/api/admin/applications/:id", requireSuperAdmin, async (req, res) => {
+  const appItem = await store.getApplicationById(req.params.id);
   if (!appItem) {
     return res.status(404).json({ error: "Application not found." });
   }
   res.json({ application: appItem });
 });
 
-app.put("/api/admin/applications/:id", requireSuperAdmin, (req, res) => {
-  const existing = store.getApplicationById(req.params.id);
+app.put("/api/admin/applications/:id", requireSuperAdmin, async (req, res) => {
+  const existing = await store.getApplicationById(req.params.id);
   if (!existing) {
     return res.status(404).json({ error: "Application not found." });
   }
@@ -767,36 +770,36 @@ app.put("/api/admin/applications/:id", requireSuperAdmin, (req, res) => {
   if (ssoEnabled !== undefined) updates.ssoEnabled = Boolean(ssoEnabled);
   if (highlightColor !== undefined) updates.highlightColor = highlightColor;
 
-  const updatedApp = store.updateApplication(req.params.id, updates, req);
+  const updatedApp = await store.updateApplication(req.params.id, updates, req);
   res.json({ application: updatedApp });
 });
 
-app.delete("/api/admin/applications/:id", requireSuperAdmin, (req, res) => {
-  const existing = store.getApplicationById(req.params.id);
+app.delete("/api/admin/applications/:id", requireSuperAdmin, async (req, res) => {
+  const existing = await store.getApplicationById(req.params.id);
   if (!existing) {
     return res.status(404).json({ error: "Application not found." });
   }
 
-  store.deleteApplication(req.params.id, req);
+  await store.deleteApplication(req.params.id, req);
   res.json({ success: true, message: "Application deleted." });
 });
 
 
 // Policy Management
-app.get("/api/admin/policies", requireServicePermission("policies", "read"), (req, res) => {
+app.get("/api/admin/policies", requireServicePermission("policies", "read"), async (req, res) => {
   const { category, status } = req.query;
-  const policies = store.getPolicies({ category, status });
+  const policies = await store.getPolicies({ category, status });
   res.json({ policies });
 });
 
-app.post("/api/admin/policies", requireServicePermission("policies", "write"), (req, res) => {
+app.post("/api/admin/policies", requireServicePermission("policies", "write"), async (req, res) => {
   const { title, category, summary, content, version, status, effectiveDate } = req.body || {};
 
   if (typeof title !== "string" || !title.trim() || title.trim().length > 200) {
     return res.status(400).json({ error: "Policy title is required." });
   }
 
-  const newPolicy = store.createPolicy(
+  const newPolicy = await store.createPolicy(
     {
       title: title.trim(),
       category: typeof category === "string" ? category.trim() : "Administrative",
@@ -812,16 +815,16 @@ app.post("/api/admin/policies", requireServicePermission("policies", "write"), (
   res.status(201).json({ policy: newPolicy });
 });
 
-app.get("/api/admin/policies/:id", requireServicePermission("policies", "read"), (req, res) => {
-  const policy = store.getPolicyById(req.params.id);
+app.get("/api/admin/policies/:id", requireServicePermission("policies", "read"), async (req, res) => {
+  const policy = await store.getPolicyById(req.params.id);
   if (!policy) {
     return res.status(404).json({ error: "Policy not found." });
   }
   res.json({ policy });
 });
 
-app.put("/api/admin/policies/:id", requireServicePermission("policies", "write"), (req, res) => {
-  const existing = store.getPolicyById(req.params.id);
+app.put("/api/admin/policies/:id", requireServicePermission("policies", "write"), async (req, res) => {
+  const existing = await store.getPolicyById(req.params.id);
   if (!existing) {
     return res.status(404).json({ error: "Policy not found." });
   }
@@ -843,25 +846,25 @@ app.put("/api/admin/policies/:id", requireServicePermission("policies", "write")
   if (status !== undefined) updates.status = status;
   if (effectiveDate !== undefined) updates.effectiveDate = effectiveDate;
 
-  const updatedPolicy = store.updatePolicy(req.params.id, updates, req);
+  const updatedPolicy = await store.updatePolicy(req.params.id, updates, req);
   res.json({ policy: updatedPolicy });
 });
 
-app.delete("/api/admin/policies/:id", requireServicePermission("policies", "write"), (req, res) => {
-  const existing = store.getPolicyById(req.params.id);
+app.delete("/api/admin/policies/:id", requireServicePermission("policies", "write"), async (req, res) => {
+  const existing = await store.getPolicyById(req.params.id);
   if (!existing) {
     return res.status(404).json({ error: "Policy not found." });
   }
 
-  store.deletePolicy(req.params.id, req);
+  await store.deletePolicy(req.params.id, req);
   res.json({ success: true, message: "Policy deleted/archived." });
 });
 
 
 // Audit Log Management
-app.get("/api/admin/audit", requireSuperAdmin, (req, res) => {
+app.get("/api/admin/audit", requireSuperAdmin, async (req, res) => {
   const { action, resourceType, search } = req.query;
-  let events = store.getAuditLogs();
+  let events = await store.getAuditLogs();
 
   if (action) {
     events = events.filter((e) => e.action === action);
@@ -881,17 +884,20 @@ app.get("/api/admin/audit", requireSuperAdmin, (req, res) => {
     );
   }
 
+  res.json({ events });
+});
+
 // -------------------------
 // Access Control / User Permission Endpoints
 // -------------------------
 
-app.get("/api/admin/access-rules", requireAuth, requireSuperAdmin, (req, res) => {
+app.get("/api/admin/access-rules", requireAuth, requireSuperAdmin, async (req, res) => {
   const { targetType, status, search } = req.query;
-  const rules = store.getAccessRules({ targetType, status, search });
+  const rules = await store.getAccessRules({ targetType, status, search });
   res.json({ rules });
 });
 
-app.post("/api/admin/access-rules", requireAuth, requireSuperAdmin, (req, res) => {
+app.post("/api/admin/access-rules", requireAuth, requireSuperAdmin, async (req, res) => {
   const { name, targetType, targetValue, services, accessLevel, status } = req.body;
   if (!name || typeof name !== "string" || !name.trim()) {
     return res.status(400).json({ message: "Rule name is required." });
@@ -900,39 +906,38 @@ app.post("/api/admin/access-rules", requireAuth, requireSuperAdmin, (req, res) =
     return res.status(400).json({ message: "Target role or email address is required." });
   }
 
-  const rule = store.createAccessRule(
+  const rule = await store.createAccessRule(
     { name, targetType, targetValue, services, accessLevel, status },
     req
   );
   res.status(201).json({ rule });
 });
 
-app.put("/api/admin/access-rules/:id", requireAuth, requireSuperAdmin, (req, res) => {
+app.put("/api/admin/access-rules/:id", requireAuth, requireSuperAdmin, async (req, res) => {
   const { id } = req.params;
-  const existing = store.getAccessRuleById(id);
+  const existing = await store.getAccessRuleById(id);
   if (!existing) {
     return res.status(404).json({ message: "Access rule not found." });
   }
 
-  const updated = store.updateAccessRule(id, req.body, req);
+  const updated = await store.updateAccessRule(id, req.body, req);
   res.json({ rule: updated });
 });
 
-app.delete("/api/admin/access-rules/:id", requireAuth, requireSuperAdmin, (req, res) => {
+app.delete("/api/admin/access-rules/:id", requireAuth, requireSuperAdmin, async (req, res) => {
   const { id } = req.params;
-  const deleted = store.deleteAccessRule(id, req);
+  const deleted = await store.deleteAccessRule(id, req);
   if (!deleted) {
     return res.status(404).json({ message: "Access rule not found." });
   }
   res.json({ success: true, id });
 });
 
-app.get("/api/me/permissions", requireAuth, (req, res) => {
+app.get("/api/me/permissions", requireAuth, async (req, res) => {
   const user = req.session.user;
-  const evalResult = store.evaluateUserAccess(user.email, user.roles || []);
+  const evalResult = await store.evaluateUserAccess(user.email, user.roles || []);
   res.json(evalResult);
 });
-
 
 
 // -------------------------
@@ -992,6 +997,7 @@ app.get("/health", (req, res) => {
 
 async function startServer() {
   try {
+    await db.initDatabase();
     await redisClient.connect();
 
     console.log("Connected to Redis session store.");

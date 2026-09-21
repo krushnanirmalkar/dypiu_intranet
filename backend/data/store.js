@@ -1,11 +1,25 @@
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+const db = require("../db");
 
 const STORE_PATH = path.join(__dirname, "store.json");
 const TMP_STORE_PATH = path.join(__dirname, "store.json.tmp");
 
 let cache = null;
+let usePostgres = false;
+
+// Check DB connection on startup
+(async () => {
+  try {
+    const success = await db.initDatabase();
+    if (success) {
+      usePostgres = true;
+    }
+  } catch (err) {
+    console.warn("Using JSON store fallback as PostgreSQL is not connected.");
+  }
+})();
 
 const initialAccessRules = [
   {
@@ -13,7 +27,7 @@ const initialAccessRules = [
     name: "Super Admin Full Access",
     targetType: "role",
     targetValue: "super_admin",
-    services: ["notices", "policies", "applications", "audit"],
+    services: ["notices", "policies", "applications", "access", "audit"],
     accessLevel: "full",
     status: "active",
     createdAt: new Date().toISOString(),
@@ -26,7 +40,7 @@ const initialAccessRules = [
     name: "University Admin Access",
     targetType: "role",
     targetValue: "admin",
-    services: ["notices", "policies", "applications", "audit"],
+    services: ["notices", "policies", "applications", "access", "audit"],
     accessLevel: "full",
     status: "active",
     createdAt: new Date().toISOString(),
@@ -69,8 +83,7 @@ function loadStore() {
       };
       saveStore(cache);
     }
-  } catch (err) {
-    console.error("Error loading store.json:", err);
+  } catch {
     cache = {
       applications: [],
       notices: [],
@@ -91,200 +104,293 @@ function saveStore(data) {
         fs.renameSync(TMP_STORE_PATH, STORE_PATH);
       } catch {
         fs.writeFileSync(STORE_PATH, content, "utf8");
-        if (fs.existsSync(TMP_STORE_PATH)) {
-          try { fs.unlinkSync(TMP_STORE_PATH); } catch {}
-        }
       }
     } catch {
       fs.writeFileSync(STORE_PATH, content, "utf8");
     }
-    cache = data;
-  } catch (err) {
-    console.error("Error saving store.json:", err);
-    throw new Error("Failed to persist data.");
-  }
+  } catch {}
+  cache = data;
 }
 
-function generateId(prefix = "id") {
-  return `${prefix}-${crypto.randomBytes(6).toString("hex")}`;
+function generateId(prefix) {
+  return `${prefix}-${Date.now()}-${crypto.randomBytes(3).toString("hex")}`;
 }
 
 // -------------------------
-// Audit Log Helper
+// Audit Log Methods
 // -------------------------
 
-function recordAuditEvent(req, action, resourceType, resourceId, summary, extraMeta = {}) {
-  const store = loadStore();
-  const actorSub = req?.session?.user?.sub || "system";
-  const actorEmail = req?.session?.user?.email || "system@dypiu.ac.in";
-
+async function recordAuditEvent(req, action, resourceType, resourceId, summary, details = {}) {
+  const user = req?.session?.user || {};
   const event = {
-    id: generateId("audit"),
+    id: generateId("log"),
     timestamp: new Date().toISOString(),
-    actorSub,
-    actorEmail,
+    actorSub: user.sub || null,
+    actorEmail: user.email || "system",
+    actorName: user.name || "System Process",
+    actorRole: Array.isArray(user.roles) ? user.roles[0] || null : null,
     action,
     resourceType,
-    resourceId,
+    resourceId: resourceId ? String(resourceId) : null,
     summary,
-    metadata: {
-      ip: req?.ip || null,
-      method: req?.method || null,
-      path: req?.path || null,
-      ...extraMeta
-    }
+    details: details || {},
+    ip: req?.ip || null
   };
 
-  store.auditLogs.unshift(event);
-  // Limit max audit logs in json file to 1000 for performance
-  if (store.auditLogs.length > 1000) {
-    store.auditLogs = store.auditLogs.slice(0, 1000);
+  if (usePostgres) {
+    try {
+      await db.query(
+        `INSERT INTO audit_logs (id, timestamp, actor_sub, actor_email, actor_name, actor_role, action, resource_type, resource_id, summary, details, ip)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+        [event.id, event.timestamp, event.actorSub, event.actorEmail, event.actorName, event.actorRole, event.action, event.resourceType, event.resourceId, event.summary, JSON.stringify(event.details), event.ip]
+      );
+      return event;
+    } catch (err) {
+      console.warn("PostgreSQL audit record fallback:", err.message);
+    }
   }
-  saveStore(store);
+
+  const storeData = loadStore();
+  if (!storeData.auditLogs) storeData.auditLogs = [];
+  storeData.auditLogs.unshift(event);
+  if (storeData.auditLogs.length > 500) {
+    storeData.auditLogs = storeData.auditLogs.slice(0, 500);
+  }
+  saveStore(storeData);
   return event;
 }
 
-function getAuditLogs() {
-  const store = loadStore();
-  return store.auditLogs || [];
-}
-
-// -------------------------
-// Application CRUD
-// -------------------------
-
-function getApplications(includeDisabled = false) {
-  const store = loadStore();
-  if (includeDisabled) {
-    return store.applications;
+async function getAuditLogs() {
+  if (usePostgres) {
+    try {
+      const res = await db.query(
+        `SELECT id, timestamp, actor_sub AS "actorSub", actor_email AS "actorEmail", actor_name AS "actorName", actor_role AS "actorRole", action, resource_type AS "resourceType", resource_id AS "resourceId", summary, details, ip
+         FROM audit_logs
+         ORDER BY timestamp DESC
+         LIMIT 200`
+      );
+      return res.rows;
+    } catch (err) {
+      console.warn("PostgreSQL getAuditLogs fallback:", err.message);
+    }
   }
-  return store.applications.filter((app) => app.enabled !== false);
+  const storeData = loadStore();
+  return storeData.auditLogs || [];
 }
 
-function getApplicationById(id) {
-  const store = loadStore();
-  return store.applications.find((app) => app.id === id) || null;
+// -------------------------
+// Applications Methods
+// -------------------------
+
+async function getApplications(includeDisabled = false) {
+  if (usePostgres) {
+    try {
+      const res = await db.query(
+        `SELECT id, name, short_name AS "shortName", description, url, icon, category, roles, enabled, display_order AS "displayOrder", sso_enabled AS "ssoEnabled", highlight_color AS "highlightColor", created_at AS "createdAt", updated_at AS "updatedAt", created_by AS "createdBy", updated_by AS "updatedBy"
+         FROM applications
+         WHERE ($1::boolean = true OR enabled = true)
+         ORDER BY display_order ASC, created_at ASC`,
+        [includeDisabled]
+      );
+      return res.rows;
+    } catch (err) {
+      console.warn("PostgreSQL getApplications fallback:", err.message);
+    }
+  }
+
+  const storeData = loadStore();
+  const list = storeData.applications || [];
+  if (includeDisabled) return list;
+  return list.filter((app) => app.enabled !== false);
 }
 
-function createApplication(appData, req) {
-  const store = loadStore();
+async function getApplicationById(id) {
+  if (usePostgres) {
+    try {
+      const res = await db.query(
+        `SELECT id, name, short_name AS "shortName", description, url, icon, category, roles, enabled, display_order AS "displayOrder", sso_enabled AS "ssoEnabled", highlight_color AS "highlightColor", created_at AS "createdAt", updated_at AS "updatedAt", created_by AS "createdBy", updated_by AS "updatedBy"
+         FROM applications
+         WHERE id = $1`,
+        [id]
+      );
+      return res.rows[0] || null;
+    } catch (err) {
+      console.warn("PostgreSQL getApplicationById fallback:", err.message);
+    }
+  }
+  const storeData = loadStore();
+  return (storeData.applications || []).find((app) => app.id === id) || null;
+}
+
+async function createApplication(appData, req) {
+  const id = generateId("app");
+  const now = new Date().toISOString();
+  const actorEmail = req?.session?.user?.email || "system";
+
   const newApp = {
-    id: appData.id || generateId("app"),
-    name: appData.name,
-    shortName: appData.shortName || appData.name,
+    id,
+    name: appData.name.trim(),
+    shortName: appData.shortName || appData.name.trim(),
     description: appData.description || "",
-    url: appData.url,
+    url: appData.url.trim(),
     icon: appData.icon || "LayoutDashboard",
     category: appData.category || "Productivity",
-    roles: Array.isArray(appData.roles) && appData.roles.length > 0 ? appData.roles : ["student", "staff", "admin"],
+    roles: Array.isArray(appData.roles) ? appData.roles : ["student", "staff", "admin"],
     enabled: appData.enabled !== false,
-    displayOrder: Number(appData.displayOrder) || store.applications.length + 1,
+    displayOrder: Number(appData.displayOrder) || 1,
     ssoEnabled: appData.ssoEnabled !== false,
-    highlightColor: appData.highlightColor || undefined
+    highlightColor: appData.highlightColor || null,
+    createdAt: now,
+    updatedAt: now,
+    createdBy: actorEmail,
+    updatedBy: actorEmail
   };
 
-  store.applications.push(newApp);
-  saveStore(store);
-
-  if (req) {
-    recordAuditEvent(req, "application.created", "application", newApp.id, `Created application '${newApp.name}'`);
+  if (usePostgres) {
+    try {
+      await db.query(
+        `INSERT INTO applications (id, name, short_name, description, url, icon, category, roles, enabled, display_order, sso_enabled, highlight_color, created_at, updated_at, created_by, updated_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+        [newApp.id, newApp.name, newApp.shortName, newApp.description, newApp.url, newApp.icon, newApp.category, newApp.roles, newApp.enabled, newApp.displayOrder, newApp.ssoEnabled, newApp.highlightColor, newApp.createdAt, newApp.updatedAt, newApp.createdBy, newApp.updatedBy]
+      );
+      await recordAuditEvent(req, "application.created", "application", id, `Created application '${newApp.name}'`);
+      return newApp;
+    } catch (err) {
+      console.warn("PostgreSQL createApplication fallback:", err.message);
+    }
   }
 
+  const storeData = loadStore();
+  if (!storeData.applications) storeData.applications = [];
+  storeData.applications.push(newApp);
+  saveStore(storeData);
+  await recordAuditEvent(req, "application.created", "application", id, `Created application '${newApp.name}'`);
   return newApp;
 }
 
-function updateApplication(id, updates, req) {
-  const store = loadStore();
-  const index = store.applications.findIndex((app) => app.id === id);
-  if (index === -1) return null;
+async function updateApplication(id, updates, req) {
+  const now = new Date().toISOString();
+  const actorEmail = req?.session?.user?.email || "system";
 
-  const existing = store.applications[index];
-  const updatedApp = {
-    ...existing,
-    ...updates,
-    id // keep original ID
-  };
+  if (usePostgres) {
+    try {
+      const existing = await getApplicationById(id);
+      if (!existing) return null;
+      const updated = { ...existing, ...updates, updatedAt: now, updatedBy: actorEmail };
 
-  store.applications[index] = updatedApp;
-  saveStore(store);
-
-  if (req) {
-    const action = updates.enabled !== undefined && updates.enabled !== existing.enabled
-      ? (updates.enabled ? "application.enabled" : "application.disabled")
-      : "application.updated";
-    recordAuditEvent(req, action, "application", id, `Updated application '${updatedApp.name}'`);
+      await db.query(
+        `UPDATE applications
+         SET name = $1, short_name = $2, description = $3, url = $4, icon = $5, category = $6, roles = $7, enabled = $8, display_order = $9, sso_enabled = $10, highlight_color = $11, updated_at = $12, updated_by = $13
+         WHERE id = $14`,
+        [updated.name, updated.shortName, updated.description, updated.url, updated.icon, updated.category, updated.roles, updated.enabled, updated.displayOrder, updated.ssoEnabled, updated.highlightColor, updated.updatedAt, updated.updatedBy, id]
+      );
+      await recordAuditEvent(req, "application.updated", "application", id, `Updated application '${updated.name}'`);
+      return updated;
+    } catch (err) {
+      console.warn("PostgreSQL updateApplication fallback:", err.message);
+    }
   }
 
+  const storeData = loadStore();
+  const index = (storeData.applications || []).findIndex((app) => app.id === id);
+  if (index === -1) return null;
+
+  const updatedApp = { ...storeData.applications[index], ...updates, id, updatedAt: now, updatedBy: actorEmail };
+  storeData.applications[index] = updatedApp;
+  saveStore(storeData);
+  await recordAuditEvent(req, "application.updated", "application", id, `Updated application '${updatedApp.name}'`);
   return updatedApp;
 }
 
-function deleteApplication(id, req) {
-  const store = loadStore();
-  const index = store.applications.findIndex((app) => app.id === id);
-  if (index === -1) return false;
+async function deleteApplication(id, req) {
+  if (usePostgres) {
+    try {
+      const existing = await getApplicationById(id);
+      if (!existing) return false;
 
-  const removed = store.applications[index];
-  store.applications.splice(index, 1);
-  saveStore(store);
-
-  if (req) {
-    recordAuditEvent(req, "application.deleted", "application", id, `Deleted application '${removed.name}'`);
+      await db.query("DELETE FROM applications WHERE id = $1", [id]);
+      await recordAuditEvent(req, "application.deleted", "application", id, `Deleted application '${existing.name}'`);
+      return true;
+    } catch (err) {
+      console.warn("PostgreSQL deleteApplication fallback:", err.message);
+    }
   }
 
+  const storeData = loadStore();
+  const index = (storeData.applications || []).findIndex((app) => app.id === id);
+  if (index === -1) return false;
+
+  const removed = storeData.applications[index];
+  storeData.applications.splice(index, 1);
+  saveStore(storeData);
+  await recordAuditEvent(req, "application.deleted", "application", id, `Deleted application '${removed.name}'`);
   return true;
 }
 
 // -------------------------
-// Notice CRUD
+// Notices Methods
 // -------------------------
 
-function getNotices(filter = {}) {
-  const store = loadStore();
-  let result = [...store.notices];
-
-  if (filter.status) {
-    result = result.filter((n) => n.status === filter.status);
+async function getNotices(filters = {}) {
+  const { category, audience, status } = filters;
+  if (usePostgres) {
+    try {
+      const res = await db.query(
+        `SELECT id, title, content, category, audience, priority, status, author, publish_at AS "publishAt", expires_at AS "expiresAt", attachment_url AS "attachmentUrl", attachment_name AS "attachmentName", attachment_size AS "attachmentSize", created_at AS "createdAt", updated_at AS "updatedAt", created_by AS "createdBy", updated_by AS "updatedBy"
+         FROM notices
+         WHERE ($1::text IS NULL OR category = $1)
+           AND ($2::text IS NULL OR audience = $2)
+           AND ($3::text IS NULL OR status = $3)
+         ORDER BY created_at DESC`,
+        [category || null, audience || null, status || null]
+      );
+      return res.rows;
+    } catch (err) {
+      console.warn("PostgreSQL getNotices fallback:", err.message);
+    }
   }
 
-  if (filter.checkExpiry) {
-    const now = Date.now();
-    result = result.filter((n) => {
-      if (!n.expiresAt) return true;
-      const expTime = new Date(n.expiresAt).getTime();
-      return isNaN(expTime) || expTime > now;
-    });
-  }
-
-  if (filter.audience && filter.audience !== "All") {
-    result = result.filter((n) => n.audience === "All" || n.audience === filter.audience);
-  }
-
-  if (filter.category) {
-    result = result.filter((n) => n.category === filter.category);
-  }
-
-  return result;
+  const storeData = loadStore();
+  let list = [...(storeData.notices || [])];
+  if (category) list = list.filter((n) => n.category === category);
+  if (audience) list = list.filter((n) => n.audience === audience || n.audience === "All");
+  if (status) list = list.filter((n) => n.status === status);
+  list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  return list;
 }
 
-function getNoticeById(id) {
-  const store = loadStore();
-  return store.notices.find((n) => n.id === id) || null;
+async function getNoticeById(id) {
+  if (usePostgres) {
+    try {
+      const res = await db.query(
+        `SELECT id, title, content, category, audience, priority, status, author, publish_at AS "publishAt", expires_at AS "expiresAt", attachment_url AS "attachmentUrl", attachment_name AS "attachmentName", attachment_size AS "attachmentSize", created_at AS "createdAt", updated_at AS "updatedAt", created_by AS "createdBy", updated_by AS "updatedBy"
+         FROM notices
+         WHERE id = $1`,
+        [id]
+      );
+      return res.rows[0] || null;
+    } catch (err) {
+      console.warn("PostgreSQL getNoticeById fallback:", err.message);
+    }
+  }
+  const storeData = loadStore();
+  return (storeData.notices || []).find((n) => String(n.id) === String(id)) || null;
 }
 
-function createNotice(noticeData, req) {
-  const store = loadStore();
+async function createNotice(noticeData, req) {
+  const id = generateId("notice");
   const now = new Date().toISOString();
-  const actorEmail = req?.session?.user?.email || "admin@dypiu.ac.in";
+  const actorEmail = req?.session?.user?.email || "system";
 
   const newNotice = {
-    id: generateId("notice"),
-    title: noticeData.title,
-    content: noticeData.content,
+    id,
+    title: noticeData.title.trim(),
+    content: noticeData.content.trim(),
     category: noticeData.category || "Academic",
     audience: noticeData.audience || "All",
     priority: noticeData.priority || "Medium",
     status: noticeData.status || "published",
-    author: noticeData.author || "University Administration",
+    author: noticeData.author || req?.session?.user?.name || "University Administration",
     publishAt: noticeData.publishAt || now,
     expiresAt: noticeData.expiresAt || null,
     attachmentUrl: noticeData.attachmentUrl || null,
@@ -296,210 +402,309 @@ function createNotice(noticeData, req) {
     updatedBy: actorEmail
   };
 
-  store.notices.unshift(newNotice);
-  saveStore(store);
-
-  if (req) {
-    recordAuditEvent(req, "notice.created", "notice", newNotice.id, `Created notice '${newNotice.title}'`);
-    if (newNotice.status === "published") {
-      recordAuditEvent(req, "notice.published", "notice", newNotice.id, `Published notice '${newNotice.title}'`);
+  if (usePostgres) {
+    try {
+      await db.query(
+        `INSERT INTO notices (id, title, content, category, audience, priority, status, author, publish_at, expires_at, attachment_url, attachment_name, attachment_size, created_at, updated_at, created_by, updated_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+        [newNotice.id, newNotice.title, newNotice.content, newNotice.category, newNotice.audience, newNotice.priority, newNotice.status, newNotice.author, newNotice.publishAt, newNotice.expiresAt, newNotice.attachmentUrl, newNotice.attachmentName, newNotice.attachmentSize, newNotice.createdAt, newNotice.updatedAt, newNotice.createdBy, newNotice.updatedBy]
+      );
+      await recordAuditEvent(req, "notice.created", "notice", id, `Created notice '${newNotice.title}'`);
+      return newNotice;
+    } catch (err) {
+      console.warn("PostgreSQL createNotice fallback:", err.message);
     }
   }
 
+  const storeData = loadStore();
+  if (!storeData.notices) storeData.notices = [];
+  storeData.notices.unshift(newNotice);
+  saveStore(storeData);
+  await recordAuditEvent(req, "notice.created", "notice", id, `Created notice '${newNotice.title}'`);
   return newNotice;
 }
 
-function updateNotice(id, updates, req) {
-  const store = loadStore();
-  const index = store.notices.findIndex((n) => n.id === id);
-  if (index === -1) return null;
-
-  const existing = store.notices[index];
+async function updateNotice(id, updates, req) {
   const now = new Date().toISOString();
-  const actorEmail = req?.session?.user?.email || existing.updatedBy;
+  const actorEmail = req?.session?.user?.email || "system";
 
-  const updatedNotice = {
-    ...existing,
-    ...updates,
-    id,
-    updatedAt: now,
-    updatedBy: actorEmail
-  };
+  if (usePostgres) {
+    try {
+      const existing = await getNoticeById(id);
+      if (!existing) return null;
+      const updated = { ...existing, ...updates, updatedAt: now, updatedBy: actorEmail };
 
-  store.notices[index] = updatedNotice;
-  saveStore(store);
-
-  if (req) {
-    let action = "notice.updated";
-    if (updates.status && updates.status !== existing.status) {
-      if (updates.status === "published") action = "notice.published";
-      else if (updates.status === "draft" || updates.status === "unpublished") action = "notice.unpublished";
-      else if (updates.status === "archived") action = "notice.archived";
+      await db.query(
+        `UPDATE notices
+         SET title = $1, content = $2, category = $3, audience = $4, priority = $5, status = $6, author = $7, publish_at = $8, expires_at = $9, attachment_url = $10, attachment_name = $11, attachment_size = $12, updated_at = $13, updated_by = $14
+         WHERE id = $15`,
+        [updated.title, updated.content, updated.category, updated.audience, updated.priority, updated.status, updated.author, updated.publishAt, updated.expiresAt, updated.attachmentUrl, updated.attachmentName, updated.attachmentSize, updated.updatedAt, updated.updatedBy, id]
+      );
+      await recordAuditEvent(req, "notice.updated", "notice", id, `Updated notice '${updated.title}'`);
+      return updated;
+    } catch (err) {
+      console.warn("PostgreSQL updateNotice fallback:", err.message);
     }
-    recordAuditEvent(req, action, "notice", id, `Updated notice '${updatedNotice.title}'`);
   }
 
+  const storeData = loadStore();
+  const index = (storeData.notices || []).findIndex((n) => String(n.id) === String(id));
+  if (index === -1) return null;
+
+  const updatedNotice = { ...storeData.notices[index], ...updates, id, updatedAt: now, updatedBy: actorEmail };
+  storeData.notices[index] = updatedNotice;
+  saveStore(storeData);
+  await recordAuditEvent(req, "notice.updated", "notice", id, `Updated notice '${updatedNotice.title}'`);
   return updatedNotice;
 }
 
-function deleteNotice(id, req) {
-  const store = loadStore();
-  const index = store.notices.findIndex((n) => n.id === id);
-  if (index === -1) return false;
+async function deleteNotice(id, req) {
+  if (usePostgres) {
+    try {
+      const existing = await getNoticeById(id);
+      if (!existing) return false;
 
-  const removed = store.notices[index];
-  store.notices.splice(index, 1);
-  saveStore(store);
-
-  if (req) {
-    recordAuditEvent(req, "notice.deleted", "notice", id, `Deleted notice '${removed.title}'`);
+      await db.query("DELETE FROM notices WHERE id = $1", [id]);
+      await recordAuditEvent(req, "notice.deleted", "notice", id, `Deleted notice '${existing.title}'`);
+      return true;
+    } catch (err) {
+      console.warn("PostgreSQL deleteNotice fallback:", err.message);
+    }
   }
 
+  const storeData = loadStore();
+  const index = (storeData.notices || []).findIndex((n) => String(n.id) === String(id));
+  if (index === -1) return false;
+
+  const removed = storeData.notices[index];
+  storeData.notices.splice(index, 1);
+  saveStore(storeData);
+  await recordAuditEvent(req, "notice.deleted", "notice", id, `Deleted notice '${removed.title}'`);
   return true;
 }
 
 // -------------------------
-// Policy CRUD
+// Policies Methods
 // -------------------------
 
-function getPolicies(filter = {}) {
-  const store = loadStore();
-  let result = [...store.policies];
-
-  if (filter.status) {
-    result = result.filter((p) => p.status === filter.status);
+async function getPolicies(filters = {}) {
+  const { category, status } = filters;
+  if (usePostgres) {
+    try {
+      const res = await db.query(
+        `SELECT id, title, category, summary, content, version, status, effective_date AS "effectiveDate", attachment_url AS "attachmentUrl", attachment_name AS "attachmentName", attachment_size AS "attachmentSize", created_at AS "createdAt", updated_at AS "updatedAt", created_by AS "createdBy", updated_by AS "updatedBy"
+         FROM policies
+         WHERE ($1::text IS NULL OR category = $1)
+           AND ($2::text IS NULL OR status = $2)
+         ORDER BY created_at DESC`,
+        [category || null, status || null]
+      );
+      return res.rows;
+    } catch (err) {
+      console.warn("PostgreSQL getPolicies fallback:", err.message);
+    }
   }
 
-  if (filter.category) {
-    result = result.filter((p) => p.category === filter.category);
+  const storeData = loadStore();
+  let list = [...(storeData.policies || [])];
+  if (category) list = list.filter((p) => p.category === category);
+  if (status) list = list.filter((p) => p.status === status);
+  list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  return list;
+}
+
+async function getPolicyById(id) {
+  if (usePostgres) {
+    try {
+      const res = await db.query(
+        `SELECT id, title, category, summary, content, version, status, effective_date AS "effectiveDate", attachment_url AS "attachmentUrl", attachment_name AS "attachmentName", attachment_size AS "attachmentSize", created_at AS "createdAt", updated_at AS "updatedAt", created_by AS "createdBy", updated_by AS "updatedBy"
+         FROM policies
+         WHERE id = $1`,
+        [id]
+      );
+      return res.rows[0] || null;
+    } catch (err) {
+      console.warn("PostgreSQL getPolicyById fallback:", err.message);
+    }
   }
-
-  return result;
+  const storeData = loadStore();
+  return (storeData.policies || []).find((p) => String(p.id) === String(id)) || null;
 }
 
-function getPolicyById(id) {
-  const store = loadStore();
-  return store.policies.find((p) => p.id === id) || null;
-}
-
-function createPolicy(policyData, req) {
-  const store = loadStore();
+async function createPolicy(policyData, req) {
+  const id = generateId("pol");
   const now = new Date().toISOString();
-  const actorEmail = req?.session?.user?.email || "admin@dypiu.ac.in";
+  const actorEmail = req?.session?.user?.email || "system";
 
   const newPolicy = {
-    id: generateId("pol"),
-    title: policyData.title,
+    id,
+    title: policyData.title.trim(),
     category: policyData.category || "Administrative",
     summary: policyData.summary || "",
     content: policyData.content || "",
     version: policyData.version || "1.0",
     status: policyData.status || "published",
     effectiveDate: policyData.effectiveDate || new Date().toISOString().split("T")[0],
-    publishedAt: policyData.status === "published" ? now : null,
+    attachmentUrl: policyData.attachmentUrl || null,
+    attachmentName: policyData.attachmentName || null,
+    attachmentSize: policyData.attachmentSize || null,
     createdAt: now,
     updatedAt: now,
     createdBy: actorEmail,
     updatedBy: actorEmail
   };
 
-  store.policies.unshift(newPolicy);
-  saveStore(store);
-
-  if (req) {
-    recordAuditEvent(req, "policy.created", "policy", newPolicy.id, `Created policy '${newPolicy.title}'`);
-    if (newPolicy.status === "published") {
-      recordAuditEvent(req, "policy.published", "policy", newPolicy.id, `Published policy '${newPolicy.title}'`);
+  if (usePostgres) {
+    try {
+      await db.query(
+        `INSERT INTO policies (id, title, category, summary, content, version, status, effective_date, attachment_url, attachment_name, attachment_size, created_at, updated_at, created_by, updated_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+        [newPolicy.id, newPolicy.title, newPolicy.category, newPolicy.summary, newPolicy.content, newPolicy.version, newPolicy.status, newPolicy.effectiveDate, newPolicy.attachmentUrl, newPolicy.attachmentName, newPolicy.attachmentSize, newPolicy.createdAt, newPolicy.updatedAt, newPolicy.createdBy, newPolicy.updatedBy]
+      );
+      await recordAuditEvent(req, "policy.created", "policy", id, `Created policy '${newPolicy.title}'`);
+      return newPolicy;
+    } catch (err) {
+      console.warn("PostgreSQL createPolicy fallback:", err.message);
     }
   }
 
+  const storeData = loadStore();
+  if (!storeData.policies) storeData.policies = [];
+  storeData.policies.unshift(newPolicy);
+  saveStore(storeData);
+  await recordAuditEvent(req, "policy.created", "policy", id, `Created policy '${newPolicy.title}'`);
   return newPolicy;
 }
 
-function updatePolicy(id, updates, req) {
-  const store = loadStore();
-  const index = store.policies.findIndex((p) => p.id === id);
-  if (index === -1) return null;
-
-  const existing = store.policies[index];
+async function updatePolicy(id, updates, req) {
   const now = new Date().toISOString();
-  const actorEmail = req?.session?.user?.email || existing.updatedBy;
+  const actorEmail = req?.session?.user?.email || "system";
 
-  const updatedPolicy = {
-    ...existing,
-    ...updates,
-    id,
-    updatedAt: now,
-    updatedBy: actorEmail,
-    publishedAt: updates.status === "published" && existing.status !== "published" ? now : existing.publishedAt
-  };
+  if (usePostgres) {
+    try {
+      const existing = await getPolicyById(id);
+      if (!existing) return null;
+      const updated = { ...existing, ...updates, updatedAt: now, updatedBy: actorEmail };
 
-  store.policies[index] = updatedPolicy;
-  saveStore(store);
-
-  if (req) {
-    let action = "policy.updated";
-    if (updates.status && updates.status !== existing.status) {
-      if (updates.status === "published") action = "policy.published";
-      else if (updates.status === "draft" || updates.status === "unpublished") action = "policy.unpublished";
-      else if (updates.status === "archived") action = "policy.archived";
+      await db.query(
+        `UPDATE policies
+         SET title = $1, category = $2, summary = $3, content = $4, version = $5, status = $6, effective_date = $7, attachment_url = $8, attachment_name = $9, attachment_size = $10, updated_at = $11, updated_by = $12
+         WHERE id = $13`,
+        [updated.title, updated.category, updated.summary, updated.content, updated.version, updated.status, updated.effectiveDate, updated.attachmentUrl, updated.attachmentName, updated.attachmentSize, updated.updatedAt, updated.updatedBy, id]
+      );
+      await recordAuditEvent(req, "policy.updated", "policy", id, `Updated policy '${updated.title}'`);
+      return updated;
+    } catch (err) {
+      console.warn("PostgreSQL updatePolicy fallback:", err.message);
     }
-    recordAuditEvent(req, action, "policy", id, `Updated policy '${updatedPolicy.title}'`);
   }
 
+  const storeData = loadStore();
+  const index = (storeData.policies || []).findIndex((p) => String(p.id) === String(id));
+  if (index === -1) return null;
+
+  const updatedPolicy = { ...storeData.policies[index], ...updates, id, updatedAt: now, updatedBy: actorEmail };
+  storeData.policies[index] = updatedPolicy;
+  saveStore(storeData);
+  await recordAuditEvent(req, "policy.updated", "policy", id, `Updated policy '${updatedPolicy.title}'`);
   return updatedPolicy;
 }
 
-function deletePolicy(id, req) {
-  const store = loadStore();
-  const index = store.policies.findIndex((p) => p.id === id);
-  if (index === -1) return false;
+async function deletePolicy(id, req) {
+  if (usePostgres) {
+    try {
+      const existing = await getPolicyById(id);
+      if (!existing) return false;
 
-  const removed = store.policies[index];
-  store.policies.splice(index, 1);
-  saveStore(store);
-
-  if (req) {
-    recordAuditEvent(req, "policy.archived", "policy", id, `Deleted/Archived policy '${removed.title}'`);
+      await db.query("DELETE FROM policies WHERE id = $1", [id]);
+      await recordAuditEvent(req, "policy.deleted", "policy", id, `Deleted policy '${existing.title}'`);
+      return true;
+    } catch (err) {
+      console.warn("PostgreSQL deletePolicy fallback:", err.message);
+    }
   }
 
+  const storeData = loadStore();
+  const index = (storeData.policies || []).findIndex((p) => String(p.id) === String(id));
+  if (index === -1) return false;
+
+  const removed = storeData.policies[index];
+  storeData.policies.splice(index, 1);
+  saveStore(storeData);
+  await recordAuditEvent(req, "policy.deleted", "policy", id, `Deleted policy '${removed.title}'`);
   return true;
 }
 
-function getAccessRules(filters = {}) {
-  const store = loadStore();
-  let rules = [...(store.accessRules || [])];
+// -------------------------
+// Access Rules Methods
+// -------------------------
 
-  if (filters.targetType) {
-    rules = rules.filter((r) => r.targetType === filters.targetType);
-  }
-  if (filters.status) {
-    rules = rules.filter((r) => r.status === filters.status);
-  }
-  if (filters.search) {
-    const q = filters.search.toLowerCase();
-    rules = rules.filter(
-      (r) =>
-        r.name.toLowerCase().includes(q) ||
-        r.targetValue.toLowerCase().includes(q)
-    );
+async function getAccessRules(filters = {}) {
+  const { targetType, status, search } = filters;
+  if (usePostgres) {
+    try {
+      const res = await db.query(
+        `SELECT id, name, target_type AS "targetType", target_value AS "targetValue", services, access_level AS "accessLevel", status, created_at AS "createdAt", updated_at AS "updatedAt", created_by AS "createdBy", updated_by AS "updatedBy"
+         FROM access_rules
+         ORDER BY created_at DESC`
+      );
+      let rules = res.rows;
+      if (targetType && targetType !== "ALL") {
+        rules = rules.filter((r) => r.targetType.toLowerCase() === targetType.toLowerCase());
+      }
+      if (status && status !== "ALL") {
+        rules = rules.filter((r) => r.status.toLowerCase() === status.toLowerCase());
+      }
+      if (search) {
+        const q = search.toLowerCase();
+        rules = rules.filter((r) => r.name.toLowerCase().includes(q) || r.targetValue.toLowerCase().includes(q));
+      }
+      return rules;
+    } catch (err) {
+      console.warn("PostgreSQL getAccessRules fallback:", err.message);
+    }
   }
 
+  const storeData = loadStore();
+  let rules = [...(storeData.accessRules || [])];
+  if (targetType && targetType !== "ALL") {
+    rules = rules.filter((r) => r.targetType.toLowerCase() === targetType.toLowerCase());
+  }
+  if (status && status !== "ALL") {
+    rules = rules.filter((r) => r.status.toLowerCase() === status.toLowerCase());
+  }
+  if (search) {
+    const q = search.toLowerCase();
+    rules = rules.filter((r) => r.name.toLowerCase().includes(q) || r.targetValue.toLowerCase().includes(q));
+  }
   return rules;
 }
 
-function getAccessRuleById(id) {
-  const store = loadStore();
-  return (store.accessRules || []).find((r) => r.id === id) || null;
+async function getAccessRuleById(id) {
+  if (usePostgres) {
+    try {
+      const res = await db.query(
+        `SELECT id, name, target_type AS "targetType", target_value AS "targetValue", services, access_level AS "accessLevel", status, created_at AS "createdAt", updated_at AS "updatedAt", created_by AS "createdBy", updated_by AS "updatedBy"
+         FROM access_rules
+         WHERE id = $1`,
+        [id]
+      );
+      return res.rows[0] || null;
+    } catch (err) {
+      console.warn("PostgreSQL getAccessRuleById fallback:", err.message);
+    }
+  }
+  const storeData = loadStore();
+  return (storeData.accessRules || []).find((r) => r.id === id) || null;
 }
 
-function createAccessRule(ruleData, req) {
-  const store = loadStore();
+async function createAccessRule(ruleData, req) {
+  const id = generateId("rule");
   const now = new Date().toISOString();
   const actorEmail = req?.session?.user?.email || "system";
 
   const newRule = {
-    id: generateId("rule"),
+    id,
     name: ruleData.name.trim(),
     targetType: ruleData.targetType || "email",
     targetValue: ruleData.targetValue.trim(),
@@ -512,71 +717,132 @@ function createAccessRule(ruleData, req) {
     updatedBy: actorEmail
   };
 
-  if (!store.accessRules) store.accessRules = [];
-  store.accessRules.unshift(newRule);
-  saveStore(store);
-
-  if (req) {
-    recordAuditEvent(req, "access_rule.created", "access_rule", newRule.id, `Created access rule '${newRule.name}' for ${newRule.targetType}:${newRule.targetValue}`);
+  if (usePostgres) {
+    try {
+      await db.query(
+        `INSERT INTO access_rules (id, name, target_type, target_value, services, access_level, status, created_at, updated_at, created_by, updated_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        [newRule.id, newRule.name, newRule.targetType, newRule.targetValue, newRule.services, newRule.accessLevel, newRule.status, newRule.createdAt, newRule.updatedAt, newRule.createdBy, newRule.updatedBy]
+      );
+      await recordAuditEvent(req, "access_rule.created", "access_rule", newRule.id, `Created access rule '${newRule.name}' for ${newRule.targetType}:${newRule.targetValue}`);
+      return newRule;
+    } catch (err) {
+      console.warn("PostgreSQL createAccessRule fallback:", err.message);
+    }
   }
 
+  const storeData = loadStore();
+  if (!storeData.accessRules) storeData.accessRules = [];
+  storeData.accessRules.unshift(newRule);
+  saveStore(storeData);
+  await recordAuditEvent(req, "access_rule.created", "access_rule", newRule.id, `Created access rule '${newRule.name}' for ${newRule.targetType}:${newRule.targetValue}`);
   return newRule;
 }
 
-function updateAccessRule(id, updates, req) {
-  const store = loadStore();
-  if (!store.accessRules) store.accessRules = [];
-  const index = store.accessRules.findIndex((r) => r.id === id);
-  if (index === -1) return null;
-
-  const existing = store.accessRules[index];
+async function updateAccessRule(id, updates, req) {
   const now = new Date().toISOString();
   const actorEmail = req?.session?.user?.email || "system";
 
-  const updatedRule = {
-    ...existing,
-    ...updates,
-    id,
-    updatedAt: now,
-    updatedBy: actorEmail
-  };
+  if (usePostgres) {
+    try {
+      const existing = await getAccessRuleById(id);
+      if (!existing) return null;
+      const updated = { ...existing, ...updates, id, updatedAt: now, updatedBy: actorEmail };
 
-  store.accessRules[index] = updatedRule;
-  saveStore(store);
-
-  if (req) {
-    recordAuditEvent(req, "access_rule.updated", "access_rule", id, `Updated access rule '${updatedRule.name}'`);
+      await db.query(
+        `UPDATE access_rules
+         SET name = $1, target_type = $2, target_value = $3, services = $4, access_level = $5, status = $6, updated_at = $7, updated_by = $8
+         WHERE id = $9`,
+        [updated.name, updated.targetType, updated.targetValue, updated.services, updated.accessLevel, updated.status, updated.updatedAt, updated.updatedBy, id]
+      );
+      await recordAuditEvent(req, "access_rule.updated", "access_rule", id, `Updated access rule '${updated.name}'`);
+      return updated;
+    } catch (err) {
+      console.warn("PostgreSQL updateAccessRule fallback:", err.message);
+    }
   }
 
+  const storeData = loadStore();
+  const index = (storeData.accessRules || []).findIndex((r) => r.id === id);
+  if (index === -1) return null;
+
+  const updatedRule = { ...storeData.accessRules[index], ...updates, id, updatedAt: now, updatedBy: actorEmail };
+  storeData.accessRules[index] = updatedRule;
+  saveStore(storeData);
+  await recordAuditEvent(req, "access_rule.updated", "access_rule", id, `Updated access rule '${updatedRule.name}'`);
   return updatedRule;
 }
 
-function deleteAccessRule(id, req) {
-  const store = loadStore();
-  if (!store.accessRules) store.accessRules = [];
-  const index = store.accessRules.findIndex((r) => r.id === id);
-  if (index === -1) return false;
+async function deleteAccessRule(id, req) {
+  if (usePostgres) {
+    try {
+      const existing = await getAccessRuleById(id);
+      if (!existing) return false;
 
-  const removed = store.accessRules[index];
-  store.accessRules.splice(index, 1);
-  saveStore(store);
-
-  if (req) {
-    recordAuditEvent(req, "access_rule.deleted", "access_rule", id, `Deleted access rule '${removed.name}'`);
+      await db.query("DELETE FROM access_rules WHERE id = $1", [id]);
+      await recordAuditEvent(req, "access_rule.deleted", "access_rule", id, `Deleted access rule '${existing.name}'`);
+      return true;
+    } catch (err) {
+      console.warn("PostgreSQL deleteAccessRule fallback:", err.message);
+    }
   }
 
+  const storeData = loadStore();
+  const index = (storeData.accessRules || []).findIndex((r) => r.id === id);
+  if (index === -1) return false;
+
+  const removed = storeData.accessRules[index];
+  storeData.accessRules.splice(index, 1);
+  saveStore(storeData);
+  await recordAuditEvent(req, "access_rule.deleted", "access_rule", id, `Deleted access rule '${removed.name}'`);
   return true;
 }
 
-function evaluateUserAccess(email, roles = []) {
-  const store = loadStore();
-  const activeRules = (store.accessRules || []).filter((r) => r.status === "active");
+async function evaluateUserAccess(email, roles = []) {
+  const normEmail = (email || "").trim().toLowerCase();
+  const userRoles = Array.isArray(roles) ? roles.map((r) => String(r).trim().toLowerCase()) : [];
+
+  if (usePostgres) {
+    try {
+      const res = await db.query(
+        `SELECT services, access_level AS "accessLevel"
+         FROM access_rules
+         WHERE status = 'active'
+           AND (
+             (LOWER(target_type) IN ('email', 'gmail') AND LOWER(TRIM(target_value)) = LOWER(TRIM($1)))
+             OR
+             (LOWER(target_type) = 'role' AND LOWER(TRIM(target_value)) = ANY($2::text[]))
+           )`,
+        [normEmail, userRoles]
+      );
+
+      const allowedServices = new Set();
+      let maxAccessLevel = "read";
+
+      for (const rule of res.rows) {
+        for (const srv of rule.services || []) {
+          allowedServices.add(srv);
+        }
+        if (rule.accessLevel === "full") maxAccessLevel = "full";
+        else if (rule.accessLevel === "write" && maxAccessLevel !== "full") maxAccessLevel = "write";
+      }
+
+      return {
+        email: normEmail,
+        roles: userRoles,
+        allowedServices: Array.from(allowedServices),
+        accessLevel: maxAccessLevel
+      };
+    } catch (err) {
+      console.warn("PostgreSQL evaluateUserAccess fallback:", err.message);
+    }
+  }
+
+  const storeData = loadStore();
+  const activeRules = (storeData.accessRules || []).filter((r) => r.status === "active");
 
   const allowedServices = new Set();
   let maxAccessLevel = "read";
-
-  const userRoles = Array.isArray(roles) ? roles.map((r) => String(r).trim().toLowerCase()) : [];
-  const normEmail = (email || "").trim().toLowerCase();
 
   for (const rule of activeRules) {
     let matches = false;

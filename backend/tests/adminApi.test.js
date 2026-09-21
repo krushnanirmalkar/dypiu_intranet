@@ -32,7 +32,7 @@ function createMockReqRes({ user = null } = {}) {
   return { req, res };
 }
 
-function runTests() {
+async function runTests() {
   console.log("==========================================");
   console.log("Running Super Admin & Security Tests...");
   console.log("==========================================");
@@ -95,7 +95,7 @@ function runTests() {
   // Notice CRUD
   {
     const mockReq = { session: { user: { sub: "admin-1", email: "admin@dypiu.ac.in" } }, ip: "127.0.0.1", method: "POST", path: "/api/admin/notices" };
-    const notice = store.createNotice({
+    const notice = await store.createNotice({
       title: "Test Notice",
       content: "Test notice content body",
       category: "Academic",
@@ -108,16 +108,16 @@ function runTests() {
     assert.strictEqual(notice.title, "Test Notice");
 
     // Fetch notice
-    const fetched = store.getNoticeById(notice.id);
+    const fetched = await store.getNoticeById(notice.id);
     assert.ok(fetched, "Should fetch notice by ID");
 
     // Update notice
-    const updated = store.updateNotice(notice.id, { title: "Updated Test Notice", status: "draft" }, mockReq);
+    const updated = await store.updateNotice(notice.id, { title: "Updated Test Notice", status: "draft" }, mockReq);
     assert.strictEqual(updated.title, "Updated Test Notice");
     assert.strictEqual(updated.status, "draft");
 
     // Delete notice
-    const deleted = store.deleteNotice(notice.id, mockReq);
+    const deleted = await store.deleteNotice(notice.id, mockReq);
     assert.strictEqual(deleted, true, "Delete notice should return true");
     console.log("  ✓ Notice CRUD & Status Toggles working correctly");
   }
@@ -127,7 +127,7 @@ function runTests() {
     const mockReq = { session: { user: { sub: "admin-1", email: "admin@dypiu.ac.in" } }, ip: "127.0.0.1", method: "POST", path: "/api/admin/applications" };
     
     // Create valid app
-    const app = store.createApplication({
+    const app = await store.createApplication({
       name: "Test App",
       url: "https://test.dypiu.ac.in",
       category: "Academic",
@@ -139,22 +139,22 @@ function runTests() {
     assert.strictEqual(app.name, "Test App");
 
     // Disable application
-    const disabledApp = store.updateApplication(app.id, { enabled: false }, mockReq);
+    const disabledApp = await store.updateApplication(app.id, { enabled: false }, mockReq);
     assert.strictEqual(disabledApp.enabled, false);
 
     // Verify disabled app disappears from user-facing store list
-    const visibleApps = store.getApplications(false);
+    const visibleApps = await store.getApplications(false);
     assert.ok(!visibleApps.some(a => a.id === app.id), "Disabled application should not be in visible apps");
 
     // Clean up test app
-    store.deleteApplication(app.id, mockReq);
+    await store.deleteApplication(app.id, mockReq);
     console.log("  ✓ Application CRUD, URL safety & visibility filtering working");
   }
 
   // Policy CRUD
   {
     const mockReq = { session: { user: { sub: "admin-1", email: "admin@dypiu.ac.in" } }, ip: "127.0.0.1", method: "POST", path: "/api/admin/policies" };
-    const policy = store.createPolicy({
+    const policy = await store.createPolicy({
       title: "Test Policy",
       category: "Academic",
       summary: "Test policy summary",
@@ -166,14 +166,14 @@ function runTests() {
     assert.ok(policy.id, "Policy ID should be generated");
     assert.strictEqual(policy.version, "1.0");
 
-    store.deletePolicy(policy.id, mockReq);
+    await store.deletePolicy(policy.id, mockReq);
     console.log("  ✓ Policy CRUD & versioning working");
   }
 
   // Access Control & Role/Gmail Access Rules
   {
     const mockReq = { session: { user: { sub: "admin-1", email: "admin@dypiu.ac.in" } }, ip: "127.0.0.1", method: "POST", path: "/api/admin/access-rules" };
-    const rule = store.createAccessRule({
+    const rule = await store.createAccessRule({
       name: "Dean Gmail Notice Grant",
       targetType: "email",
       targetValue: "dean@gmail.com",
@@ -186,18 +186,18 @@ function runTests() {
     assert.strictEqual(rule.targetValue, "dean@gmail.com");
 
     // Test permission evaluation for Gmail
-    const access = store.evaluateUserAccess("dean@gmail.com", ["staff"]);
+    const access = await store.evaluateUserAccess("dean@gmail.com", ["staff"]);
     assert.ok(access.allowedServices.includes("notices"), "User should have notice access");
     assert.ok(access.allowedServices.includes("policies"), "User should have policy access");
 
-    store.deleteAccessRule(rule.id, mockReq);
+    await store.deleteAccessRule(rule.id, mockReq);
     console.log("  ✓ Role-Based & Gmail access rules CRUD & permissions evaluation working");
   }
 
   // 3. Audit Log Generation & Immutability
   console.log("\n[3] Testing Audit Trail Recording...");
   {
-    const auditLogs = store.getAuditLogs();
+    const auditLogs = await store.getAuditLogs();
     assert.ok(Array.isArray(auditLogs), "Audit logs should be an array");
     assert.ok(auditLogs.length > 0, "Audit logs should contain recorded events");
     const lastEvent = auditLogs[0];
