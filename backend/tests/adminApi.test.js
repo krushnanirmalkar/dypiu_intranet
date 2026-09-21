@@ -92,7 +92,7 @@ async function runTests() {
   // 2. Persistence & CRUD Tests
   console.log("\n[2] Testing Store Persistence & CRUD...");
 
-  // Notice CRUD
+  // Notice CRUD & Persistence
   {
     const mockReq = { session: { user: { sub: "admin-1", email: "admin@dypiu.ac.in" } }, ip: "127.0.0.1", method: "POST", path: "/api/admin/notices" };
     const notice = await store.createNotice({
@@ -110,6 +110,7 @@ async function runTests() {
     // Fetch notice
     const fetched = await store.getNoticeById(notice.id);
     assert.ok(fetched, "Should fetch notice by ID");
+    assert.strictEqual(fetched.title, "Test Notice");
 
     // Update notice
     const updated = await store.updateNotice(notice.id, { title: "Updated Test Notice", status: "draft" }, mockReq);
@@ -170,28 +171,83 @@ async function runTests() {
     console.log("  ✓ Policy CRUD & versioning working");
   }
 
-  // Access Control & Role/Gmail Access Rules
+  // Access Control & Additive Role/Gmail Access Rules
   {
     const mockReq = { session: { user: { sub: "admin-1", email: "admin@dypiu.ac.in" } }, ip: "127.0.0.1", method: "POST", path: "/api/admin/access-rules" };
-    const rule = await store.createAccessRule({
-      name: "Dean Gmail Notice Grant",
+    const rule1 = await store.createAccessRule({
+      name: "Staff Base Rule",
+      targetType: "role",
+      targetValue: "staff",
+      services: ["notices"],
+      accessLevel: "read",
+      status: "active"
+    }, mockReq);
+
+    const rule2 = await store.createAccessRule({
+      name: "Dean Gmail Policy Rule",
       targetType: "email",
       targetValue: "dean@gmail.com",
-      services: ["notices", "policies"],
+      services: ["policies"],
       accessLevel: "write",
       status: "active"
     }, mockReq);
 
-    assert.ok(rule.id, "Access rule ID should be generated");
-    assert.strictEqual(rule.targetValue, "dean@gmail.com");
-
-    // Test permission evaluation for Gmail
+    // Test permission evaluation: Additive semantics (role rules + email rules)
     const access = await store.evaluateUserAccess("dean@gmail.com", ["staff"]);
-    assert.ok(access.allowedServices.includes("notices"), "User should have notice access");
-    assert.ok(access.allowedServices.includes("policies"), "User should have policy access");
+    assert.ok(access.allowedServices.includes("notices"), "User should inherit notice access from role");
+    assert.ok(access.allowedServices.includes("policies"), "User should receive policy access from email");
+    assert.strictEqual(access.accessLevel, "write", "Max access level should aggregate to write");
 
-    await store.deleteAccessRule(rule.id, mockReq);
-    console.log("  ✓ Role-Based & Gmail access rules CRUD & permissions evaluation working");
+    await store.deleteAccessRule(rule1.id, mockReq);
+    await store.deleteAccessRule(rule2.id, mockReq);
+    console.log("  ✓ Role-Based & Gmail access rules CRUD & additive permissions evaluation working");
+  }
+
+  // Notice Expiry Filtering Test
+  {
+    const mockReq = { session: { user: { sub: "admin-1", email: "admin@dypiu.ac.in" } }, ip: "127.0.0.1", method: "POST", path: "/api/admin/notices" };
+    
+    // Future notice
+    const futureNotice = await store.createNotice({
+      title: "Future Scheduled Notice",
+      content: "Content",
+      category: "Academic",
+      audience: "All",
+      status: "published",
+      publishAt: new Date(Date.now() + 86400000).toISOString()
+    }, mockReq);
+
+    // Expired notice
+    const expiredNotice = await store.createNotice({
+      title: "Expired Notice",
+      content: "Content",
+      category: "Academic",
+      audience: "All",
+      status: "published",
+      publishAt: new Date(Date.now() - 86400000).toISOString(),
+      expiresAt: new Date(Date.now() - 3600000).toISOString()
+    }, mockReq);
+
+    // Active notice
+    const activeNotice = await store.createNotice({
+      title: "Active Notice",
+      content: "Content",
+      category: "Academic",
+      audience: "All",
+      status: "published",
+      publishAt: new Date(Date.now() - 3600000).toISOString(),
+      expiresAt: new Date(Date.now() + 86400000).toISOString()
+    }, mockReq);
+
+    const activeList = await store.getNotices({ status: "published", checkExpiry: true });
+    assert.ok(activeList.some(n => n.id === activeNotice.id), "Active notice should be in published list");
+    assert.ok(!activeList.some(n => n.id === futureNotice.id), "Future scheduled notice should NOT be in active published list");
+    assert.ok(!activeList.some(n => n.id === expiredNotice.id), "Expired notice should NOT be in active published list");
+
+    await store.deleteNotice(futureNotice.id, mockReq);
+    await store.deleteNotice(expiredNotice.id, mockReq);
+    await store.deleteNotice(activeNotice.id, mockReq);
+    console.log("  ✓ Notice publication & expiry date filtering verified");
   }
 
   // 3. Audit Log Generation & Immutability

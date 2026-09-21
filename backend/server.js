@@ -552,7 +552,16 @@ app.get("/api/policies", requireAuth, async (req, res) => {
 // -------------------------
 
 // Dashboard Summary
-app.get("/api/admin/dashboard", requireSuperAdmin, async (req, res) => {
+app.get("/api/admin/dashboard", requireAuth, async (req, res) => {
+  const user = req.session.user;
+  const userRoles = Array.isArray(user.roles) ? user.roles : [];
+  const isSuperAdmin = userRoles.includes("super_admin") || userRoles.includes("admin");
+  const permissions = await store.evaluateUserAccess(user.email, userRoles);
+
+  if (!isSuperAdmin && (!permissions.allowedServices || permissions.allowedServices.length === 0)) {
+    return res.status(403).json({ authenticated: true, message: "Forbidden. Admin portal access required." });
+  }
+
   const allNotices = await store.getNotices();
   const allApps = await store.getApplications(true);
   const allPolicies = await store.getPolicies();
@@ -693,12 +702,12 @@ app.delete("/api/admin/notices/:id", requireServicePermission("notices", "write"
 
 
 // Application Management
-app.get("/api/admin/applications", requireSuperAdmin, async (req, res) => {
+app.get("/api/admin/applications", requireServicePermission("applications", "read"), async (req, res) => {
   const applicationsList = await store.getApplications(true);
   res.json({ applications: applicationsList });
 });
 
-app.post("/api/admin/applications", requireSuperAdmin, async (req, res) => {
+app.post("/api/admin/applications", requireServicePermission("applications", "write"), async (req, res) => {
   const { name, shortName, description, url, icon, category, roles, enabled, displayOrder, ssoEnabled, highlightColor } = req.body || {};
 
   if (typeof name !== "string" || !name.trim() || name.trim().length > 100) {
@@ -729,7 +738,7 @@ app.post("/api/admin/applications", requireSuperAdmin, async (req, res) => {
   res.status(201).json({ application: newApp });
 });
 
-app.get("/api/admin/applications/:id", requireSuperAdmin, async (req, res) => {
+app.get("/api/admin/applications/:id", requireServicePermission("applications", "read"), async (req, res) => {
   const appItem = await store.getApplicationById(req.params.id);
   if (!appItem) {
     return res.status(404).json({ error: "Application not found." });
@@ -737,7 +746,7 @@ app.get("/api/admin/applications/:id", requireSuperAdmin, async (req, res) => {
   res.json({ application: appItem });
 });
 
-app.put("/api/admin/applications/:id", requireSuperAdmin, async (req, res) => {
+app.put("/api/admin/applications/:id", requireServicePermission("applications", "write"), async (req, res) => {
   const existing = await store.getApplicationById(req.params.id);
   if (!existing) {
     return res.status(404).json({ error: "Application not found." });
@@ -774,7 +783,7 @@ app.put("/api/admin/applications/:id", requireSuperAdmin, async (req, res) => {
   res.json({ application: updatedApp });
 });
 
-app.delete("/api/admin/applications/:id", requireSuperAdmin, async (req, res) => {
+app.delete("/api/admin/applications/:id", requireServicePermission("applications", "write"), async (req, res) => {
   const existing = await store.getApplicationById(req.params.id);
   if (!existing) {
     return res.status(404).json({ error: "Application not found." });
@@ -862,7 +871,7 @@ app.delete("/api/admin/policies/:id", requireServicePermission("policies", "writ
 
 
 // Audit Log Management
-app.get("/api/admin/audit", requireSuperAdmin, async (req, res) => {
+app.get("/api/admin/audit", requireServicePermission("audit", "read"), async (req, res) => {
   const { action, resourceType, search } = req.query;
   let events = await store.getAuditLogs();
 
@@ -891,13 +900,13 @@ app.get("/api/admin/audit", requireSuperAdmin, async (req, res) => {
 // Access Control / User Permission Endpoints
 // -------------------------
 
-app.get("/api/admin/access-rules", requireAuth, requireSuperAdmin, async (req, res) => {
+app.get("/api/admin/access-rules", requireServicePermission("access", "read"), async (req, res) => {
   const { targetType, status, search } = req.query;
   const rules = await store.getAccessRules({ targetType, status, search });
   res.json({ rules });
 });
 
-app.post("/api/admin/access-rules", requireAuth, requireSuperAdmin, async (req, res) => {
+app.post("/api/admin/access-rules", requireServicePermission("access", "write"), async (req, res) => {
   const { name, targetType, targetValue, services, accessLevel, status } = req.body;
   if (!name || typeof name !== "string" || !name.trim()) {
     return res.status(400).json({ message: "Rule name is required." });
@@ -913,7 +922,7 @@ app.post("/api/admin/access-rules", requireAuth, requireSuperAdmin, async (req, 
   res.status(201).json({ rule });
 });
 
-app.put("/api/admin/access-rules/:id", requireAuth, requireSuperAdmin, async (req, res) => {
+app.put("/api/admin/access-rules/:id", requireServicePermission("access", "write"), async (req, res) => {
   const { id } = req.params;
   const existing = await store.getAccessRuleById(id);
   if (!existing) {
@@ -924,7 +933,7 @@ app.put("/api/admin/access-rules/:id", requireAuth, requireSuperAdmin, async (re
   res.json({ rule: updated });
 });
 
-app.delete("/api/admin/access-rules/:id", requireAuth, requireSuperAdmin, async (req, res) => {
+app.delete("/api/admin/access-rules/:id", requireServicePermission("access", "write"), async (req, res) => {
   const { id } = req.params;
   const deleted = await store.deleteAccessRule(id, req);
   if (!deleted) {
@@ -997,7 +1006,7 @@ app.get("/health", (req, res) => {
 
 async function startServer() {
   try {
-    await db.initDatabase();
+    await store.initStore();
     await redisClient.connect();
 
     console.log("Connected to Redis session store.");

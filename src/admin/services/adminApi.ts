@@ -287,27 +287,28 @@ function saveDevAuditLogs(logs: AuditEvent[]): void {
 }
 
 async function fetchWithDevFallback<T>(url: string, options?: RequestInit, devFallbackSupplier?: () => T): Promise<T> {
+  const isDevMode = import.meta.env.DEV;
+
   try {
     const response = await fetch(url, options);
 
     const contentType = response.headers.get('content-type') || '';
     if (!contentType.includes('application/json')) {
-      // Returned HTML (e.g. Vite SPA fallback when backend server is offline)
-      if (devFallbackSupplier) {
+      if (isDevMode && devFallbackSupplier) {
         return devFallbackSupplier();
       }
       throw new Error('Server returned non-JSON response.');
     }
 
     if (response.status === 401) {
-      if (devFallbackSupplier) return devFallbackSupplier();
+      if (isDevMode && devFallbackSupplier) return devFallbackSupplier();
       window.location.href = '/login';
       throw new Error('Authentication required.');
     }
 
     if (response.status === 403) {
-      if (devFallbackSupplier) return devFallbackSupplier();
-      throw new Error('Access denied. Super Admin privileges required.');
+      if (isDevMode && devFallbackSupplier) return devFallbackSupplier();
+      throw new Error('Access denied. Administrator privileges required.');
     }
 
     if (!response.ok) {
@@ -319,13 +320,13 @@ async function fetchWithDevFallback<T>(url: string, options?: RequestInit, devFa
       } catch {
         // ignore
       }
-      if (devFallbackSupplier) return devFallbackSupplier();
+      if (isDevMode && devFallbackSupplier) return devFallbackSupplier();
       throw new Error(errorMsg);
     }
 
     return response.json() as Promise<T>;
   } catch (err: unknown) {
-    if (devFallbackSupplier) {
+    if (isDevMode && devFallbackSupplier) {
       return devFallbackSupplier();
     }
     throw err;
