@@ -190,6 +190,7 @@ export const MainApp: React.FC = () => {
             setAuthLoading(false);
 
             if (isDirectAdminUrl && !isSuperAdmin) {
+              window.history.replaceState({}, '', '/');
               setCurrentNav('dashboard');
             }
             return;
@@ -259,6 +260,28 @@ export const MainApp: React.FC = () => {
     else window.location.assign(app.url);
   };
 
+  const handleNavigate = (page: string) => {
+    if (page === 'admin') {
+      const isAdmin = Boolean(currentUser?.isSuperAdmin || currentUser?.role === 'admin');
+      if (isAdmin) {
+        if (window.location.pathname !== '/admin') {
+          window.history.pushState({}, '', '/admin');
+        }
+        setCurrentNav('admin');
+      } else {
+        if (window.location.pathname === '/admin') {
+          window.history.replaceState({}, '', '/');
+        }
+        setCurrentNav('dashboard');
+      }
+    } else {
+      if (window.location.pathname === '/admin') {
+        window.history.pushState({}, '', '/');
+      }
+      setCurrentNav(page);
+    }
+  };
+
   if (isSignedOutPage) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-navy-50 px-4">
@@ -284,21 +307,12 @@ export const MainApp: React.FC = () => {
   // Render Super Admin Portal
   // -------------------------
   if (currentNav === 'admin') {
-    if (!currentUser.isSuperAdmin) {
-      return (
-        <div className="flex min-h-screen items-center justify-center bg-navy-50 p-4">
-          <div className="max-w-md rounded-2xl border border-red-200 bg-white p-8 text-center shadow-lg">
-            <h2 className="text-xl font-black text-red-700">Access Denied</h2>
-            <p className="mt-2 text-xs text-navy-600 font-medium">You do not have Super Admin privileges to view this portal.</p>
-            <button
-              onClick={() => setCurrentNav('dashboard')}
-              className="mt-6 rounded-xl bg-navy-900 px-5 py-2.5 text-xs font-bold text-white"
-            >
-              Return to Portal
-            </button>
-          </div>
-        </div>
-      );
+    if (!currentUser.isSuperAdmin && currentUser.role !== 'admin') {
+      if (window.location.pathname === '/admin') {
+        window.history.replaceState({}, '', '/');
+      }
+      setCurrentNav('dashboard');
+      return null;
     }
 
     return (
@@ -311,7 +325,7 @@ export const MainApp: React.FC = () => {
           setOpenAppCreateModal(false);
           setOpenPolicyCreateModal(false);
         }}
-        onReturnToPortal={() => setCurrentNav('dashboard')}
+        onReturnToPortal={() => handleNavigate('dashboard')}
       >
         {adminTab === 'dashboard' && (
           <AdminDashboard
@@ -352,7 +366,7 @@ export const MainApp: React.FC = () => {
         user={currentUser}
         applications={applications}
         loading={applicationsLoading}
-        onNavigate={setCurrentNav}
+        onNavigate={handleNavigate}
         onOpenApp={openApplication}
       />
     );
@@ -360,19 +374,19 @@ export const MainApp: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#f7f9fd] font-sans text-navy-900">
-      <AppSidebar currentRole={currentRole} currentNav={currentNav} onNavigate={setCurrentNav} isOpenMobile={isMobileSidebarOpen} onCloseMobile={() => setIsMobileSidebarOpen(false)} />
+      <AppSidebar currentRole={currentRole} currentNav={currentNav} onNavigate={handleNavigate} isOpenMobile={isMobileSidebarOpen} onCloseMobile={() => setIsMobileSidebarOpen(false)} />
       <TopNavbar
         user={currentUser}
         onToggleMobileSidebar={() => setIsMobileSidebarOpen(true)}
         unreadNotifCount={unreadNotifCount}
-        onNavigate={setCurrentNav}
+        onNavigate={handleNavigate}
         notifications={notifications}
         onMarkAllRead={() => setNotifications((items) => items.map((item) => ({ ...item, isRead: true })))}
       />
 
       <main className="mx-auto w-full max-w-[1500px] px-4 py-3 sm:px-5 lg:px-6 lg:py-4">
         {currentNav === 'applications' && <ApplicationsPage applications={applications} onOpenApp={openApplication} onToggleFavorite={() => {}} />}
-        {currentNav === 'audit' && currentUser.isSuperAdmin && <AuditPage />}
+        {currentNav === 'audit' && (currentUser.isSuperAdmin || currentUser.role === 'admin') && <AuditPage />}
         {currentNav === 'profile' && <ProfilePage user={currentUser} currentRole={currentRole} />}
         {currentNav === 'notifications' && <NoticesPage />}
         {currentNav === 'documents' && <PoliciesPage />}
@@ -380,7 +394,7 @@ export const MainApp: React.FC = () => {
           <div className="rounded-[18px] border border-navy-100 bg-white p-8 text-center shadow-sm">
             <h2 className="text-xl font-black capitalize text-navy-950">{currentNav}</h2>
             <p className="mx-auto mt-2 max-w-md text-xs text-navy-500">This area is ready to connect to its university service.</p>
-            <button onClick={() => setCurrentNav('dashboard')} className="mt-5 rounded-lg bg-navy-800 px-4 py-2 text-xs font-bold text-white">Return to dashboard</button>
+            <button onClick={() => handleNavigate('dashboard')} className="mt-5 rounded-lg bg-navy-800 px-4 py-2 text-xs font-bold text-white">Return to dashboard</button>
           </div>
         )}
       </main>

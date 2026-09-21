@@ -216,9 +216,9 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
                 <p className="mt-1 truncate text-sm font-medium text-blue-600">{user.email}</p>
               </div>
               <div className="border-t border-slate-200">
-                {user.isSuperAdmin && (
+                {(user.isSuperAdmin || user.role === 'admin') && (
                   <button onClick={() => { onNavigate('admin'); setIsDropdownOpen(false); }} className="flex w-full items-center gap-4 px-5 py-3.5 text-left text-base font-semibold text-blue-700 bg-blue-50/60 hover:bg-blue-100/70 transition-colors">
-                    <ShieldCheck className="h-5 w-5 text-blue-600" /><span>Admin Panel</span>
+                    <ShieldCheck className="h-5 w-5 text-blue-600" /><span>Admin Portal</span>
                   </button>
                 )}
                 <button onClick={() => { onNavigate('profile'); setIsDropdownOpen(false); }} className="flex w-full items-center gap-4 px-5 py-3.5 text-left text-base font-semibold text-[#02022D] hover:bg-slate-50 transition-colors">
