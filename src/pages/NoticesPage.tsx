@@ -1,7 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Bell, Clock, ExternalLink, Paperclip, Search, X } from 'lucide-react';
+import { Bell, Clock, ExternalLink, Paperclip, Plus, Search, X } from 'lucide-react';
 import type { AdminNotice } from '../admin/types/admin';
+import type { UserProfile } from '../types';
 import { adminApi } from '../admin/services/adminApi';
+
+interface NoticesPageProps {
+  user?: UserProfile | null;
+  onOpenCreateNotice?: () => void;
+}
 
 const DEFAULT_NOTICES: AdminNotice[] = [
   {
@@ -54,12 +60,16 @@ const DEFAULT_NOTICES: AdminNotice[] = [
   },
 ];
 
-export const NoticesPage: React.FC = () => {
+export const NoticesPage: React.FC<NoticesPageProps> = ({ user, onOpenCreateNotice }) => {
   const [notices, setNotices] = useState<AdminNotice[]>(DEFAULT_NOTICES);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedNotice, setSelectedNotice] = useState<AdminNotice | null>(null);
+
+  const canCreateNotice = Boolean(
+    user?.isSuperAdmin || user?.role === 'admin' || user?.permissions?.canManageNotices
+  );
 
   useEffect(() => {
     const fetchNotices = async () => {
@@ -107,6 +117,16 @@ export const NoticesPage: React.FC = () => {
             Access all official university notices, exam datesheets, administrative orders, and official attachments.
           </p>
         </div>
+
+        {canCreateNotice && onOpenCreateNotice && (
+          <button
+            onClick={onOpenCreateNotice}
+            className="flex items-center gap-2 rounded-xl bg-orange-600 hover:bg-orange-700 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition-all shrink-0 self-start md:self-center cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>+ Create Notice</span>
+          </button>
+        )}
       </div>
 
       {/* Filter and Search Bar */}

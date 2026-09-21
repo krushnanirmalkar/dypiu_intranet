@@ -652,7 +652,7 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
                   <p className="mt-1 truncate text-sm font-medium text-blue-600">{user.email}</p>
                 </div>
                 <div className="border-t border-slate-200">
-                  {(user.isSuperAdmin || user.role === 'admin') && (
+                  {(user.isSuperAdmin || user.role === 'admin' || user.hasAdminPortalAccess || Boolean(user.permissions?.allowedServices?.length)) && (
                     <button
                       onClick={() => { onNavigate('admin'); setIsProfileMenuOpen(false); }}
                       className="flex w-full items-center gap-4 px-5 py-3.5 text-left text-base font-semibold text-blue-700 bg-blue-50/60 hover:bg-blue-100/70 transition-colors"

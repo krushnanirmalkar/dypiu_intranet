@@ -1,7 +1,7 @@
 require("dotenv").config();
 
 const applications = require("./applications");
-const { requireAuth, requireRole, requireSuperAdmin } = require("./middleware/auth");
+const { requireAuth, requireRole, requireSuperAdmin, requireServicePermission } = require("./middleware/auth");
 const store = require("./data/store");
 
 const express = require("express");
@@ -416,13 +416,17 @@ app.get("/auth/callback", async (req, res) => {
 
 app.get("/api/me", requireAuth, (req, res) => {
   const userRoles = Array.isArray(req.session.user?.roles) ? req.session.user.roles : [];
+  const permissions = store.evaluateUserAccess(req.session.user?.email, userRoles);
   const isSuperAdmin = userRoles.includes("super_admin") || userRoles.includes("admin");
+  const hasAdminPortalAccess = isSuperAdmin || (permissions.allowedServices && permissions.allowedServices.length > 0);
 
   res.json({
     authenticated: true,
     user: {
       ...req.session.user,
       isSuperAdmin,
+      hasAdminPortalAccess,
+      permissions,
       picture: "/api/me/photo"
     }
   });
@@ -570,13 +574,13 @@ app.get("/api/admin/dashboard", requireSuperAdmin, (req, res) => {
 
 
 // Notice Management
-app.get("/api/admin/notices", requireSuperAdmin, (req, res) => {
+app.get("/api/admin/notices", requireServicePermission("notices", "read"), (req, res) => {
   const { category, audience, status } = req.query;
   const notices = store.getNotices({ category, audience, status });
   res.json({ notices });
 });
 
-app.post("/api/admin/notices", requireSuperAdmin, (req, res) => {
+app.post("/api/admin/notices", requireServicePermission("notices", "write"), (req, res) => {
   const { title, content, category, audience, priority, status, publishAt, expiresAt, attachmentUrl, attachmentName, attachmentSize } = req.body || {};
 
   if (typeof title !== "string" || !title.trim() || title.trim().length > 300) {
@@ -617,7 +621,7 @@ app.post("/api/admin/notices", requireSuperAdmin, (req, res) => {
   res.status(201).json({ notice: newNotice });
 });
 
-app.get("/api/admin/notices/:id", requireSuperAdmin, (req, res) => {
+app.get("/api/admin/notices/:id", requireServicePermission("notices", "read"), (req, res) => {
   const notice = store.getNoticeById(req.params.id);
   if (!notice) {
     return res.status(404).json({ error: "Notice not found." });
@@ -625,7 +629,7 @@ app.get("/api/admin/notices/:id", requireSuperAdmin, (req, res) => {
   res.json({ notice });
 });
 
-app.put("/api/admin/notices/:id", requireSuperAdmin, (req, res) => {
+app.put("/api/admin/notices/:id", requireServicePermission("notices", "write"), (req, res) => {
   const existing = store.getNoticeById(req.params.id);
   if (!existing) {
     return res.status(404).json({ error: "Notice not found." });
@@ -674,7 +678,7 @@ app.put("/api/admin/notices/:id", requireSuperAdmin, (req, res) => {
   res.json({ notice: updatedNotice });
 });
 
-app.delete("/api/admin/notices/:id", requireSuperAdmin, (req, res) => {
+app.delete("/api/admin/notices/:id", requireServicePermission("notices", "write"), (req, res) => {
   const existing = store.getNoticeById(req.params.id);
   if (!existing) {
     return res.status(404).json({ error: "Notice not found." });
@@ -779,13 +783,13 @@ app.delete("/api/admin/applications/:id", requireSuperAdmin, (req, res) => {
 
 
 // Policy Management
-app.get("/api/admin/policies", requireSuperAdmin, (req, res) => {
+app.get("/api/admin/policies", requireServicePermission("policies", "read"), (req, res) => {
   const { category, status } = req.query;
   const policies = store.getPolicies({ category, status });
   res.json({ policies });
 });
 
-app.post("/api/admin/policies", requireSuperAdmin, (req, res) => {
+app.post("/api/admin/policies", requireServicePermission("policies", "write"), (req, res) => {
   const { title, category, summary, content, version, status, effectiveDate } = req.body || {};
 
   if (typeof title !== "string" || !title.trim() || title.trim().length > 200) {
@@ -808,7 +812,7 @@ app.post("/api/admin/policies", requireSuperAdmin, (req, res) => {
   res.status(201).json({ policy: newPolicy });
 });
 
-app.get("/api/admin/policies/:id", requireSuperAdmin, (req, res) => {
+app.get("/api/admin/policies/:id", requireServicePermission("policies", "read"), (req, res) => {
   const policy = store.getPolicyById(req.params.id);
   if (!policy) {
     return res.status(404).json({ error: "Policy not found." });
@@ -816,7 +820,7 @@ app.get("/api/admin/policies/:id", requireSuperAdmin, (req, res) => {
   res.json({ policy });
 });
 
-app.put("/api/admin/policies/:id", requireSuperAdmin, (req, res) => {
+app.put("/api/admin/policies/:id", requireServicePermission("policies", "write"), (req, res) => {
   const existing = store.getPolicyById(req.params.id);
   if (!existing) {
     return res.status(404).json({ error: "Policy not found." });
@@ -843,7 +847,7 @@ app.put("/api/admin/policies/:id", requireSuperAdmin, (req, res) => {
   res.json({ policy: updatedPolicy });
 });
 
-app.delete("/api/admin/policies/:id", requireSuperAdmin, (req, res) => {
+app.delete("/api/admin/policies/:id", requireServicePermission("policies", "write"), (req, res) => {
   const existing = store.getPolicyById(req.params.id);
   if (!existing) {
     return res.status(404).json({ error: "Policy not found." });

@@ -1,5 +1,15 @@
 export type UserRole = 'student' | 'staff' | 'admin' | 'super_admin';
 
+export interface UserPermissions {
+  allowedServices: string[];
+  accessLevel: 'read' | 'write' | 'full';
+  canManageNotices?: boolean;
+  canManagePolicies?: boolean;
+  canManageApplications?: boolean;
+  canManageAccess?: boolean;
+  canManageAudit?: boolean;
+}
+
 export interface UserProfile {
   id: string;
   name: string;
@@ -15,6 +25,8 @@ export interface UserProfile {
   joinedYear: string;
   phone: string;
   isSuperAdmin?: boolean;
+  hasAdminPortalAccess?: boolean;
+  permissions?: UserPermissions;
 }
 
 export interface ApplicationItem {

@@ -31,6 +31,11 @@ interface SessionUser {
   picture?: string;
   roles: string[];
   isSuperAdmin?: boolean;
+  hasAdminPortalAccess?: boolean;
+  permissions?: {
+    allowedServices: string[];
+    accessLevel: 'read' | 'write' | 'full';
+  };
 }
 
 const resolveRoleByPrecedence = (roles: readonly string[]): UserRole | null => {
@@ -53,10 +58,15 @@ const createPreviewSessionUser = (user: AuthenticatedUser): SessionUser => {
     email: user.email,
     roles: Array.isArray(user.roles) && user.roles.length > 0 ? [...user.roles] : [previewRole],
     isSuperAdmin: user.isSuperAdmin ?? user.roles?.includes('super_admin') ?? false,
+    hasAdminPortalAccess: true,
+    permissions: {
+      allowedServices: ['notices', 'policies', 'applications', 'access', 'audit'],
+      accessLevel: 'full',
+    },
   };
 };
 
-const hasValidIdentity = (user: unknown): user is { sub: string; name: string; email: string; picture?: unknown; roles?: unknown; isSuperAdmin?: unknown } => {
+const hasValidIdentity = (user: unknown): user is { sub: string; name: string; email: string; picture?: unknown; roles?: unknown; isSuperAdmin?: unknown; hasAdminPortalAccess?: unknown; permissions?: unknown } => {
   if (typeof user !== 'object' || user === null) return false;
   const candidate = user as Record<string, unknown>;
   return typeof candidate.sub === 'string' && candidate.sub.length > 0
@@ -64,21 +74,42 @@ const hasValidIdentity = (user: unknown): user is { sub: string; name: string; e
     && typeof candidate.email === 'string' && candidate.email.length > 0;
 };
 
-const buildProfile = (user: SessionUser, role: UserRole): UserProfile => ({
-  id: user.sub,
-  name: user.name,
-  email: user.email,
-  role,
-  roleTitle: user.isSuperAdmin ? 'Super Administrator' : role === 'staff' ? 'Staff' : role === 'admin' ? 'Administrator' : 'Student',
-  avatar: user.picture ?? '',
-  collegeId: user.email.split('@')[0],
-  department: 'D Y Patil International University',
-  yearOrDesignation: user.isSuperAdmin ? 'Super Administrator' : role === 'student' ? 'Student' : role === 'staff' ? 'Staff' : 'Administration',
-  bio: 'Member of the DYPIU campus community.',
-  joinedYear: '',
-  phone: '',
-  isSuperAdmin: user.isSuperAdmin,
-});
+const buildProfile = (user: SessionUser, role: UserRole): UserProfile => {
+  const allowedServices = user.permissions?.allowedServices || [];
+  const isSuperOrAdmin = Boolean(user.isSuperAdmin || role === 'admin');
+  const canManageNotices = isSuperOrAdmin || allowedServices.includes('notices');
+  const canManagePolicies = isSuperOrAdmin || allowedServices.includes('policies');
+  const canManageApplications = isSuperOrAdmin || allowedServices.includes('applications');
+  const canManageAccess = isSuperOrAdmin || allowedServices.includes('access');
+  const canManageAudit = isSuperOrAdmin || allowedServices.includes('audit');
+  const hasAdminPortalAccess = Boolean(user.hasAdminPortalAccess || isSuperOrAdmin || allowedServices.length > 0);
+
+  return {
+    id: user.sub,
+    name: user.name,
+    email: user.email,
+    role,
+    roleTitle: user.isSuperAdmin ? 'Super Administrator' : role === 'staff' ? 'Staff' : role === 'admin' ? 'Administrator' : 'Student',
+    avatar: user.picture ?? '',
+    collegeId: user.email.split('@')[0],
+    department: 'D Y Patil International University',
+    yearOrDesignation: user.isSuperAdmin ? 'Super Administrator' : role === 'student' ? 'Student' : role === 'staff' ? 'Staff' : 'Administration',
+    bio: 'Member of the DYPIU campus community.',
+    joinedYear: '',
+    phone: '',
+    isSuperAdmin: user.isSuperAdmin,
+    hasAdminPortalAccess,
+    permissions: {
+      allowedServices,
+      accessLevel: user.permissions?.accessLevel || 'read',
+      canManageNotices,
+      canManagePolicies,
+      canManageApplications,
+      canManageAccess,
+      canManageAudit,
+    },
+  };
+};
 
 const applicationCategories: ApplicationItem['category'][] = [
   'Academic',
@@ -176,6 +207,14 @@ export const MainApp: React.FC = () => {
               : [];
             const isSuperAdmin = data.user.isSuperAdmin === true || roles.includes('super_admin') || roles.includes('admin');
             const resolvedRole = resolveRoleByPrecedence(roles) || 'staff';
+            const userPermissions = typeof data.user.permissions === 'object' && data.user.permissions !== null
+              ? (data.user.permissions as { allowedServices: string[]; accessLevel: 'read' | 'write' | 'full' })
+              : undefined;
+            const hasAdminPortalAccess = Boolean(
+              data.user.hasAdminPortalAccess === true ||
+              isSuperAdmin ||
+              (userPermissions?.allowedServices && userPermissions.allowedServices.length > 0)
+            );
 
             setAuthenticatedUser({
               sub: data.user.sub,
@@ -184,12 +223,14 @@ export const MainApp: React.FC = () => {
               picture: typeof data.user.picture === 'string' ? data.user.picture : undefined,
               roles,
               isSuperAdmin,
+              hasAdminPortalAccess,
+              permissions: userPermissions,
             });
             setCurrentRole(resolvedRole);
             setAuthenticated(true);
             setAuthLoading(false);
 
-            if (isDirectAdminUrl && !isSuperAdmin) {
+            if (isDirectAdminUrl && !hasAdminPortalAccess) {
               window.history.replaceState({}, '', '/');
               setCurrentNav('dashboard');
             }
@@ -262,8 +303,13 @@ export const MainApp: React.FC = () => {
 
   const handleNavigate = (page: string) => {
     if (page === 'admin') {
-      const isAdmin = Boolean(currentUser?.isSuperAdmin || currentUser?.role === 'admin');
-      if (isAdmin) {
+      const canAccessAdmin = Boolean(
+        currentUser?.isSuperAdmin ||
+        currentUser?.role === 'admin' ||
+        currentUser?.hasAdminPortalAccess ||
+        currentUser?.permissions?.allowedServices?.length
+      );
+      if (canAccessAdmin) {
         if (window.location.pathname !== '/admin') {
           window.history.pushState({}, '', '/admin');
         }
@@ -304,10 +350,17 @@ export const MainApp: React.FC = () => {
   }
 
   // -------------------------
-  // Render Super Admin Portal
+  // Render Admin / Management Portal
   // -------------------------
   if (currentNav === 'admin') {
-    if (!currentUser.isSuperAdmin && currentUser.role !== 'admin') {
+    const canAccessAdmin = Boolean(
+      currentUser.isSuperAdmin ||
+      currentUser.role === 'admin' ||
+      currentUser.hasAdminPortalAccess ||
+      currentUser.permissions?.allowedServices?.length
+    );
+
+    if (!canAccessAdmin) {
       if (window.location.pathname === '/admin') {
         window.history.replaceState({}, '', '/');
       }
@@ -329,6 +382,7 @@ export const MainApp: React.FC = () => {
       >
         {adminTab === 'dashboard' && (
           <AdminDashboard
+            user={currentUser}
             onNavigateTab={(tab) => {
               setAdminTab(tab);
               setOpenNoticeCreateModal(false);
@@ -350,11 +404,21 @@ export const MainApp: React.FC = () => {
           />
         )}
 
-        {adminTab === 'notices' && <NoticesAdminPage initialOpenCreate={openNoticeCreateModal} />}
-        {adminTab === 'applications' && <ApplicationsAdminPage initialOpenCreate={openAppCreateModal} />}
-        {adminTab === 'policies' && <PoliciesAdminPage initialOpenCreate={openPolicyCreateModal} />}
-        {adminTab === 'access' && <AccessControlAdminPage />}
-        {adminTab === 'audit' && <AuditLogAdminPage />}
+        {adminTab === 'notices' && (currentUser.isSuperAdmin || currentUser.role === 'admin' || currentUser.permissions?.canManageNotices) && (
+          <NoticesAdminPage initialOpenCreate={openNoticeCreateModal} />
+        )}
+        {adminTab === 'applications' && (currentUser.isSuperAdmin || currentUser.role === 'admin' || currentUser.permissions?.canManageApplications) && (
+          <ApplicationsAdminPage initialOpenCreate={openAppCreateModal} />
+        )}
+        {adminTab === 'policies' && (currentUser.isSuperAdmin || currentUser.role === 'admin' || currentUser.permissions?.canManagePolicies) && (
+          <PoliciesAdminPage initialOpenCreate={openPolicyCreateModal} />
+        )}
+        {adminTab === 'access' && (currentUser.isSuperAdmin || currentUser.role === 'admin' || currentUser.permissions?.canManageAccess) && (
+          <AccessControlAdminPage />
+        )}
+        {adminTab === 'audit' && (currentUser.isSuperAdmin || currentUser.role === 'admin' || currentUser.permissions?.canManageAudit) && (
+          <AuditLogAdminPage />
+        )}
       </AdminLayout>
     );
   }
@@ -386,10 +450,28 @@ export const MainApp: React.FC = () => {
 
       <main className="mx-auto w-full max-w-[1500px] px-4 py-3 sm:px-5 lg:px-6 lg:py-4">
         {currentNav === 'applications' && <ApplicationsPage applications={applications} onOpenApp={openApplication} onToggleFavorite={() => {}} />}
-        {currentNav === 'audit' && (currentUser.isSuperAdmin || currentUser.role === 'admin') && <AuditPage />}
+        {currentNav === 'audit' && (currentUser.isSuperAdmin || currentUser.role === 'admin' || currentUser.permissions?.canManageAudit) && <AuditPage />}
         {currentNav === 'profile' && <ProfilePage user={currentUser} currentRole={currentRole} />}
-        {currentNav === 'notifications' && <NoticesPage />}
-        {currentNav === 'documents' && <PoliciesPage />}
+        {currentNav === 'notifications' && (
+          <NoticesPage
+            user={currentUser}
+            onOpenCreateNotice={() => {
+              handleNavigate('admin');
+              setAdminTab('notices');
+              setOpenNoticeCreateModal(true);
+            }}
+          />
+        )}
+        {currentNav === 'documents' && (
+          <PoliciesPage
+            user={currentUser}
+            onOpenCreatePolicy={() => {
+              handleNavigate('admin');
+              setAdminTab('policies');
+              setOpenPolicyCreateModal(true);
+            }}
+          />
+        )}
         {['academics', 'events', 'settings', 'support'].includes(currentNav) && (
           <div className="rounded-[18px] border border-navy-100 bg-white p-8 text-center shadow-sm">
             <h2 className="text-xl font-black capitalize text-navy-950">{currentNav}</h2>

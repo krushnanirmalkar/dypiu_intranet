@@ -218,6 +218,366 @@
   ],
   "auditLogs": [
     {
+      "id": "audit-fbec94e2d743",
+      "timestamp": "2026-09-21T11:07:11.820Z",
+      "actorSub": "admin-1",
+      "actorEmail": "admin@dypiu.ac.in",
+      "action": "access_rule.deleted",
+      "resourceType": "access_rule",
+      "resourceId": "rule-1cbf406ffbe5",
+      "summary": "Deleted access rule 'Dean Gmail Notice Grant'",
+      "metadata": {
+        "ip": "127.0.0.1",
+        "method": "POST",
+        "path": "/api/admin/access-rules"
+      }
+    },
+    {
+      "id": "audit-61d357f0c2a7",
+      "timestamp": "2026-09-21T11:07:11.804Z",
+      "actorSub": "admin-1",
+      "actorEmail": "admin@dypiu.ac.in",
+      "action": "access_rule.created",
+      "resourceType": "access_rule",
+      "resourceId": "rule-1cbf406ffbe5",
+      "summary": "Created access rule 'Dean Gmail Notice Grant' for email:dean@gmail.com",
+      "metadata": {
+        "ip": "127.0.0.1",
+        "method": "POST",
+        "path": "/api/admin/access-rules"
+      }
+    },
+    {
+      "id": "audit-3bf1ead4dd63",
+      "timestamp": "2026-09-21T11:07:11.763Z",
+      "actorSub": "admin-1",
+      "actorEmail": "admin@dypiu.ac.in",
+      "action": "policy.archived",
+      "resourceType": "policy",
+      "resourceId": "pol-1546b7f16f43",
+      "summary": "Deleted/Archived policy 'Test Policy'",
+      "metadata": {
+        "ip": "127.0.0.1",
+        "method": "POST",
+        "path": "/api/admin/policies"
+      }
+    },
+    {
+      "id": "audit-6870e9089c6c",
+      "timestamp": "2026-09-21T11:07:11.754Z",
+      "actorSub": "admin-1",
+      "actorEmail": "admin@dypiu.ac.in",
+      "action": "policy.published",
+      "resourceType": "policy",
+      "resourceId": "pol-1546b7f16f43",
+      "summary": "Published policy 'Test Policy'",
+      "metadata": {
+        "ip": "127.0.0.1",
+        "method": "POST",
+        "path": "/api/admin/policies"
+      }
+    },
+    {
+      "id": "audit-78603eab5549",
+      "timestamp": "2026-09-21T11:07:11.748Z",
+      "actorSub": "admin-1",
+      "actorEmail": "admin@dypiu.ac.in",
+      "action": "policy.created",
+      "resourceType": "policy",
+      "resourceId": "pol-1546b7f16f43",
+      "summary": "Created policy 'Test Policy'",
+      "metadata": {
+        "ip": "127.0.0.1",
+        "method": "POST",
+        "path": "/api/admin/policies"
+      }
+    },
+    {
+      "id": "audit-8b4a911074ef",
+      "timestamp": "2026-09-21T11:07:11.742Z",
+      "actorSub": "admin-1",
+      "actorEmail": "admin@dypiu.ac.in",
+      "action": "application.deleted",
+      "resourceType": "application",
+      "resourceId": "app-2da43e58c3c4",
+      "summary": "Deleted application 'Test App'",
+      "metadata": {
+        "ip": "127.0.0.1",
+        "method": "POST",
+        "path": "/api/admin/applications"
+      }
+    },
+    {
+      "id": "audit-90ae565d9dfd",
+      "timestamp": "2026-09-21T11:07:11.736Z",
+      "actorSub": "admin-1",
+      "actorEmail": "admin@dypiu.ac.in",
+      "action": "application.disabled",
+      "resourceType": "application",
+      "resourceId": "app-2da43e58c3c4",
+      "summary": "Updated application 'Test App'",
+      "metadata": {
+        "ip": "127.0.0.1",
+        "method": "POST",
+        "path": "/api/admin/applications"
+      }
+    },
+    {
+      "id": "audit-5c0702b45e9d",
+      "timestamp": "2026-09-21T11:07:11.731Z",
+      "actorSub": "admin-1",
+      "actorEmail": "admin@dypiu.ac.in",
+      "action": "application.created",
+      "resourceType": "application",
+      "resourceId": "app-2da43e58c3c4",
+      "summary": "Created application 'Test App'",
+      "metadata": {
+        "ip": "127.0.0.1",
+        "method": "POST",
+        "path": "/api/admin/applications"
+      }
+    },
+    {
+      "id": "audit-d072c7c7aa9a",
+      "timestamp": "2026-09-21T11:07:11.727Z",
+      "actorSub": "admin-1",
+      "actorEmail": "admin@dypiu.ac.in",
+      "action": "notice.deleted",
+      "resourceType": "notice",
+      "resourceId": "notice-7d05245571c5",
+      "summary": "Deleted notice 'Updated Test Notice'",
+      "metadata": {
+        "ip": "127.0.0.1",
+        "method": "POST",
+        "path": "/api/admin/notices"
+      }
+    },
+    {
+      "id": "audit-597d1da98d88",
+      "timestamp": "2026-09-21T11:07:11.721Z",
+      "actorSub": "admin-1",
+      "actorEmail": "admin@dypiu.ac.in",
+      "action": "notice.unpublished",
+      "resourceType": "notice",
+      "resourceId": "notice-7d05245571c5",
+      "summary": "Updated notice 'Updated Test Notice'",
+      "metadata": {
+        "ip": "127.0.0.1",
+        "method": "POST",
+        "path": "/api/admin/notices"
+      }
+    },
+    {
+      "id": "audit-bf08b5082862",
+      "timestamp": "2026-09-21T11:07:11.710Z",
+      "actorSub": "admin-1",
+      "actorEmail": "admin@dypiu.ac.in",
+      "action": "notice.published",
+      "resourceType": "notice",
+      "resourceId": "notice-7d05245571c5",
+      "summary": "Published notice 'Test Notice'",
+      "metadata": {
+        "ip": "127.0.0.1",
+        "method": "POST",
+        "path": "/api/admin/notices"
+      }
+    },
+    {
+      "id": "audit-1c8d8146ecc3",
+      "timestamp": "2026-09-21T11:07:11.708Z",
+      "actorSub": "admin-1",
+      "actorEmail": "admin@dypiu.ac.in",
+      "action": "notice.created",
+      "resourceType": "notice",
+      "resourceId": "notice-7d05245571c5",
+      "summary": "Created notice 'Test Notice'",
+      "metadata": {
+        "ip": "127.0.0.1",
+        "method": "POST",
+        "path": "/api/admin/notices"
+      }
+    },
+    {
+      "id": "audit-0e53fdccfe39",
+      "timestamp": "2026-09-21T11:01:50.097Z",
+      "actorSub": "admin-1",
+      "actorEmail": "admin@dypiu.ac.in",
+      "action": "access_rule.deleted",
+      "resourceType": "access_rule",
+      "resourceId": "rule-b3f229e0e792",
+      "summary": "Deleted access rule 'Dean Gmail Notice Grant'",
+      "metadata": {
+        "ip": "127.0.0.1",
+        "method": "POST",
+        "path": "/api/admin/access-rules"
+      }
+    },
+    {
+      "id": "audit-08e78d7eb95a",
+      "timestamp": "2026-09-21T11:01:50.081Z",
+      "actorSub": "admin-1",
+      "actorEmail": "admin@dypiu.ac.in",
+      "action": "access_rule.created",
+      "resourceType": "access_rule",
+      "resourceId": "rule-b3f229e0e792",
+      "summary": "Created access rule 'Dean Gmail Notice Grant' for email:dean@gmail.com",
+      "metadata": {
+        "ip": "127.0.0.1",
+        "method": "POST",
+        "path": "/api/admin/access-rules"
+      }
+    },
+    {
+      "id": "audit-c965eeb4e3af",
+      "timestamp": "2026-09-21T11:01:50.075Z",
+      "actorSub": "admin-1",
+      "actorEmail": "admin@dypiu.ac.in",
+      "action": "policy.archived",
+      "resourceType": "policy",
+      "resourceId": "pol-7245236e5766",
+      "summary": "Deleted/Archived policy 'Test Policy'",
+      "metadata": {
+        "ip": "127.0.0.1",
+        "method": "POST",
+        "path": "/api/admin/policies"
+      }
+    },
+    {
+      "id": "audit-be003c80c5eb",
+      "timestamp": "2026-09-21T11:01:50.065Z",
+      "actorSub": "admin-1",
+      "actorEmail": "admin@dypiu.ac.in",
+      "action": "policy.published",
+      "resourceType": "policy",
+      "resourceId": "pol-7245236e5766",
+      "summary": "Published policy 'Test Policy'",
+      "metadata": {
+        "ip": "127.0.0.1",
+        "method": "POST",
+        "path": "/api/admin/policies"
+      }
+    },
+    {
+      "id": "audit-29aa3ae28461",
+      "timestamp": "2026-09-21T11:01:50.054Z",
+      "actorSub": "admin-1",
+      "actorEmail": "admin@dypiu.ac.in",
+      "action": "policy.created",
+      "resourceType": "policy",
+      "resourceId": "pol-7245236e5766",
+      "summary": "Created policy 'Test Policy'",
+      "metadata": {
+        "ip": "127.0.0.1",
+        "method": "POST",
+        "path": "/api/admin/policies"
+      }
+    },
+    {
+      "id": "audit-406876c6bd34",
+      "timestamp": "2026-09-21T11:01:50.036Z",
+      "actorSub": "admin-1",
+      "actorEmail": "admin@dypiu.ac.in",
+      "action": "application.deleted",
+      "resourceType": "application",
+      "resourceId": "app-d37e1f5b0cff",
+      "summary": "Deleted application 'Test App'",
+      "metadata": {
+        "ip": "127.0.0.1",
+        "method": "POST",
+        "path": "/api/admin/applications"
+      }
+    },
+    {
+      "id": "audit-a138a6dcd011",
+      "timestamp": "2026-09-21T11:01:50.031Z",
+      "actorSub": "admin-1",
+      "actorEmail": "admin@dypiu.ac.in",
+      "action": "application.disabled",
+      "resourceType": "application",
+      "resourceId": "app-d37e1f5b0cff",
+      "summary": "Updated application 'Test App'",
+      "metadata": {
+        "ip": "127.0.0.1",
+        "method": "POST",
+        "path": "/api/admin/applications"
+      }
+    },
+    {
+      "id": "audit-531f9f3083d1",
+      "timestamp": "2026-09-21T11:01:50.026Z",
+      "actorSub": "admin-1",
+      "actorEmail": "admin@dypiu.ac.in",
+      "action": "application.created",
+      "resourceType": "application",
+      "resourceId": "app-d37e1f5b0cff",
+      "summary": "Created application 'Test App'",
+      "metadata": {
+        "ip": "127.0.0.1",
+        "method": "POST",
+        "path": "/api/admin/applications"
+      }
+    },
+    {
+      "id": "audit-dae11b250191",
+      "timestamp": "2026-09-21T11:01:50.006Z",
+      "actorSub": "admin-1",
+      "actorEmail": "admin@dypiu.ac.in",
+      "action": "notice.deleted",
+      "resourceType": "notice",
+      "resourceId": "notice-89a0f7597ec4",
+      "summary": "Deleted notice 'Updated Test Notice'",
+      "metadata": {
+        "ip": "127.0.0.1",
+        "method": "POST",
+        "path": "/api/admin/notices"
+      }
+    },
+    {
+      "id": "audit-b04706faf9b4",
+      "timestamp": "2026-09-21T11:01:49.981Z",
+      "actorSub": "admin-1",
+      "actorEmail": "admin@dypiu.ac.in",
+      "action": "notice.unpublished",
+      "resourceType": "notice",
+      "resourceId": "notice-89a0f7597ec4",
+      "summary": "Updated notice 'Updated Test Notice'",
+      "metadata": {
+        "ip": "127.0.0.1",
+        "method": "POST",
+        "path": "/api/admin/notices"
+      }
+    },
+    {
+      "id": "audit-9f49d38c38bf",
+      "timestamp": "2026-09-21T11:01:49.948Z",
+      "actorSub": "admin-1",
+      "actorEmail": "admin@dypiu.ac.in",
+      "action": "notice.published",
+      "resourceType": "notice",
+      "resourceId": "notice-89a0f7597ec4",
+      "summary": "Published notice 'Test Notice'",
+      "metadata": {
+        "ip": "127.0.0.1",
+        "method": "POST",
+        "path": "/api/admin/notices"
+      }
+    },
+    {
+      "id": "audit-e8174b279721",
+      "timestamp": "2026-09-21T11:01:49.946Z",
+      "actorSub": "admin-1",
+      "actorEmail": "admin@dypiu.ac.in",
+      "action": "notice.created",
+      "resourceType": "notice",
+      "resourceId": "notice-89a0f7597ec4",
+      "summary": "Created notice 'Test Notice'",
+      "metadata": {
+        "ip": "127.0.0.1",
+        "method": "POST",
+        "path": "/api/admin/notices"
+      }
+    },
+    {
       "id": "audit-249ab64b6b20",
       "timestamp": "2026-09-21T10:09:36.504Z",
       "actorSub": "admin-1",

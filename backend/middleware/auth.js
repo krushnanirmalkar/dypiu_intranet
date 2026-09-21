@@ -1,3 +1,5 @@
+const store = require("../data/store");
+
 function requireAuth(req, res, next) {
   if (!req.session.user) {
     return res.status(401).json({
@@ -53,9 +55,45 @@ function requireSuperAdmin(req, res, next) {
   return requireRole("super_admin", "admin")(req, res, next);
 }
 
+function requireServicePermission(service, requiredLevel = "read") {
+  return (req, res, next) => {
+    if (!req.session.user) {
+      return res.status(401).json({
+        authenticated: false,
+        message: "Authentication required."
+      });
+    }
+
+    const user = req.session.user;
+    const userRoles = Array.isArray(user.roles) ? user.roles : [];
+
+    if (user.isSuperAdmin || userRoles.includes("super_admin") || userRoles.includes("admin")) {
+      return next();
+    }
+
+    const access = store.evaluateUserAccess(user.email, userRoles);
+    if (!access.allowedServices.includes(service)) {
+      return res.status(403).json({
+        authenticated: true,
+        message: `Forbidden. You do not have access to the '${service}' service.`
+      });
+    }
+
+    if (requiredLevel === "write" && access.accessLevel === "read") {
+      return res.status(403).json({
+        authenticated: true,
+        message: `Forbidden. Write permission required for '${service}'.`
+      });
+    }
+
+    next();
+  };
+}
+
 module.exports = {
   requireAuth,
   requireRole,
-  requireSuperAdmin
+  requireSuperAdmin,
+  requireServicePermission
 };
 

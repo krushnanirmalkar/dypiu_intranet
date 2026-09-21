@@ -36,11 +36,11 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
 
   const navItems: { id: AdminTab; label: string; icon: React.FC<{ className?: string }> }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'notices', label: 'Notices', icon: Megaphone },
-    { id: 'applications', label: 'Applications', icon: Grid2X2 },
-    { id: 'policies', label: 'University Policies', icon: BookOpen },
-    { id: 'access', label: 'Access Control', icon: Key },
-    { id: 'audit', label: 'Audit Log', icon: ShieldCheck },
+    ...(user.isSuperAdmin || user.role === 'admin' || user.permissions?.canManageNotices ? [{ id: 'notices' as AdminTab, label: 'Notices', icon: Megaphone }] : []),
+    ...(user.isSuperAdmin || user.role === 'admin' || user.permissions?.canManageApplications ? [{ id: 'applications' as AdminTab, label: 'Applications', icon: Grid2X2 }] : []),
+    ...(user.isSuperAdmin || user.role === 'admin' || user.permissions?.canManagePolicies ? [{ id: 'policies' as AdminTab, label: 'University Policies', icon: BookOpen }] : []),
+    ...(user.isSuperAdmin || user.role === 'admin' || user.permissions?.canManageAccess ? [{ id: 'access' as AdminTab, label: 'Access Control', icon: Key }] : []),
+    ...(user.isSuperAdmin || user.role === 'admin' || user.permissions?.canManageAudit ? [{ id: 'audit' as AdminTab, label: 'Audit Log', icon: ShieldCheck }] : []),
   ];
 
   const handleNavClick = (tab: AdminTab) => {
@@ -91,7 +91,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
             </div>
             <div className="text-right leading-tight">
               <div className="font-bold text-white">{user.name}</div>
-              <div className="text-[10px] text-blue-200 font-medium">Super Administrator</div>
+              <div className="text-[10px] text-blue-200 font-medium">{user.roleTitle || 'Administrator'}</div>
             </div>
           </div>
 

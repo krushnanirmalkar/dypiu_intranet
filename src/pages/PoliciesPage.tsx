@@ -1,7 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { BookOpen, Calendar, ExternalLink, FileText, Paperclip, Search, X } from 'lucide-react';
+import { BookOpen, Calendar, ExternalLink, FileText, Paperclip, Plus, Search, X } from 'lucide-react';
 import type { AdminPolicy } from '../admin/types/admin';
+import type { UserProfile } from '../types';
 import { adminApi } from '../admin/services/adminApi';
+
+interface PoliciesPageProps {
+  user?: UserProfile | null;
+  onOpenCreatePolicy?: () => void;
+}
 
 const DEFAULT_POLICIES: AdminPolicy[] = [
   {
@@ -51,12 +57,16 @@ const DEFAULT_POLICIES: AdminPolicy[] = [
   },
 ];
 
-export const PoliciesPage: React.FC = () => {
+export const PoliciesPage: React.FC<PoliciesPageProps> = ({ user, onOpenCreatePolicy }) => {
   const [policies, setPolicies] = useState<AdminPolicy[]>(DEFAULT_POLICIES);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedPolicy, setSelectedPolicy] = useState<AdminPolicy | null>(null);
+
+  const canCreatePolicy = Boolean(
+    user?.isSuperAdmin || user?.role === 'admin' || user?.permissions?.canManagePolicies
+  );
 
   useEffect(() => {
     const fetchPolicies = async () => {
@@ -104,6 +114,16 @@ export const PoliciesPage: React.FC = () => {
             Access official university statutes, academic regulations, information security frameworks, and governance policies.
           </p>
         </div>
+
+        {canCreatePolicy && onOpenCreatePolicy && (
+          <button
+            onClick={onOpenCreatePolicy}
+            className="flex items-center gap-2 rounded-xl bg-violet-600 hover:bg-violet-700 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition-all shrink-0 self-start md:self-center cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>+ Create Policy</span>
+          </button>
+        )}
       </div>
 
       {/* Filter and Search Bar */}
