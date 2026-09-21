@@ -9,9 +9,6 @@ async function initStore() {
   return await db.initDatabase();
 }
 
-// Initial attempt to bind DB on module load
-initStore().catch(() => {});
-
 // -------------------------
 // Audit Log Methods
 // -------------------------

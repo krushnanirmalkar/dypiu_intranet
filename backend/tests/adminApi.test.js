@@ -33,15 +33,11 @@ function createMockReqRes({ user = null } = {}) {
   return { req, res };
 }
 
-// Check if Postgres is reachable locally or mock in test environment
+// Unit tests must never auto-discover or mutate a real PostgreSQL database.
+// Database integration testing belongs in a separately configured test environment.
 async function setupTestEnvironment() {
-  try {
-    await db.pool.query("SELECT 1");
-    console.log("[Test Suite] Running tests against real PostgreSQL instance.");
-  } catch (err) {
-    console.log("[Test Suite] Local PostgreSQL daemon unavailable. Injecting test double for db.query in unit test harness.");
-    setupDbMock();
-  }
+  console.log("[Test Suite] Using isolated db.query test double.");
+  setupDbMock();
 }
 
 function setupDbMock() {
