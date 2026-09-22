@@ -71,7 +71,7 @@ export interface NotificationItem {
   title: string;
   message: string;
   timestamp: string;
-  category: 'Academic' | 'Examination' | 'Event' | 'Achievement' | 'System';
+  category: 'Academic' | 'Examination' | 'Event' | 'Achievement' | 'System' | 'Notice' | 'Urgent' | 'Info';
   isRead: boolean;
   targetRoles: UserRole[];
 }

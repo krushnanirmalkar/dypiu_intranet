@@ -474,6 +474,8 @@ export const MainApp: React.FC = () => {
         loading={applicationsLoading}
         onNavigate={handleNavigate}
         onOpenApp={openApplication}
+        notifications={notifications}
+        onMarkAllNotificationsRead={() => setNotifications((items) => items.map((item) => ({ ...item, isRead: true })))}
       />
     );
   }

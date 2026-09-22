@@ -9,6 +9,9 @@ const targetAudienceToRoles = (audience: string): UserRole[] => {
 
 const mapNotificationTypeToCategory = (type: string): NotificationItem['category'] => {
   const t = (type || '').toLowerCase();
+  if (t === 'notice') return 'Notice';
+  if (t === 'urgent') return 'Urgent';
+  if (t === 'info') return 'Info';
   if (t === 'academic') return 'Academic';
   if (t === 'examination') return 'Examination';
   if (t === 'event') return 'Event';

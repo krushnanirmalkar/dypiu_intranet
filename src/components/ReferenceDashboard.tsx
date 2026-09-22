@@ -3,7 +3,6 @@ import imgLogo from "../assets/dashboard/logo.png";
 import { Bell, AlertCircle, ChevronRight, BookOpen, GraduationCap, FileText, Laptop, Bookmark, Users, CheckCircle2, Briefcase, Award, HelpCircle, Clock, MapPin, Send, Sparkles, Search, X, Cake, Gift, User, Settings, LogOut, Paperclip, ExternalLink, ShieldCheck, Key } from 'lucide-react';
 import type { ApplicationItem, NotificationItem, UserProfile } from '../types';
 import { NotificationPanel } from './NotificationPanel';
-import { normalizeNotifications } from '../utils/notifications';
 import { adminApi } from '../admin/services/adminApi';
 
 interface DashboardNoticeItem {
@@ -274,6 +273,8 @@ interface DashboardProps {
   loading: boolean;
   onNavigate: (page: string) => void;
   onOpenApp: (app: ApplicationItem) => void;
+  notifications: NotificationItem[];
+  onMarkAllNotificationsRead: () => void;
 }
 
 type WorkspaceApp = ApplicationItem & {
@@ -291,7 +292,15 @@ const toApplicationCategory = (category: string): ApplicationItem['category'] =>
   return 'Academic';
 };
 
-export default function ReferenceDashboard({ user, applications, loading, onNavigate, onOpenApp }: DashboardProps) {
+export default function ReferenceDashboard({
+  user,
+  applications,
+  loading,
+  onNavigate,
+  onOpenApp,
+  notifications,
+  onMarkAllNotificationsRead,
+}: DashboardProps) {
   const [isGrievanceOpen, setIsGrievanceOpen] = useState(false);
   const [grievanceText, setGrievanceText] = useState(() => {
     try { return localStorage.getItem(`dypiu-grievance-draft:${user.id}`) ?? ''; }
@@ -308,22 +317,11 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [failedProfilePhoto, setFailedProfilePhoto] = useState<string | null>(null);
   const [directorySearch, setDirectorySearch] = useState('');
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchPublishedData = async () => {
-      try {
-        const response = await fetch('/api/notifications', { method: 'GET', credentials: 'include' });
-        if (response.ok) {
-          const data = await response.json();
-          setNotifications(normalizeNotifications(data));
-        }
-      } catch {
-        // Keep empty notifications list if fetch fails
-      }
-
       try {
         const fetchedNotices = await adminApi.fetchNotices({ status: 'published' });
         if (Array.isArray(fetchedNotices) && fetchedNotices.length > 0) {
@@ -448,6 +446,10 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
     `${person.name} ${person.role}`.toLowerCase().includes(directorySearch.trim().toLowerCase())
   );
 
+  const unreadNotifCount = notifications.filter(
+    (n) => n.targetRoles.includes(user.role) && !n.isRead,
+  ).length;
+
   const handleRaiseGrievance = (e: React.FormEvent) => {
     e.preventDefault();
     if (!grievanceText.trim()) return;
@@ -566,14 +568,16 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
               className="relative p-2 text-slate-500 hover:text-slate-800 transition-colors rounded-full hover:bg-slate-100"
             >
               <Bell className="size-4" />
-              <span className="absolute top-1.5 right-1.5 size-2 bg-[#ec510d] rounded-full"></span>
+              {unreadNotifCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 size-2 bg-[#ec510d] rounded-full"></span>
+              )}
             </button>
             {isNotifOpen && (
               <div className="absolute right-0 mt-2 w-[min(24rem,calc(100vw-2rem))] rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl z-50">
                 <NotificationPanel
                   notifications={notifications}
                   currentRole={user.role}
-                  onMarkAllRead={() => setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })))}
+                  onMarkAllRead={onMarkAllNotificationsRead}
                   onViewAll={() => {
                     setIsNotifOpen(false);
                     onNavigate('notifications');
