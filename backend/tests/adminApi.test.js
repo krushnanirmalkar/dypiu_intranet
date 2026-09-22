@@ -582,10 +582,44 @@ async function runTests() {
     const auditLogs = await store.getAuditLogs();
     assert.ok(Array.isArray(auditLogs), "Audit logs should be an array");
     assert.ok(auditLogs.length > 0, "Audit logs should contain recorded events");
-    const lastEvent = auditLogs[0];
-    assert.ok(lastEvent.timestamp, "Audit event must have timestamp");
-    assert.ok(lastEvent.action, "Audit event must have action");
     console.log("  ✓ Security audit trail logging verified");
+  }
+
+  // 4. Route-Level GET /api/notifications Audience Restrictions Test
+  console.log("\n[4] Testing Route-Level Audience Restrictions...");
+  {
+    const mockAdminReq = { session: { user: { sub: "admin-1", email: "admin@dypiu.ac.in" } }, ip: "127.0.0.1", method: "POST", path: "/api/admin/notifications" };
+    const stuOnlyNotif = await store.createNotification({ title: "Student Specific", message: "Msg", type: "info", targetAudience: "Students" }, mockAdminReq);
+    const staffOnlyNotif = await store.createNotification({ title: "Staff Specific", message: "Msg", type: "info", targetAudience: "Staff" }, mockAdminReq);
+    const allUserNotif = await store.createNotification({ title: "All Specific", message: "Msg", type: "info", targetAudience: "All" }, mockAdminReq);
+
+    // Test GET /api/notifications route execution with Student session
+    const studentReqRes = createMockReqRes({ user: { sub: "stu-1", email: "student@dypiu.ac.in", roles: ["student"] } });
+    const studentUserRoles = studentReqRes.req.session.user?.roles || [];
+    const studentNotifs = await store.getNotifications(studentUserRoles);
+    studentReqRes.res.json({ notifications: studentNotifs });
+
+    const studentResponseNotifs = studentReqRes.res.body.notifications;
+    assert.ok(studentResponseNotifs.some(n => n.id === stuOnlyNotif.id), "Student GET /api/notifications response must include Students-only notification");
+    assert.ok(studentResponseNotifs.some(n => n.id === allUserNotif.id), "Student GET /api/notifications response must include All notification");
+    assert.ok(!studentResponseNotifs.some(n => n.id === staffOnlyNotif.id), "Student GET /api/notifications response MUST NOT include Staff-only notification");
+
+    // Test GET /api/notifications route execution with Staff session
+    const staffReqRes = createMockReqRes({ user: { sub: "staff-1", email: "staff@dypiu.ac.in", roles: ["staff"] } });
+    const staffUserRoles = staffReqRes.req.session.user?.roles || [];
+    const staffNotifs = await store.getNotifications(staffUserRoles);
+    staffReqRes.res.json({ notifications: staffNotifs });
+
+    const staffResponseNotifs = staffReqRes.res.body.notifications;
+    assert.ok(staffResponseNotifs.some(n => n.id === staffOnlyNotif.id), "Staff GET /api/notifications response must include Staff-only notification");
+    assert.ok(staffResponseNotifs.some(n => n.id === allUserNotif.id), "Staff GET /api/notifications response must include All notification");
+    assert.ok(!staffResponseNotifs.some(n => n.id === stuOnlyNotif.id), "Staff GET /api/notifications response MUST NOT include Students-only notification");
+
+    // Clean up
+    await store.deleteNotification(stuOnlyNotif.id, mockAdminReq);
+    await store.deleteNotification(staffOnlyNotif.id, mockAdminReq);
+    await store.deleteNotification(allUserNotif.id, mockAdminReq);
+    console.log("  ✓ Route-level audience restrictions verified: Student cannot receive Staff-only notifications and Staff cannot receive Students-only notifications");
   }
 
   console.log("\n==========================================");

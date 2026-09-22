@@ -546,7 +546,8 @@ app.get("/api/policies", requireAuth, async (req, res) => {
 });
 
 app.get("/api/notifications", requireAuth, async (req, res) => {
-  const notifications = await store.getNotifications();
+  const userRoles = req.session.user?.roles || [];
+  const notifications = await store.getNotifications(userRoles);
   res.json({ notifications });
 });
 
