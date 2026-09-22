@@ -25,7 +25,10 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
       case 'Examination': return <FileCheck className="w-4 h-4 text-navy-800" />;
       case 'Event': return <Calendar className="w-4 h-4 text-navy-800" />;
       case 'Achievement': return <Award className="w-4 h-4 text-navy-800" />;
-      default: return <ShieldAlert className="w-4 h-4 text-navy-800" />;
+      case 'Notice': return <Bell className="w-4 h-4 text-navy-800" />;
+      case 'Urgent': return <ShieldAlert className="w-4 h-4 text-red-600" />;
+      case 'System': return <Bell className="w-4 h-4 text-navy-800" />;
+      default: return <Bell className="w-4 h-4 text-navy-800" />;
     }
   };
 

@@ -260,12 +260,31 @@ async function deleteNotice(id, req) {
 // Notifications Methods
 // -------------------------
 
-async function getNotifications() {
+async function getNotifications(userRoles = null) {
+  let allowedAudiences = null;
+
+  if (Array.isArray(userRoles)) {
+    const roles = userRoles.map((r) => String(r).toLowerCase());
+    const audienceSet = new Set(["All"]);
+
+    if (roles.includes("admin") || roles.includes("super_admin")) {
+      audienceSet.add("Students");
+      audienceSet.add("Staff");
+    } else {
+      if (roles.includes("student")) audienceSet.add("Students");
+      if (roles.includes("staff")) audienceSet.add("Staff");
+    }
+
+    allowedAudiences = Array.from(audienceSet);
+  }
+
   const res = await db.query(
     `SELECT id, title, message, type, target_audience AS "targetAudience", link_url AS "linkUrl", created_at AS "createdAt", created_by AS "createdBy"
      FROM notifications
+     WHERE ($1::text[] IS NULL OR target_audience = ANY($1::text[]))
      ORDER BY created_at DESC
-     LIMIT 100`
+     LIMIT 100`,
+    [allowedAudiences]
   );
   return res.rows;
 }

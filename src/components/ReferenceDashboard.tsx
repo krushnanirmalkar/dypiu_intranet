@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import imgLogo from "../assets/dashboard/logo.png";
 import { Bell, AlertCircle, ChevronRight, BookOpen, GraduationCap, FileText, Laptop, Bookmark, Users, CheckCircle2, Briefcase, Award, HelpCircle, Clock, MapPin, Send, Sparkles, Search, X, Cake, Gift, User, Settings, LogOut, Paperclip, ExternalLink, ShieldCheck, Key } from 'lucide-react';
-import type { ApplicationItem, UserProfile } from '../types';
+import type { ApplicationItem, NotificationItem, UserProfile } from '../types';
 import { NotificationPanel } from './NotificationPanel';
-import { mockNotifications } from '../data/mockData';
+import { normalizeNotifications } from '../utils/notifications';
 import { adminApi } from '../admin/services/adminApi';
 
 interface DashboardNoticeItem {
@@ -308,12 +308,22 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [failedProfilePhoto, setFailedProfilePhoto] = useState<string | null>(null);
   const [directorySearch, setDirectorySearch] = useState('');
-  const [notifications, setNotifications] = useState(mockNotifications);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchPublishedData = async () => {
+      try {
+        const response = await fetch('/api/notifications', { method: 'GET', credentials: 'include' });
+        if (response.ok) {
+          const data = await response.json();
+          setNotifications(normalizeNotifications(data));
+        }
+      } catch {
+        // Keep empty notifications list if fetch fails
+      }
+
       try {
         const fetchedNotices = await adminApi.fetchNotices({ status: 'published' });
         if (Array.isArray(fetchedNotices) && fetchedNotices.length > 0) {

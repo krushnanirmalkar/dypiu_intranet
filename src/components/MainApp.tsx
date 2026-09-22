@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
-import type { ApplicationItem, UserProfile, UserRole } from '../types';
+import type { ApplicationItem, NotificationItem, UserProfile, UserRole } from '../types';
 import { mockNotifications } from '../data/mockData';
+import { normalizeNotifications } from '../utils/notifications';
 import { DEV_PREVIEW_APPLICATIONS, DEV_PREVIEW_USER, type AuthenticatedUser } from '../data/devPreviewData';
 import { ApplicationsPage } from '../pages/ApplicationsPage';
 import { AuditPage } from '../pages/AuditPage';
@@ -183,7 +184,9 @@ export const MainApp: React.FC = () => {
     USE_DEV_PREVIEW ? DEV_PREVIEW_APPLICATIONS : [],
   );
   const [applicationsLoading, setApplicationsLoading] = useState(!USE_DEV_PREVIEW);
-  const [notifications, setNotifications] = useState(mockNotifications);
+  const [notifications, setNotifications] = useState<NotificationItem[]>(
+    USE_DEV_PREVIEW ? mockNotifications : [],
+  );
 
   useEffect(() => {
     if (isSignedOutPage) {
@@ -288,6 +291,39 @@ export const MainApp: React.FC = () => {
     };
 
     void loadApplications();
+  }, [authenticated, authenticatedUser, currentRole, isSignedOutPage]);
+
+  useEffect(() => {
+    if (isSignedOutPage) return;
+
+    if (USE_DEV_PREVIEW) {
+      setNotifications(mockNotifications);
+      return;
+    }
+
+    if (!authenticated || !authenticatedUser || !currentRole) return;
+
+    const loadNotifications = async () => {
+      try {
+        const response = await fetch('/api/notifications', { method: 'GET', credentials: 'include' });
+
+        if (response.status === 401) {
+          setAuthenticated(false);
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error(`Notification request failed with status ${response.status}`);
+        }
+
+        setNotifications(normalizeNotifications(await response.json()));
+      } catch (error) {
+        console.error('Failed to load notifications:', error);
+        setNotifications([]);
+      }
+    };
+
+    void loadNotifications();
   }, [authenticated, authenticatedUser, currentRole, isSignedOutPage]);
 
   const currentUser = useMemo(

@@ -66,7 +66,12 @@ function setupDbMock() {
     }
 
     if (sql.includes("FROM notifications")) {
-      return { rows: [...mockStore.notifications] };
+      const allowedAudiences = params[0];
+      let rows = [...mockStore.notifications];
+      if (Array.isArray(allowedAudiences)) {
+        rows = rows.filter(n => allowedAudiences.includes(n.targetAudience));
+      }
+      return { rows };
     }
 
     if (sql.includes("INSERT INTO notifications")) {
@@ -413,6 +418,34 @@ async function runTests() {
 
     await store.deleteNotification(customNotif.id, mockReq);
     console.log("  ✓ Direct Notification CRUD & Access working correctly");
+  }
+
+  // Target Audience Filtering Tests for Notifications
+  {
+    const mockReq = { session: { user: { sub: "admin-1", email: "admin@dypiu.ac.in" } }, ip: "127.0.0.1", method: "POST", path: "/api/admin/notifications" };
+    const stuNotif = await store.createNotification({ title: "Student Only", message: "Msg", type: "info", targetAudience: "Students" }, mockReq);
+    const staffNotif = await store.createNotification({ title: "Staff Only", message: "Msg", type: "info", targetAudience: "Staff" }, mockReq);
+    const allNotif = await store.createNotification({ title: "All Audience", message: "Msg", type: "info", targetAudience: "All" }, mockReq);
+
+    const studentView = await store.getNotifications(["student"]);
+    assert.ok(studentView.some(n => n.id === stuNotif.id), "Student view should include Student notification");
+    assert.ok(studentView.some(n => n.id === allNotif.id), "Student view should include All notification");
+    assert.ok(!studentView.some(n => n.id === staffNotif.id), "Student view must NOT include Staff notification");
+
+    const staffView = await store.getNotifications(["staff"]);
+    assert.ok(staffView.some(n => n.id === staffNotif.id), "Staff view should include Staff notification");
+    assert.ok(staffView.some(n => n.id === allNotif.id), "Staff view should include All notification");
+    assert.ok(!staffView.some(n => n.id === stuNotif.id), "Staff view must NOT include Student notification");
+
+    const adminView = await store.getNotifications(["admin"]);
+    assert.ok(adminView.some(n => n.id === stuNotif.id), "Admin view should include Student notification");
+    assert.ok(adminView.some(n => n.id === staffNotif.id), "Admin view should include Staff notification");
+    assert.ok(adminView.some(n => n.id === allNotif.id), "Admin view should include All notification");
+
+    await store.deleteNotification(stuNotif.id, mockReq);
+    await store.deleteNotification(staffNotif.id, mockReq);
+    await store.deleteNotification(allNotif.id, mockReq);
+    console.log("  ✓ Server-Side Target Audience Notification Filtering verified");
   }
 
   // Application CRUD & Safety
