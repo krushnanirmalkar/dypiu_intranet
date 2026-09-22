@@ -46,7 +46,8 @@ function setupDbMock() {
     notices: [],
     policies: [],
     access_rules: [],
-    audit_logs: []
+    audit_logs: [],
+    notifications: []
   };
 
   db.initDatabase = async () => true;
@@ -62,6 +63,25 @@ function setupDbMock() {
 
     if (sql.includes("FROM audit_logs")) {
       return { rows: [...mockStore.audit_logs] };
+    }
+
+    if (sql.includes("FROM notifications")) {
+      return { rows: [...mockStore.notifications] };
+    }
+
+    if (sql.includes("INSERT INTO notifications")) {
+      const notif = {
+        id: params[0], title: params[1], message: params[2], type: params[3],
+        targetAudience: params[4], linkUrl: params[5], createdAt: params[6], createdBy: params[7]
+      };
+      mockStore.notifications.unshift(notif);
+      return { rows: [notif] };
+    }
+
+    if (sql.includes("DELETE FROM notifications")) {
+      const id = params[0];
+      mockStore.notifications = mockStore.notifications.filter(n => n.id !== id);
+      return { rows: [] };
     }
 
     if (sql.includes("FROM applications")) {
@@ -340,7 +360,7 @@ async function runTests() {
   // 2. Persistence & CRUD Tests
   console.log("\n[2] Testing Store Persistence & CRUD...");
 
-  // Notice CRUD & Persistence
+  // Notice CRUD & Auto-Notification
   {
     const mockReq = { session: { user: { sub: "admin-1", email: "admin@dypiu.ac.in" } }, ip: "127.0.0.1", method: "POST", path: "/api/admin/notices" };
     const notice = await store.createNotice({
@@ -355,6 +375,10 @@ async function runTests() {
     assert.ok(notice.id, "Notice ID should be created");
     assert.strictEqual(notice.title, "Test Notice");
 
+    // Verify auto notification generated for notice publication
+    const notifs = await store.getNotifications();
+    assert.ok(notifs.some(n => n.title.includes("Test Notice")), "Publishing notice should auto-broadcast notification");
+
     // Fetch notice
     const fetched = await store.getNoticeById(notice.id);
     assert.ok(fetched, "Should fetch notice by ID");
@@ -368,7 +392,27 @@ async function runTests() {
     // Delete notice
     const deleted = await store.deleteNotice(notice.id, mockReq);
     assert.strictEqual(deleted, true, "Delete notice should return true");
-    console.log("  ✓ Notice CRUD & Status Toggles working correctly");
+    console.log("  ✓ Notice CRUD & Auto-Notification Broadcast working correctly");
+  }
+
+  // Direct Notification CRUD
+  {
+    const mockReq = { session: { user: { sub: "admin-1", email: "admin@dypiu.ac.in" } }, ip: "127.0.0.1", method: "POST", path: "/api/admin/notifications" };
+    const customNotif = await store.createNotification({
+      title: "Direct Broadcast Test",
+      message: "Testing direct notification broadcast",
+      type: "urgent",
+      targetAudience: "All"
+    }, mockReq);
+
+    assert.ok(customNotif.id, "Notification ID should be generated");
+    assert.strictEqual(customNotif.title, "Direct Broadcast Test");
+
+    const allNotifs = await store.getNotifications();
+    assert.ok(allNotifs.some(n => n.id === customNotif.id), "Custom notification should exist in notifications store");
+
+    await store.deleteNotification(customNotif.id, mockReq);
+    console.log("  ✓ Direct Notification CRUD & Access working correctly");
   }
 
   // Application CRUD & Safety
@@ -435,7 +479,7 @@ async function runTests() {
       name: "Dean Gmail Policy Rule",
       targetType: "email",
       targetValue: "dean@gmail.com",
-      services: ["policies"],
+      services: ["policies", "notifications"],
       accessLevel: "write",
       status: "active"
     }, mockReq);
@@ -444,6 +488,7 @@ async function runTests() {
     const access = await store.evaluateUserAccess("dean@gmail.com", ["staff"]);
     assert.ok(access.allowedServices.includes("notices"), "User should inherit notice access from role");
     assert.ok(access.allowedServices.includes("policies"), "User should receive policy access from email");
+    assert.ok(access.allowedServices.includes("notifications"), "User should receive notifications access from email");
     assert.strictEqual(access.accessLevel, "write", "Max access level should aggregate to write");
 
     await store.deleteAccessRule(rule1.id, mockReq);

@@ -35,15 +35,21 @@ export const AuditLogAdminPage: React.FC = () => {
     void loadLogs();
   }, []);
 
-  const filteredEvents = events.filter((e) => {
+  const safeEvents = Array.isArray(events) ? events : [];
+  const filteredEvents = safeEvents.filter((e) => {
+    if (!e) return false;
     if (resourceFilter !== 'ALL' && e.resourceType !== resourceFilter) return false;
     if (search.trim()) {
       const q = search.toLowerCase();
+      const action = e.action || '';
+      const summary = e.summary || '';
+      const actorEmail = e.actorEmail || '';
+      const resourceId = e.resourceId || '';
       return (
-        e.action.toLowerCase().includes(q) ||
-        e.summary.toLowerCase().includes(q) ||
-        e.actorEmail.toLowerCase().includes(q) ||
-        e.resourceId.toLowerCase().includes(q)
+        action.toLowerCase().includes(q) ||
+        summary.toLowerCase().includes(q) ||
+        actorEmail.toLowerCase().includes(q) ||
+        resourceId.toLowerCase().includes(q)
       );
     }
     return true;
@@ -205,11 +211,11 @@ export const AuditLogAdminPage: React.FC = () => {
               </div>
 
               <div>
-                <span className="text-[10px] font-bold uppercase text-navy-400">HTTP Request Metadata</span>
-                <div className="mt-1 rounded-xl bg-navy-900 p-3 font-mono text-[11px] text-blue-200">
-                  <p>Method: {selectedEvent.metadata?.method || 'N/A'}</p>
-                  <p>Path: {selectedEvent.metadata?.path || 'N/A'}</p>
-                  <p>IP Address: {selectedEvent.metadata?.ip || '127.0.0.1'}</p>
+                <span className="text-[10px] font-bold uppercase text-navy-400">Request Metadata</span>
+                <div className="mt-1 rounded-xl bg-navy-900 p-3 font-mono text-[11px] text-blue-200 space-y-1">
+                  <p>Method: {selectedEvent.metadata?.method || (typeof selectedEvent.details === 'object' && selectedEvent.details ? (selectedEvent.details as Record<string, unknown>).method as string : null) || 'N/A'}</p>
+                  <p>Path: {selectedEvent.metadata?.path || (typeof selectedEvent.details === 'object' && selectedEvent.details ? (selectedEvent.details as Record<string, unknown>).path as string : null) || 'N/A'}</p>
+                  <p>IP Address: {selectedEvent.metadata?.ip || selectedEvent.ip || '127.0.0.1'}</p>
                 </div>
               </div>
             </div>

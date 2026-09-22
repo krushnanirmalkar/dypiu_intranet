@@ -86,7 +86,19 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   ip VARCHAR(100)
 );
 
+CREATE TABLE IF NOT EXISTS notifications (
+  id VARCHAR(100) PRIMARY KEY,
+  title VARCHAR(500) NOT NULL,
+  message TEXT NOT NULL,
+  type VARCHAR(50) DEFAULT 'info',
+  target_audience VARCHAR(100) DEFAULT 'All',
+  link_url TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  created_by VARCHAR(255) DEFAULT 'University Administration'
+);
+
 CREATE INDEX IF NOT EXISTS idx_access_rules_target ON access_rules (LOWER(TRIM(target_value)));
 CREATE INDEX IF NOT EXISTS idx_notices_status ON notices (status);
 CREATE INDEX IF NOT EXISTS idx_policies_status ON policies (status);
 CREATE INDEX IF NOT EXISTS idx_applications_enabled ON applications (enabled);
+CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications (created_at DESC);

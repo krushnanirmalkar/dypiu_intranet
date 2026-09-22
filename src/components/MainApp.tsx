@@ -21,6 +21,7 @@ import { ApplicationsAdminPage } from '../admin/pages/ApplicationsAdminPage';
 import { PoliciesAdminPage } from '../admin/pages/PoliciesAdminPage';
 import { AuditLogAdminPage } from '../admin/pages/AuditLogAdminPage';
 import { AccessControlAdminPage } from '../admin/pages/AccessControlAdminPage';
+import { NotificationsAdminPage } from '../admin/pages/NotificationsAdminPage';
 
 const USE_DEV_PREVIEW = false;
 
@@ -60,7 +61,7 @@ const createPreviewSessionUser = (user: AuthenticatedUser): SessionUser => {
     isSuperAdmin: user.isSuperAdmin ?? user.roles?.includes('super_admin') ?? false,
     hasAdminPortalAccess: true,
     permissions: {
-      allowedServices: ['notices', 'policies', 'applications', 'access', 'audit'],
+      allowedServices: ['notices', 'policies', 'applications', 'access', 'audit', 'notifications'],
       accessLevel: 'full',
     },
   };
@@ -82,6 +83,7 @@ const buildProfile = (user: SessionUser, role: UserRole): UserProfile => {
   const canManageApplications = isSuperOrAdmin || allowedServices.includes('applications');
   const canManageAccess = isSuperOrAdmin || allowedServices.includes('access');
   const canManageAudit = isSuperOrAdmin || allowedServices.includes('audit');
+  const canManageNotifications = isSuperOrAdmin || allowedServices.includes('notifications');
   const hasAdminPortalAccess = Boolean(user.hasAdminPortalAccess || isSuperOrAdmin || allowedServices.length > 0);
 
   return {
@@ -107,6 +109,7 @@ const buildProfile = (user: SessionUser, role: UserRole): UserProfile => {
       canManageApplications,
       canManageAccess,
       canManageAudit,
+      canManageNotifications,
     },
   };
 };
@@ -406,6 +409,9 @@ export const MainApp: React.FC = () => {
 
         {adminTab === 'notices' && (currentUser.isSuperAdmin || currentUser.role === 'admin' || currentUser.permissions?.canManageNotices) && (
           <NoticesAdminPage initialOpenCreate={openNoticeCreateModal} />
+        )}
+        {adminTab === 'notifications' && (currentUser.isSuperAdmin || currentUser.role === 'admin' || currentUser.permissions?.canManageNotifications) && (
+          <NotificationsAdminPage />
         )}
         {adminTab === 'applications' && (currentUser.isSuperAdmin || currentUser.role === 'admin' || currentUser.permissions?.canManageApplications) && (
           <ApplicationsAdminPage initialOpenCreate={openAppCreateModal} />

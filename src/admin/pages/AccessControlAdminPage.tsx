@@ -336,7 +336,7 @@ export const AccessControlAdminPage: React.FC<AccessControlAdminPageProps> = ({ 
                             key={srv}
                             className="rounded-md bg-navy-100 px-2 py-0.5 text-[10px] font-bold capitalize text-navy-800"
                           >
-                            {srv === 'notices' ? 'Notice Board' : srv === 'policies' ? 'Policies' : srv === 'applications' ? 'Apps' : 'Audit Logs'}
+                            {srv === 'notices' ? 'Notice Board' : srv === 'notifications' ? 'Notifications' : srv === 'policies' ? 'Policies' : srv === 'applications' ? 'Apps' : 'Audit Logs'}
                           </span>
                         ))}
                       </div>
@@ -471,6 +471,7 @@ export const AccessControlAdminPage: React.FC<AccessControlAdminPageProps> = ({ 
                 <div className="grid grid-cols-2 gap-2">
                   {[
                     { id: 'notices', label: 'Notice Board & Circulars' },
+                    { id: 'notifications', label: 'Campus Notifications' },
                     { id: 'policies', label: 'University Policies' },
                     { id: 'applications', label: 'Application Directory' },
                     { id: 'audit', label: 'Security Audit Logs' },

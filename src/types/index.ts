@@ -8,6 +8,7 @@ export interface UserPermissions {
   canManageApplications?: boolean;
   canManageAccess?: boolean;
   canManageAudit?: boolean;
+  canManageNotifications?: boolean;
 }
 
 export interface UserProfile {

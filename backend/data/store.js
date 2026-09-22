@@ -196,6 +196,21 @@ async function createNotice(noticeData, req) {
     [newNotice.id, newNotice.title, newNotice.content, newNotice.category, newNotice.audience, newNotice.priority, newNotice.status, newNotice.author, newNotice.publishAt, newNotice.expiresAt, newNotice.attachmentUrl, newNotice.attachmentName, newNotice.attachmentSize, newNotice.createdAt, newNotice.updatedAt, newNotice.createdBy, newNotice.updatedBy]
   );
   await recordAuditEvent(req, "notice.created", "notice", id, `Created notice '${newNotice.title}'`);
+
+  if (newNotice.status === "published") {
+    try {
+      await createNotification({
+        title: `New Notice: ${newNotice.title}`,
+        message: `A new notice has been published for ${newNotice.audience}: ${newNotice.title}`,
+        type: "notice",
+        targetAudience: newNotice.audience,
+        linkUrl: "/notifications"
+      }, req);
+    } catch (err) {
+      console.error("Failed to auto-create notice notification:", err.message);
+    }
+  }
+
   return newNotice;
 }
 
@@ -214,6 +229,21 @@ async function updateNotice(id, updates, req) {
     [updated.title, updated.content, updated.category, updated.audience, updated.priority, updated.status, updated.author, updated.publishAt, updated.expiresAt, updated.attachmentUrl, updated.attachmentName, updated.attachmentSize, updated.updatedAt, updated.updatedBy, id]
   );
   await recordAuditEvent(req, "notice.updated", "notice", id, `Updated notice '${updated.title}'`);
+
+  if (updated.status === "published" && existing.status !== "published") {
+    try {
+      await createNotification({
+        title: `New Notice: ${updated.title}`,
+        message: `A new notice has been published for ${updated.audience}: ${updated.title}`,
+        type: "notice",
+        targetAudience: updated.audience,
+        linkUrl: "/notifications"
+      }, req);
+    } catch (err) {
+      console.error("Failed to auto-create notice notification:", err.message);
+    }
+  }
+
   return updated;
 }
 
@@ -223,6 +253,52 @@ async function deleteNotice(id, req) {
 
   await db.query("DELETE FROM notices WHERE id = $1", [id]);
   await recordAuditEvent(req, "notice.deleted", "notice", id, `Deleted notice '${existing.title}'`);
+  return true;
+}
+
+// -------------------------
+// Notifications Methods
+// -------------------------
+
+async function getNotifications() {
+  const res = await db.query(
+    `SELECT id, title, message, type, target_audience AS "targetAudience", link_url AS "linkUrl", created_at AS "createdAt", created_by AS "createdBy"
+     FROM notifications
+     ORDER BY created_at DESC
+     LIMIT 100`
+  );
+  return res.rows;
+}
+
+async function createNotification(data, req) {
+  const id = generateId("notif");
+  const now = new Date().toISOString();
+  const actorEmail = req?.session?.user?.email || "system";
+
+  const notif = {
+    id,
+    title: (data.title || "").trim(),
+    message: (data.message || "").trim(),
+    type: data.type || "info",
+    targetAudience: data.targetAudience || "All",
+    linkUrl: data.linkUrl ? data.linkUrl.trim() : null,
+    createdAt: now,
+    createdBy: actorEmail
+  };
+
+  await db.query(
+    `INSERT INTO notifications (id, title, message, type, target_audience, link_url, created_at, created_by)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    [notif.id, notif.title, notif.message, notif.type, notif.targetAudience, notif.linkUrl, notif.createdAt, notif.createdBy]
+  );
+
+  await recordAuditEvent(req, "notification.created", "notification", notif.id, `Created notification '${notif.title}'`);
+  return notif;
+}
+
+async function deleteNotification(id, req) {
+  await db.query("DELETE FROM notifications WHERE id = $1", [id]);
+  await recordAuditEvent(req, "notification.deleted", "notification", id, `Deleted notification ${id}`);
   return true;
 }
 
@@ -461,5 +537,8 @@ module.exports = {
   createAccessRule,
   updateAccessRule,
   deleteAccessRule,
-  evaluateUserAccess
+  evaluateUserAccess,
+  getNotifications,
+  createNotification,
+  deleteNotification
 };

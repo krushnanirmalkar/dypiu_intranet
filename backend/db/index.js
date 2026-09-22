@@ -191,7 +191,7 @@ async function seedDefaultData() {
         name: "Super Administrator Grant",
         target_type: "role",
         target_value: "super_admin",
-        services: ["notices", "policies", "applications", "access", "audit"],
+        services: ["notices", "policies", "applications", "access", "audit", "notifications"],
         access_level: "full",
         status: "active"
       },
@@ -200,7 +200,7 @@ async function seedDefaultData() {
         name: "Administrator Role Grant",
         target_type: "role",
         target_value: "admin",
-        services: ["notices", "policies", "applications", "access", "audit"],
+        services: ["notices", "policies", "applications", "access", "audit", "notifications"],
         access_level: "full",
         status: "active"
       },
@@ -221,6 +221,30 @@ async function seedDefaultData() {
          VALUES ($1, $2, $3, $4, $5, $6, $7)
          ON CONFLICT (id) DO NOTHING`,
         [item.id, item.name, item.target_type, item.target_value, item.services, item.access_level, item.status]
+      );
+    }
+  }
+
+  // 5. Seed Notifications if empty
+  const notifRes = await pool.query("SELECT COUNT(*) FROM notifications");
+  if (parseInt(notifRes.rows[0].count, 10) === 0) {
+    const initialNotifs = [
+      {
+        id: "notif-1",
+        title: "Welcome to DYPIU UniOne Intranet",
+        message: "Your central portal for campus notices, academic services, and digital resources is now active.",
+        type: "system",
+        target_audience: "All",
+        created_by: "University IT Administration"
+      }
+    ];
+
+    for (const item of initialNotifs) {
+      await pool.query(
+        `INSERT INTO notifications (id, title, message, type, target_audience, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT (id) DO NOTHING`,
+        [item.id, item.title, item.message, item.type, item.target_audience, item.created_by]
       );
     }
   }

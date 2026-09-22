@@ -69,7 +69,9 @@ export interface AuditEvent {
   resourceType: string;
   resourceId: string;
   summary: string;
-  metadata: {
+  details?: Record<string, unknown> | string | null;
+  ip?: string | null;
+  metadata?: {
     ip?: string | null;
     method?: string | null;
     path?: string | null;
@@ -92,8 +94,20 @@ export interface DashboardOverviewResponse {
   recentAuditLogs: AuditEvent[];
 }
 
+export type NotificationType = 'info' | 'notice' | 'urgent' | 'alert' | 'system';
+export interface AdminNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  targetAudience: 'All' | 'Students' | 'Staff';
+  linkUrl?: string | null;
+  createdAt: string;
+  createdBy: string;
+}
+
 export type AccessRuleTargetType = 'email' | 'role';
-export type AccessRuleService = 'notices' | 'policies' | 'applications' | 'audit';
+export type AccessRuleService = 'notices' | 'policies' | 'applications' | 'audit' | 'notifications';
 export type AccessLevel = 'read' | 'write' | 'full';
 export type AccessRuleStatus = 'active' | 'disabled';
 

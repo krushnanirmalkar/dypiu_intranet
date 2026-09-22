@@ -2,6 +2,7 @@ import type {
   AccessRule,
   AdminApplication,
   AdminNotice,
+  AdminNotification,
   AdminPolicy,
   AuditEvent,
   DashboardOverviewResponse,
@@ -763,7 +764,7 @@ export const adminApi = {
 
   // Audit Logs
   async fetchAuditLogs(params?: { action?: string; resourceType?: string; search?: string }): Promise<AuditEvent[]> {
-    return fetchWithDevFallback<AuditEvent[]>(
+    const res = await fetchWithDevFallback<AuditEvent[] | { events: AuditEvent[] }>(
       `/api/admin/audit${params ? `?${new URLSearchParams(params as Record<string, string>).toString()}` : ''}`,
       { credentials: 'include' },
       () => {
@@ -775,12 +776,70 @@ export const adminApi = {
           const q = params.search.toLowerCase();
           result = result.filter(
             (e) =>
-              e.summary.toLowerCase().includes(q) ||
-              e.action.toLowerCase().includes(q) ||
-              e.actorEmail.toLowerCase().includes(q),
+              (e.summary || '').toLowerCase().includes(q) ||
+              (e.action || '').toLowerCase().includes(q) ||
+              (e.actorEmail || '').toLowerCase().includes(q),
           );
         }
         return result;
+      },
+    );
+    if (Array.isArray(res)) return res;
+    if (res && Array.isArray((res as { events?: AuditEvent[] }).events)) return (res as { events: AuditEvent[] }).events;
+    return [];
+  },
+
+  // Notifications
+  async fetchNotifications(): Promise<AdminNotification[]> {
+    const res = await fetchWithDevFallback<AdminNotification[] | { notifications: AdminNotification[] }>(
+      '/api/admin/notifications',
+      { credentials: 'include' },
+      () => getStored<AdminNotification[]>('dypiu_dev_notifications', []),
+    );
+    if (Array.isArray(res)) return res;
+    if (res && Array.isArray((res as { notifications?: AdminNotification[] }).notifications)) return (res as { notifications: AdminNotification[] }).notifications;
+    return [];
+  },
+
+  async createNotification(notif: Partial<AdminNotification>): Promise<AdminNotification> {
+    const newNotif: AdminNotification = {
+      id: `notif-${Date.now()}`,
+      title: notif.title || 'New Notification',
+      message: notif.message || '',
+      type: notif.type || 'info',
+      targetAudience: notif.targetAudience || 'All',
+      linkUrl: notif.linkUrl || null,
+      createdAt: new Date().toISOString(),
+      createdBy: 'preview@dypiu.ac.in',
+    };
+
+    const res = await fetchWithDevFallback<AdminNotification | { notification: AdminNotification }>(
+      '/api/admin/notifications',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(notif),
+      },
+      () => {
+        const stored = getStored<AdminNotification[]>('dypiu_dev_notifications', []);
+        stored.unshift(newNotif);
+        setStored('dypiu_dev_notifications', stored);
+        return newNotif;
+      },
+    );
+    if (res && typeof res === 'object' && 'notification' in res) return (res as { notification: AdminNotification }).notification;
+    return res as AdminNotification;
+  },
+
+  async deleteNotification(id: string): Promise<void> {
+    await fetchWithDevFallback<{ success: boolean }>(
+      `/api/admin/notifications/${id}`,
+      { method: 'DELETE', credentials: 'include' },
+      () => {
+        const stored = getStored<AdminNotification[]>('dypiu_dev_notifications', []);
+        setStored('dypiu_dev_notifications', stored.filter((n) => n.id !== id));
+        return { success: true };
       },
     );
   },

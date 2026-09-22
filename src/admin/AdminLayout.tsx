@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   ArrowLeft,
+  Bell,
   BookOpen,
   Grid2X2,
   Key,
@@ -15,7 +16,7 @@ import {
 import type { UserProfile } from '../types';
 import imgLogo from '../assets/dashboard/logo.png';
 
-export type AdminTab = 'dashboard' | 'notices' | 'applications' | 'policies' | 'access' | 'audit';
+export type AdminTab = 'dashboard' | 'notices' | 'applications' | 'policies' | 'access' | 'audit' | 'notifications';
 
 interface AdminLayoutProps {
   user: UserProfile;
@@ -37,6 +38,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
   const navItems: { id: AdminTab; label: string; icon: React.FC<{ className?: string }> }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     ...(user.isSuperAdmin || user.role === 'admin' || user.permissions?.canManageNotices ? [{ id: 'notices' as AdminTab, label: 'Notices', icon: Megaphone }] : []),
+    ...(user.isSuperAdmin || user.role === 'admin' || user.permissions?.canManageNotifications ? [{ id: 'notifications' as AdminTab, label: 'Notifications', icon: Bell }] : []),
     ...(user.isSuperAdmin || user.role === 'admin' || user.permissions?.canManageApplications ? [{ id: 'applications' as AdminTab, label: 'Applications', icon: Grid2X2 }] : []),
     ...(user.isSuperAdmin || user.role === 'admin' || user.permissions?.canManagePolicies ? [{ id: 'policies' as AdminTab, label: 'University Policies', icon: BookOpen }] : []),
     ...(user.isSuperAdmin || user.role === 'admin' || user.permissions?.canManageAccess ? [{ id: 'access' as AdminTab, label: 'Access Control', icon: Key }] : []),

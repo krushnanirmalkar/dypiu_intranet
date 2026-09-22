@@ -545,6 +545,11 @@ app.get("/api/policies", requireAuth, async (req, res) => {
   res.json({ policies });
 });
 
+app.get("/api/notifications", requireAuth, async (req, res) => {
+  const notifications = await store.getNotifications();
+  res.json({ notifications });
+});
+
 
 // -------------------------
 // SUPER ADMIN PORTAL APIs
@@ -894,6 +899,46 @@ app.get("/api/admin/audit", requireServicePermission("audit", "read"), async (re
   }
 
   res.json({ events });
+});
+
+// Notifications Management
+app.get("/api/admin/notifications", requireServicePermission("notifications", "read"), async (req, res) => {
+  const notifications = await store.getNotifications();
+  res.json({ notifications });
+});
+
+app.post("/api/admin/notifications", requireServicePermission("notifications", "write"), async (req, res) => {
+  const { title, message, type, targetAudience, linkUrl } = req.body || {};
+
+  if (typeof title !== "string" || !title.trim() || title.trim().length > 300) {
+    return res.status(400).json({ error: "Notification title is required and must be under 300 characters." });
+  }
+
+  if (typeof message !== "string" || !message.trim() || message.trim().length > 5000) {
+    return res.status(400).json({ error: "Notification message is required and must be under 5000 characters." });
+  }
+
+  if (linkUrl && !isValidSafeUrl(linkUrl)) {
+    return res.status(400).json({ error: "Invalid or unsafe link URL." });
+  }
+
+  const notification = await store.createNotification(
+    {
+      title: title.trim(),
+      message: message.trim(),
+      type: typeof type === "string" ? type : "info",
+      targetAudience: typeof targetAudience === "string" ? targetAudience : "All",
+      linkUrl: typeof linkUrl === "string" ? linkUrl.trim() : null
+    },
+    req
+  );
+
+  res.status(201).json({ notification });
+});
+
+app.delete("/api/admin/notifications/:id", requireServicePermission("notifications", "write"), async (req, res) => {
+  await store.deleteNotification(req.params.id, req);
+  res.json({ success: true, message: "Notification deleted." });
 });
 
 // -------------------------
