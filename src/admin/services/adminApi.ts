@@ -617,6 +617,21 @@ export const adminApi = {
   },
 
   // Policies
+  // Authenticated end-user view: published policies from PostgreSQL.
+  async fetchPublishedPolicies(): Promise<AdminPolicy[]> {
+    const res = await fetchWithDevFallback<AdminPolicy[] | { policies: AdminPolicy[] }>(
+      '/api/policies',
+      { credentials: 'include' },
+      () => getDevPolicies().filter((p) => p.status === 'published'),
+    );
+    if (Array.isArray(res)) return res;
+    if (res && Array.isArray((res as { policies?: AdminPolicy[] }).policies)) {
+      return (res as { policies: AdminPolicy[] }).policies;
+    }
+    return [];
+  },
+
+  // Administrative policy management.
   async fetchPolicies(params?: { category?: string; status?: string }): Promise<AdminPolicy[]> {
     const res = await fetchWithDevFallback<AdminPolicy[] | { policies: AdminPolicy[] }>(
       `/api/admin/policies${params ? `?${new URLSearchParams(params as Record<string, string>).toString()}` : ''}`,

@@ -9,56 +9,9 @@ interface PoliciesPageProps {
   onOpenCreatePolicy?: () => void;
 }
 
-const DEFAULT_POLICIES: AdminPolicy[] = [
-  {
-    id: 'pol-1',
-    title: 'DYPIU Campus Information Security Policy',
-    category: 'IT & Security',
-    summary: 'Guidelines for acceptable use of campus network, accounts, data protection, and cybersecurity compliance.',
-    content: 'All students, faculty, and administrative staff must adhere to strict password governance, multi-factor authentication, and multi-tenant data privacy regulations. Unauthorized distribution of internal credentials or scraping of campus databases is strictly prohibited.',
-    version: '1.2',
-    status: 'published',
-    effectiveDate: '2026-01-01',
-    publishedAt: '2026-01-01T00:00:00.000Z',
-    createdAt: '2025-12-15T10:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
-    createdBy: 'admin@dypiu.ac.in',
-    updatedBy: 'admin@dypiu.ac.in',
-  },
-  {
-    id: 'pol-2',
-    title: 'Academic Integrity and Anti-Plagiarism Framework',
-    category: 'Academic',
-    summary: 'Policy governing originality of submitted course assignments, research papers, and examination conduct.',
-    content: 'DYPIU maintains zero tolerance towards academic dishonesty. Submissions containing unauthorized AI generation or uncredited text will be evaluated by the Disciplinary Committee in accordance with UGC guidelines.',
-    version: '2.0',
-    status: 'published',
-    effectiveDate: '2026-02-01',
-    publishedAt: '2026-02-01T00:00:00.000Z',
-    createdAt: '2026-01-20T11:00:00.000Z',
-    updatedAt: '2026-02-01T00:00:00.000Z',
-    createdBy: 'academics@dypiu.ac.in',
-    updatedBy: 'academics@dypiu.ac.in',
-  },
-  {
-    id: 'pol-3',
-    title: 'Student Code of Conduct & Hostel Governance',
-    category: 'Campus & Hostel',
-    summary: 'Rules of conduct, residency guidelines, curfew regulations, and campus decorum.',
-    content: 'All resident and non-resident students are expected to maintain exemplary behavior on campus premises. Identity cards must be displayed at all times, and anti-ragging policies are strictly enforced.',
-    version: '1.5',
-    status: 'published',
-    effectiveDate: '2025-08-01',
-    publishedAt: '2025-08-01T00:00:00.000Z',
-    createdAt: '2025-07-15T10:00:00.000Z',
-    updatedAt: '2025-08-01T00:00:00.000Z',
-    createdBy: 'hostel@dypiu.ac.in',
-    updatedBy: 'hostel@dypiu.ac.in',
-  },
-];
 
 export const PoliciesPage: React.FC<PoliciesPageProps> = ({ user, onOpenCreatePolicy }) => {
-  const [policies, setPolicies] = useState<AdminPolicy[]>(DEFAULT_POLICIES);
+  const [policies, setPolicies] = useState<AdminPolicy[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -72,10 +25,8 @@ export const PoliciesPage: React.FC<PoliciesPageProps> = ({ user, onOpenCreatePo
     const fetchPolicies = async () => {
       setLoading(true);
       try {
-        const data = await adminApi.fetchPolicies({ status: 'published' });
-        if (Array.isArray(data) && data.length > 0) {
-          setPolicies(data);
-        }
+        const data = await adminApi.fetchPublishedPolicies();
+        setPolicies(data);
       } catch (err) {
         console.error('Failed to load policies page data:', err);
       } finally {

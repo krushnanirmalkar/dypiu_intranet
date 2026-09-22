@@ -33,44 +33,6 @@ interface DashboardPolicyItem {
   attachmentSize?: string | null;
 }
 
-const POLICIES: DashboardPolicyItem[] = [
-  {
-    id: 1,
-    title: 'Code of Conduct Policy',
-    category: 'Administrative',
-    summary: 'Effective from 1 Sep 2025',
-    content: 'All students, staff, and faculty members are required to observe high ethical standards, mutual respect, and academic integrity across campus operations.',
-    version: '1.0',
-    effectiveDate: '2025-09-01',
-  },
-  {
-    id: 2,
-    title: 'Attendance Guidelines',
-    category: 'Academic',
-    summary: 'For all students and faculty',
-    content: 'Minimum 75% attendance is mandatory in all registered theory and lab courses to be eligible for end-semester examinations.',
-    version: '2.1',
-    effectiveDate: '2026-01-10',
-  },
-  {
-    id: 3,
-    title: 'Academic Integrity Policy',
-    category: 'Academic',
-    summary: 'Maintaining ethical standards',
-    content: 'DYPIU upholds strict zero-tolerance towards plagiarism, unauthorized assistance, or unethical practices during assessments.',
-    version: '1.5',
-    effectiveDate: '2025-08-15',
-  },
-  {
-    id: 4,
-    title: 'Campus IT & WiFi Policy',
-    category: 'IT & Security',
-    summary: 'Fair usage & security rules',
-    content: 'Guidelines on bandwidth usage, VPN security, single sign-on authentication, and prohibited sites on university network.',
-    version: '1.2',
-    effectiveDate: '2026-01-01',
-  },
-];
 
 const APPLICATIONS = [
   { id: 'udms', name: 'UDMS', fullName: 'University Data Management', desc: 'Faculty profiles & reports', category: 'Academic', icon: GraduationCap, badge: 'v2.4' },
@@ -341,7 +303,7 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [noticeList, setNoticeList] = useState<DashboardNoticeItem[]>(NOTICES);
   const [selectedNotice, setSelectedNotice] = useState<DashboardNoticeItem | null>(null);
-  const [policyList, setPolicyList] = useState<DashboardPolicyItem[]>(POLICIES);
+  const [policyList, setPolicyList] = useState<DashboardPolicyItem[]>([]);
   const [selectedPolicy, setSelectedPolicy] = useState<DashboardPolicyItem | null>(null);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [failedProfilePhoto, setFailedProfilePhoto] = useState<string | null>(null);
@@ -384,7 +346,7 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
       }
 
       try {
-        const fetchedPolicies = await adminApi.fetchPolicies({ status: 'published' });
+        const fetchedPolicies = await adminApi.fetchPublishedPolicies();
         if (Array.isArray(fetchedPolicies) && fetchedPolicies.length > 0) {
           const mapped: DashboardPolicyItem[] = fetchedPolicies.map((p) => ({
             id: p.id,
@@ -401,7 +363,7 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
           setPolicyList(mapped);
         }
       } catch {
-        // Fallback to static POLICIES if fetch fails
+        // Keep policy list empty if the authenticated API request fails.
       }
     };
     void fetchPublishedData();
