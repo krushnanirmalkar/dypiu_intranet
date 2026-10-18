@@ -61,7 +61,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-[#F3F3F8] font-sans text-slate-800 flex flex-col">
+    <div className="h-[100dvh] max-h-[100dvh] bg-[#F3F3F8] font-sans text-slate-800 flex flex-col overflow-hidden">
       {/* Top Header - Reference Design Style */}
       <div className="bg-[#0A1328] sticky top-0 z-50 select-none shrink-0 w-full">
         <header className="bg-white rounded-bl-[24px] sm:rounded-bl-[32px] border-b border-slate-200/80 shadow-xs h-16 sm:h-20 px-3 sm:px-6 md:px-7 flex items-center justify-between relative overflow-visible">
@@ -131,11 +131,11 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
       </div>
 
       {/* Main Container */}
-      <div className="flex flex-1 min-h-0 relative">
+      <div className="flex flex-1 min-h-0 relative overflow-hidden">
         {/* Mobile Drawer Backdrop */}
         {isMobileDrawerOpen && (
           <div
-            className="fixed inset-0 top-16 z-30 bg-navy-950/60 backdrop-blur-xs lg:hidden"
+            className="fixed inset-0 top-16 sm:top-20 z-30 bg-navy-950/60 backdrop-blur-xs lg:hidden"
             onClick={() => setIsMobileDrawerOpen(false)}
           />
         )}
@@ -143,8 +143,8 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
         {/* Mobile Slide-Over Sidebar (< lg) */}
         <aside
           className={`
-            fixed top-16 bottom-0 left-0 z-40 w-64 bg-white border-r border-navy-100 flex flex-col justify-between
-            transition-transform duration-200 ease-in-out shadow-xl lg:hidden
+            fixed top-16 sm:top-20 bottom-0 left-0 z-40 w-64 bg-white border-r border-navy-100 flex flex-col justify-between
+            transition-transform duration-200 ease-in-out shadow-xl lg:hidden overflow-y-auto
             ${isMobileDrawerOpen ? 'translate-x-0' : '-translate-x-full'}
           `}
         >
@@ -199,7 +199,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
         </aside>
 
         {/* Desktop Permanent Sidebar (>= lg) */}
-        <aside className="hidden lg:flex lg:w-64 lg:shrink-0 bg-white border-r border-navy-100 flex-col justify-between min-h-full">
+        <aside className="hidden lg:flex lg:w-64 lg:shrink-0 bg-white border-r border-navy-100 flex-col justify-between h-full overflow-y-auto">
           <div className="p-4 space-y-6">
             <div>
               <p className="px-3 text-[10px] font-extrabold uppercase tracking-wider text-navy-400">
@@ -251,7 +251,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
         </aside>
 
         {/* Main Content Workspace */}
-        <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+        <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 pb-16 sm:pb-20 overflow-y-auto h-full">
           <div className="mx-auto max-w-7xl">
             {children}
           </div>
