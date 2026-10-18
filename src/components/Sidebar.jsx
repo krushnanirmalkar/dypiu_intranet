@@ -120,8 +120,7 @@ export const Sidebar = (/** @type {any} */ {
       items: [
         { label: 'Uni Policies', icon: FileText },
         { label: 'Grievance', icon: MessageSquare },
-        { label: 'Help & Support', icon: HelpCircle },
-        ...(user?.isSuperAdmin || user?.hasAdminPortalAccess ? [{ label: 'Admin Portal', icon: ShieldCheck }] : [])
+        { label: 'Help & Support', icon: HelpCircle }
       ]
     },
   ];
