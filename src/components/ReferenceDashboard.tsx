@@ -624,7 +624,10 @@ export default function ReferenceDashboard({
             {isProfileMenuOpen && (
               <div className="absolute right-0 top-[calc(100%+8px)] w-[min(340px,calc(100vw-32px))] overflow-hidden rounded-b-2xl rounded-t-sm border border-slate-200 bg-white shadow-[0_18px_48px_rgb(12,30,56,0.16)]">
                 <div className="px-5 py-4 bg-white">
-                  <p className="text-base font-extrabold leading-tight text-[#02022D]">{userName}</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-base font-extrabold leading-tight text-[#02022D]">{userName}</p>
+                    <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">{user.roleTitle || 'Student'}</span>
+                  </div>
                   <p className="mt-1 truncate text-sm font-medium text-blue-600">{user.email}</p>
                 </div>
                 <div className="border-t border-slate-200">

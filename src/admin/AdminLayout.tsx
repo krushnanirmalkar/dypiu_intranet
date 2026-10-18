@@ -38,6 +38,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
   const formattedName = toTitleCase(user.name || 'Admin User');
+  const formattedFirstName = formattedName.split(/\s+/)[0] || 'Admin';
   const initials = formattedName
     .split(/\s+/)
     .filter(Boolean)
@@ -95,7 +96,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="relative z-20 flex items-center gap-2 sm:gap-4 mr-1 sm:mr-3 md:mr-8">
             {/* Return to UniOne Intranet */}
             <button
               onClick={onReturnToPortal}
@@ -112,7 +113,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
                 {initials}
               </div>
               <div className="hidden md:block text-left leading-tight">
-                <div className="font-bold text-[#393678]">{formattedName}</div>
+                <div className="font-bold text-[#393678]">{formattedFirstName}</div>
                 <div className="text-[10px] text-slate-500 font-semibold">{user.roleTitle || 'Administrator'}</div>
               </div>
             </div>

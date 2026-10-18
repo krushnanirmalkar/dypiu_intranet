@@ -6,7 +6,7 @@ import React from 'react';
  */
 
 export const TopRightHeaderShape = ({ className = "h-full w-28 sm:w-36 md:w-44" }) => (
-  <div className={`absolute top-0 right-0 pointer-events-none z-10 overflow-hidden ${className}`}>
+  <div className={`absolute top-0 right-0 pointer-events-none z-0 overflow-hidden ${className}`}>
     <svg
       viewBox="0 0 160 80"
       preserveAspectRatio="none"

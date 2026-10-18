@@ -101,7 +101,8 @@ export const Header = (/** @type {any} */ {
     hasAdminPortalAccess: propUser?.hasAdminPortalAccess,
     role: propUser?.role,
     roles: propUser?.roles,
-    permissions: propUser?.permissions
+    permissions: propUser?.permissions,
+    roleTitle: propUser?.roleTitle || (propUser?.isSuperAdmin ? 'Super Administrator' : propUser?.role === 'admin' ? 'Administrator' : propUser?.role === 'staff' ? 'Staff' : 'Student')
   };
 
   return (
@@ -127,7 +128,7 @@ export const Header = (/** @type {any} */ {
         </div>
 
         {/* Right: Search, Notification, Profile */}
-        <div className="flex items-center gap-2 sm:gap-4 md:gap-5 mr-1 sm:mr-4 md:mr-16">
+        <div className="relative z-20 flex items-center gap-2 sm:gap-4 md:gap-5 mr-1 sm:mr-4 md:mr-16">
           {/* Mobile Search Toggle Icon */}
           <button
             onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
@@ -254,9 +255,14 @@ export const Header = (/** @type {any} */ {
                   {user.shortName ? user.shortName.charAt(0).toUpperCase() : 'U'}
                 </div>
               )}
-              <span className="hidden sm:inline-block text-xs font-semibold text-slate-700 group-hover:text-[#002B5C]">
-                {user.shortName}
-              </span>
+              <div className="hidden sm:block text-left leading-tight">
+                <div className="text-xs font-bold text-slate-700 group-hover:text-[#002B5C] transition-colors">
+                  {user.shortName}
+                </div>
+                <div className="text-[10px] text-slate-500 font-semibold leading-none mt-0.5">
+                  {user.roleTitle}
+                </div>
+              </div>
               <ChevronDown className={`w-3.5 h-3.5 text-slate-500 group-hover:text-slate-800 transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`} />
             </button>
 
@@ -265,9 +271,14 @@ export const Header = (/** @type {any} */ {
               <div className="absolute right-0 top-full mt-3 w-72 max-w-[calc(100vw-1.5rem)] bg-white rounded-2xl border border-slate-200/80 shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
                 {/* Header User Details */}
                 <div className="p-3.5 bg-slate-50/80 border-b border-slate-100">
-                  <h4 className="text-xs font-bold text-[#393678] tracking-wide">
-                    {user.name}
-                  </h4>
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="text-xs font-bold text-[#393678] tracking-wide truncate">
+                      {user.name}
+                    </h4>
+                    <span className="text-[9.5px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-slate-200/80 text-slate-700 shrink-0">
+                      {user.roleTitle}
+                    </span>
+                  </div>
                   <p className="text-[11px] font-semibold text-[#00afef] mt-0.5 truncate">
                     {user.email}
                   </p>
