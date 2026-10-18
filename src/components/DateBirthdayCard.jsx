@@ -55,11 +55,9 @@ export const DateBirthdayCard = (/** @type {any} */ { dateText = '' } = {}) => {
 
           <div className="p-2.5 rounded-xl bg-[#faa831]/10 border border-[#faa831]/20 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2.5 min-w-0">
-              <img
-                src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=150&auto=format&fit=crop"
-                alt="Aarav Sharma"
-                className="w-8 h-8 rounded-full object-cover shrink-0 border border-white shadow-2xs"
-              />
+              <div className="w-8 h-8 rounded-full bg-[#393678] text-white flex items-center justify-center font-bold text-xs shrink-0 border border-white shadow-2xs">
+                AS
+              </div>
               <div className="min-w-0">
                 <h4 className="text-xs font-bold text-[#393678] truncate leading-tight">
                   Aarav Sharma

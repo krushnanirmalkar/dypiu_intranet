@@ -17,6 +17,7 @@ export const Header = (/** @type {any} */ {
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [localUnreadCount, setLocalUnreadCount] = useState(3);
   const [selectedNotification, setSelectedNotification] = useState(null);
+  const [avatarError, setAvatarError] = useState(false);
   const dropdownRef = useRef(null);
   const notifRef = useRef(null);
 
@@ -84,7 +85,7 @@ export const Header = (/** @type {any} */ {
     name: formattedName,
     email: propUser?.email || '20240802084@dypiu.ac.in',
     shortName: formattedFirstName,
-    avatar: propUser?.avatar || propUser?.picture || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150&auto=format&fit=crop',
+    avatar: propUser?.avatar || propUser?.picture || null,
     isSuperAdmin: propUser?.isSuperAdmin,
     hasAdminPortalAccess: propUser?.hasAdminPortalAccess
   };
@@ -227,11 +228,18 @@ export const Header = (/** @type {any} */ {
               onClick={() => setIsProfileOpen(!isProfileOpen)}
               className="flex items-center gap-1.5 sm:gap-2 pl-1.5 sm:pl-2 border-l border-slate-200 cursor-pointer group focus:outline-none"
             >
-              <img
-                src={user.avatar}
-                alt={user.shortName}
-                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border border-slate-200 group-hover:border-[#002B5C] transition-colors"
-              />
+              {user.avatar && !avatarError ? (
+                <img
+                  src={user.avatar}
+                  alt={user.shortName}
+                  onError={() => setAvatarError(true)}
+                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border border-slate-200 group-hover:border-[#002B5C] transition-colors"
+                />
+              ) : (
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#0A1328] text-white flex items-center justify-center font-bold text-xs border border-slate-200 shadow-2xs group-hover:bg-[#393678] transition-colors">
+                  {user.shortName ? user.shortName.charAt(0).toUpperCase() : 'U'}
+                </div>
+              )}
               <span className="hidden sm:inline-block text-xs font-semibold text-slate-700 group-hover:text-[#002B5C]">
                 {user.shortName}
               </span>

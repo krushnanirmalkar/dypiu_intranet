@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { TopRightYellowBadgeShape, BottomLeftBlueYellowSwoosh } from './DecorativeShapes';
+import dypiuCampusHero from '../assets/dypiu_campus_hero.jpg';
 
 const thoughts = [
   "“You don’t have to figure everything out today. Just take the next step.”",
@@ -58,7 +59,7 @@ export const WelcomeHero = (/** @type {any} */ { user } = {}) => {
       {/* Right side Campus Building Image & Yellow badge */}
       <div className="absolute top-0 right-0 bottom-0 w-1/3 sm:w-2/5 overflow-hidden rounded-r-xl pointer-events-none">
         <img
-          src="https://images.unsplash.com/photo-1541829070764-84a7d30dd3f3?q=80&w=800&auto=format&fit=crop"
+          src={dypiuCampusHero}
           alt="DYPIU Campus Building"
           className="w-full h-full object-cover object-center opacity-60 sm:opacity-90 mix-blend-multiply"
         />

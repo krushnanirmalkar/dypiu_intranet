@@ -205,34 +205,43 @@ export const MainSection = (/** @type {any} */ {
           </div>
 
           <div className="space-y-2.5">
-            {contactsList.map((contact) => (
-              <div
-                key={contact.id}
-                className="p-2.5 rounded-xl border border-slate-200/70 bg-slate-50/50 hover:bg-slate-100/70 hover:border-[#00afef]/40 transition-all cursor-pointer group flex items-center gap-3"
-              >
-                <img
-                  src={contact.avatar}
-                  alt={contact.name}
-                  className="w-10 h-10 rounded-full object-cover shrink-0 border border-slate-200/80 shadow-2xs group-hover:scale-105 transition-transform"
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-1">
-                    <h3 className="text-xs font-bold text-[#393678] group-hover:text-[#00afef] transition-colors truncate">
-                      {contact.name}
-                    </h3>
-                    <span className={`text-[8px] font-extrabold uppercase px-1.5 py-0.2 rounded border shrink-0 ${contact.tagColor}`}>
-                      {contact.tag}
-                    </span>
+            {contactsList.map((contact) => {
+              const contactColorMap = {
+                'ACADEMICS': 'bg-[#00afef] text-white',
+                'FACULTY': 'bg-[#1bb470] text-white',
+                'REGISTRAR': 'bg-[#faa831] text-white',
+                'RESEARCH': 'bg-[#f16136] text-white',
+                'WELFARE': 'bg-[#8b5cf6] text-white',
+              };
+              const initials = contact.name.replace(/^(Dr\.|Prof\.|Ms\.|Mr\.)\s*/i, '').split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+
+              return (
+                <div
+                  key={contact.id}
+                  className="p-2.5 rounded-xl border border-slate-200/70 bg-slate-50/50 hover:bg-slate-100/70 hover:border-[#00afef]/40 transition-all cursor-pointer group flex items-center gap-3"
+                >
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs shrink-0 border border-slate-200/80 shadow-2xs group-hover:scale-105 transition-transform ${contactColorMap[contact.tag] || 'bg-[#393678] text-white'}`}>
+                    {initials}
                   </div>
-                  <p className="text-[10.5px] text-slate-500 font-medium truncate mt-0.5">
-                    {contact.role}
-                  </p>
-                  <p className="text-[9.5px] text-[#00afef] font-semibold mt-0.5 truncate">
-                    {contact.ext}
-                  </p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-1">
+                      <h3 className="text-xs font-bold text-[#393678] group-hover:text-[#00afef] transition-colors truncate">
+                        {contact.name}
+                      </h3>
+                      <span className={`text-[8px] font-extrabold uppercase px-1.5 py-0.2 rounded border shrink-0 ${contact.tagColor}`}>
+                        {contact.tag}
+                      </span>
+                    </div>
+                    <p className="text-[10.5px] text-slate-500 font-medium truncate mt-0.5">
+                      {contact.role}
+                    </p>
+                    <p className="text-[9.5px] text-[#00afef] font-semibold mt-0.5 truncate">
+                      {contact.ext}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
@@ -322,21 +331,13 @@ export const MainSection = (/** @type {any} */ {
                   className="py-2.5 flex items-center gap-3 hover:bg-slate-50/80 p-1.5 rounded-xl transition-colors cursor-pointer group"
                 >
                   {/* Date thumbnail box */}
-                  <div className="relative w-14 h-14 rounded-xl overflow-hidden shrink-0 shadow-2xs group-hover:scale-103 transition-transform border border-slate-200/80">
-                    <img
-                      src={event.image}
-                      alt={event.title}
-                      className="w-full h-full object-cover"
-                    />
-                    {/* Translucent overlay keeping image clear */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-black/20 flex flex-col items-center justify-center text-white">
-                      <span className="text-[8px] font-extrabold uppercase tracking-wider text-white drop-shadow-xs">
-                        {event.month}
-                      </span>
-                      <span className="text-sm font-extrabold leading-none mt-0.5 text-white drop-shadow-xs">
-                        {event.day}
-                      </span>
-                    </div>
+                  <div className="relative w-14 h-14 rounded-xl overflow-hidden shrink-0 shadow-2xs group-hover:scale-103 transition-transform border border-slate-200/80 bg-gradient-to-br from-[#393678] to-[#0A1328] flex flex-col items-center justify-center text-white">
+                    <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#00afef]">
+                      {event.month}
+                    </span>
+                    <span className="text-base font-extrabold leading-none mt-0.5 text-white">
+                      {event.day}
+                    </span>
                   </div>
 
                   {/* Event text details */}
