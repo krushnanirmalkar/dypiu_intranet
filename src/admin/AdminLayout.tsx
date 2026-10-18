@@ -194,7 +194,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
               className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-navy-200 bg-white text-xs font-bold text-navy-800 hover:bg-navy-50 transition"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
-              <span>Back to Staff Portal</span>
+              <span>Back to Dashboard</span>
             </button>
           </div>
         </aside>
@@ -246,7 +246,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
               className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-navy-200 bg-white text-xs font-bold text-navy-800 hover:bg-navy-50 transition"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
-              <span>Back to Staff Portal</span>
+              <span>Back to Dashboard</span>
             </button>
           </div>
         </aside>
