@@ -3,16 +3,19 @@ import { ShieldCheck } from 'lucide-react';
 import type { ApplicationItem, NotificationItem, UserProfile, UserRole } from '../types';
 import { mockNotifications } from '../data/mockData';
 import { normalizeNotifications } from '../utils/notifications';
-import { DEV_PREVIEW_APPLICATIONS, DEV_PREVIEW_USER, type AuthenticatedUser } from '../data/devPreviewData';
+import { DEV_PREVIEW_APPLICATIONS, DEV_PREVIEW_USER, toTitleCase, type AuthenticatedUser } from '../data/devPreviewData';
 import { ApplicationsPage } from '../pages/ApplicationsPage';
 import { AuditPage } from '../pages/AuditPage';
 import { LoginPage } from '../pages/LoginPage';
 import { ProfilePage } from '../pages/ProfilePage';
 import { NoticesPage } from '../pages/NoticesPage';
+import { NotificationsPage } from '../pages/NotificationsPage';
 import { PoliciesPage } from '../pages/PoliciesPage';
-import { AppSidebar } from './AppSidebar';
-import { TopNavbar } from './TopNavbar';
-import ReferenceDashboard from './ReferenceDashboard';
+import { Header } from './Header';
+import { Sidebar } from './Sidebar';
+import { WelcomeHero } from './WelcomeHero';
+import { DateBirthdayCard } from './DateBirthdayCard';
+import { MainSection } from './MainSection';
 
 // Super Admin Imports
 import { AdminLayout, type AdminTab } from '../admin/AdminLayout';
@@ -23,9 +26,6 @@ import { PoliciesAdminPage } from '../admin/pages/PoliciesAdminPage';
 import { AuditLogAdminPage } from '../admin/pages/AuditLogAdminPage';
 import { AccessControlAdminPage } from '../admin/pages/AccessControlAdminPage';
 import { NotificationsAdminPage } from '../admin/pages/NotificationsAdminPage';
-
-const USE_DEV_PREVIEW = false;
-
 interface SessionUser {
   sub: string;
   name: string;
@@ -56,7 +56,7 @@ const createPreviewSessionUser = (user: AuthenticatedUser): SessionUser => {
   const previewRole = resolvePreviewRole(user);
   return {
     sub: user.sub ?? user.email,
-    name: user.name,
+    name: toTitleCase(user.name),
     email: user.email,
     roles: Array.isArray(user.roles) && user.roles.length > 0 ? [...user.roles] : [previewRole],
     isSuperAdmin: user.isSuperAdmin ?? user.roles?.includes('super_admin') ?? false,
@@ -89,7 +89,7 @@ const buildProfile = (user: SessionUser, role: UserRole): UserProfile => {
 
   return {
     id: user.sub,
-    name: user.name,
+    name: toTitleCase(user.name),
     email: user.email,
     role,
     roleTitle: user.isSuperAdmin ? 'Super Administrator' : role === 'staff' ? 'Staff' : role === 'admin' ? 'Administrator' : 'Student',
@@ -163,15 +163,20 @@ const normalizeApplications = (payload: unknown): ApplicationItem[] => {
 
 export const MainApp: React.FC = () => {
   const isSignedOutPage = window.location.pathname === '/signed-out';
+  const isLoginPage = window.location.pathname === '/login';
   const isDirectAdminUrl = window.location.pathname === '/admin';
+  const isPreviewMode = typeof window !== 'undefined' && (
+    new URLSearchParams(window.location.search).get('preview') === '1' ||
+    new URLSearchParams(window.location.search).get('preview') === 'true'
+  );
 
-  const [authLoading, setAuthLoading] = useState(!USE_DEV_PREVIEW && !isSignedOutPage);
-  const [authenticated, setAuthenticated] = useState(USE_DEV_PREVIEW);
+  const [authLoading, setAuthLoading] = useState(!isSignedOutPage && !isLoginPage && !isPreviewMode);
+  const [authenticated, setAuthenticated] = useState(isPreviewMode);
   const [authenticatedUser, setAuthenticatedUser] = useState<SessionUser | null>(
-    USE_DEV_PREVIEW ? createPreviewSessionUser(DEV_PREVIEW_USER) : null,
+    isPreviewMode ? createPreviewSessionUser(DEV_PREVIEW_USER) : null,
   );
   const [currentRole, setCurrentRole] = useState<UserRole | null>(
-    USE_DEV_PREVIEW ? resolvePreviewRole(DEV_PREVIEW_USER) : null,
+    isPreviewMode ? resolvePreviewRole(DEV_PREVIEW_USER) : null,
   );
   const [currentNav, setCurrentNav] = useState(isDirectAdminUrl ? 'admin' : 'dashboard');
   const [adminTab, setAdminTab] = useState<AdminTab>('dashboard');
@@ -179,23 +184,14 @@ export const MainApp: React.FC = () => {
   const [openAppCreateModal, setOpenAppCreateModal] = useState(false);
   const [openPolicyCreateModal, setOpenPolicyCreateModal] = useState(false);
 
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [applications, setApplications] = useState<ApplicationItem[]>(
-    USE_DEV_PREVIEW ? DEV_PREVIEW_APPLICATIONS : [],
-  );
-  const [applicationsLoading, setApplicationsLoading] = useState(!USE_DEV_PREVIEW);
-  const [notifications, setNotifications] = useState<NotificationItem[]>(
-    USE_DEV_PREVIEW ? mockNotifications : [],
-  );
+  const [isReferenceSidebarOpen, setIsReferenceSidebarOpen] = useState(false);
+  const [applications, setApplications] = useState<ApplicationItem[]>(DEV_PREVIEW_APPLICATIONS);
+  const [notifications, setNotifications] = useState<NotificationItem[]>(mockNotifications);
+  const [notices, setNotices] = useState<any[]>([]);
+  const [policies, setPolicies] = useState<any[]>([]);
 
   useEffect(() => {
-    if (isSignedOutPage) {
-      setAuthLoading(false);
-      return;
-    }
-
-    if (USE_DEV_PREVIEW) {
-      setAuthenticated(true);
+    if (isSignedOutPage || isLoginPage || isPreviewMode) {
       setAuthLoading(false);
       return;
     }
@@ -224,7 +220,7 @@ export const MainApp: React.FC = () => {
 
             setAuthenticatedUser({
               sub: data.user.sub,
-              name: data.user.name,
+              name: toTitleCase(data.user.name),
               email: data.user.email,
               picture: typeof data.user.picture === 'string' ? data.user.picture : undefined,
               roles,
@@ -234,7 +230,6 @@ export const MainApp: React.FC = () => {
             });
             setCurrentRole(resolvedRole);
             setAuthenticated(true);
-            setAuthLoading(false);
 
             if (isDirectAdminUrl && !hasAdminPortalAccess) {
               window.history.replaceState({}, '', '/');
@@ -243,88 +238,90 @@ export const MainApp: React.FC = () => {
             return;
           }
         }
-
         setAuthenticated(false);
-        setAuthLoading(false);
-      } catch (error) {
-        console.error('Authentication check failed:', error);
+        setAuthenticatedUser(null);
+        setCurrentRole(null);
+      } catch {
         setAuthenticated(false);
+        setAuthenticatedUser(null);
+        setCurrentRole(null);
+      } finally {
         setAuthLoading(false);
       }
     };
 
     void checkAuthentication();
-  }, [isSignedOutPage, isDirectAdminUrl]);
+  }, [isSignedOutPage, isLoginPage, isDirectAdminUrl, isPreviewMode]);
 
   useEffect(() => {
-    if (isSignedOutPage) return;
-
-    if (USE_DEV_PREVIEW) {
-      setApplications(DEV_PREVIEW_APPLICATIONS);
-      setApplicationsLoading(false);
-      return;
-    }
-
-    if (!authenticated || !authenticatedUser || !currentRole) return;
+    if (isSignedOutPage || isLoginPage) return;
 
     const loadApplications = async () => {
-      setApplicationsLoading(true);
       try {
         const response = await fetch('/api/applications', { method: 'GET', credentials: 'include' });
-
-        if (response.status === 401) {
-          setAuthenticated(false);
-          return;
+        if (response.ok) {
+          const loaded = normalizeApplications(await response.json());
+          if (loaded.length > 0) {
+            setApplications(loaded);
+          }
         }
-
-        if (!response.ok) {
-          throw new Error(`Application request failed with status ${response.status}`);
-        }
-
-        setApplications(normalizeApplications(await response.json()));
-      } catch (error) {
-        console.error('Failed to load authorized applications:', error);
-        setApplications([]);
-      } finally {
-        setApplicationsLoading(false);
+      } catch {
+        // keep fallback preview applications
       }
     };
 
     void loadApplications();
-  }, [authenticated, authenticatedUser, currentRole, isSignedOutPage]);
+  }, [authenticated, isSignedOutPage, isLoginPage]);
 
   useEffect(() => {
-    if (isSignedOutPage) return;
-
-    if (USE_DEV_PREVIEW) {
-      setNotifications(mockNotifications);
-      return;
-    }
-
-    if (!authenticated || !authenticatedUser || !currentRole) return;
+    if (isSignedOutPage || isLoginPage) return;
 
     const loadNotifications = async () => {
       try {
         const response = await fetch('/api/notifications', { method: 'GET', credentials: 'include' });
-
-        if (response.status === 401) {
-          setAuthenticated(false);
-          return;
+        if (response.ok) {
+          const loaded = normalizeNotifications(await response.json());
+          if (loaded.length > 0) {
+            setNotifications(loaded);
+          }
         }
-
-        if (!response.ok) {
-          throw new Error(`Notification request failed with status ${response.status}`);
-        }
-
-        setNotifications(normalizeNotifications(await response.json()));
-      } catch (error) {
-        console.error('Failed to load notifications:', error);
-        setNotifications([]);
+      } catch {
+        // keep fallback notifications
       }
     };
 
     void loadNotifications();
-  }, [authenticated, authenticatedUser, currentRole, isSignedOutPage]);
+  }, [authenticated, isSignedOutPage, isLoginPage]);
+
+  useEffect(() => {
+    if (isSignedOutPage || !authenticated) return;
+
+    const loadData = async () => {
+      try {
+        const [noticesRes, policiesRes] = await Promise.all([
+          fetch('/api/notices', { method: 'GET', credentials: 'include' }).catch(() => null),
+          fetch('/api/policies', { method: 'GET', credentials: 'include' }).catch(() => null),
+        ]);
+
+        if (noticesRes && noticesRes.ok) {
+          const data = await noticesRes.json() as { notices?: any[] };
+          if (data && Array.isArray(data.notices)) {
+            setNotices(data.notices);
+          }
+        }
+        if (policiesRes && policiesRes.ok) {
+          const data = await policiesRes.json() as { policies?: any[] };
+          if (data && Array.isArray(data.policies)) {
+            setPolicies(data.policies);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load notices or policies:', err);
+      }
+    };
+
+    void loadData();
+  }, [authenticated, isSignedOutPage]);
 
   const currentUser = useMemo(
     () => authenticatedUser && currentRole ? buildProfile(authenticatedUser, currentRole) : null,
@@ -369,19 +366,41 @@ export const MainApp: React.FC = () => {
 
   if (isSignedOutPage) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-navy-50 px-4">
-        <div className="w-full max-w-md rounded-2xl border border-navy-100 bg-white p-8 text-center shadow-lg">
-          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-navy-800 text-white"><ShieldCheck className="h-7 w-7" /></div>
-          <h1 className="text-2xl font-black text-navy-900">You have been signed out</h1>
-          <p className="mt-3 text-sm text-navy-500">Your DYPIU Intranet session has been securely ended.</p>
-          <button onClick={() => { window.location.href = '/login?reauth=1'; }} className="mt-6 w-full rounded-xl bg-navy-800 py-3 text-sm font-bold text-white">Sign in again</button>
+      <div className="flex min-h-screen items-center justify-center bg-[#F3F3F8] px-4 font-sans antialiased text-slate-800">
+        <div className="w-full max-w-md rounded-3xl border border-slate-200/80 bg-white p-8 text-center shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+          <div className="mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#0A1328] text-[#00afef] shadow-md">
+            <ShieldCheck className="h-7 w-7" />
+          </div>
+          <h1 className="text-2xl font-extrabold text-[#393678] font-serif-custom tracking-tight">
+            You have been signed out
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 max-w-xs mx-auto">
+            Your DYPIU Intranet session has been securely ended.
+          </p>
+          <div className="pt-2">
+            <button
+              onClick={() => {
+                window.location.href = '/login?reauth=1';
+              }}
+              className="w-full rounded-xl bg-[#0A1328] hover:bg-[#152347] py-3 text-xs sm:text-sm font-bold text-white transition-all shadow-md cursor-pointer"
+            >
+              Sign in again
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   if (authLoading) {
-    return <div className="flex min-h-screen items-center justify-center bg-navy-50"><div className="text-center"><div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-navy-200 border-t-navy-800" /><p className="mt-3 text-sm font-semibold text-navy-700">Verifying university session...</p></div></div>;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#F3F3F8]">
+        <div className="text-center space-y-3">
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-[#00afef]" />
+          <p className="text-xs font-bold text-[#393678] tracking-wide">Verifying university session...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!authenticated || !authenticatedUser || !currentRole || !currentUser) {
@@ -465,65 +484,121 @@ export const MainApp: React.FC = () => {
     );
   }
 
-  // Reference Dashboard
-  if (currentNav === 'dashboard') {
-    return (
-      <ReferenceDashboard
-        user={currentUser}
-        applications={applications}
-        loading={applicationsLoading}
-        onNavigate={handleNavigate}
-        onOpenApp={openApplication}
-        notifications={notifications}
-        onMarkAllNotificationsRead={() => setNotifications((items) => items.map((item) => ({ ...item, isRead: true })))}
-      />
-    );
-  }
-
+  // Unified Reference Layout for Portal
   return (
-    <div className="min-h-screen bg-[#f7f9fd] font-sans text-navy-900">
-      <AppSidebar currentRole={currentRole} currentNav={currentNav} onNavigate={handleNavigate} isOpenMobile={isMobileSidebarOpen} onCloseMobile={() => setIsMobileSidebarOpen(false)} />
-      <TopNavbar
+    <div className="h-[100dvh] max-h-[100dvh] bg-[#F3F3F8] flex flex-col font-sans text-slate-800 antialiased selection:bg-[#00afef]/20 selection:text-[#393678] overflow-hidden">
+      {/* Top Navigation Header - Permanently pinned at the top, never scrolls away */}
+      <Header
+        onToggleSidebar={() => setIsReferenceSidebarOpen((prev) => !prev)}
+        isSidebarOpen={isReferenceSidebarOpen}
         user={currentUser}
-        onToggleMobileSidebar={() => setIsMobileSidebarOpen(true)}
-        unreadNotifCount={unreadNotifCount}
-        onNavigate={handleNavigate}
         notifications={notifications}
-        onMarkAllRead={() => setNotifications((items) => items.map((item) => ({ ...item, isRead: true })))}
+        unreadCount={unreadNotifCount}
+        onMarkNotificationsRead={() => setNotifications((items) => items.map((item) => ({ ...item, isRead: true })))}
+        onNavigate={handleNavigate}
       />
 
-      <main className="mx-auto w-full max-w-[1500px] px-4 py-3 sm:px-5 lg:px-6 lg:py-4">
-        {currentNav === 'applications' && <ApplicationsPage applications={applications} onOpenApp={openApplication} onToggleFavorite={() => {}} />}
-        {currentNav === 'audit' && (currentUser.isSuperAdmin || currentUser.role === 'admin' || currentUser.permissions?.canManageAudit) && <AuditPage />}
-        {currentNav === 'profile' && <ProfilePage user={currentUser} currentRole={currentRole} />}
-        {currentNav === 'notifications' && (
-          <NoticesPage
-            user={currentUser}
-            onOpenCreateNotice={() => {
-              handleNavigate('admin');
-              setAdminTab('notices');
-              setOpenNoticeCreateModal(true);
-            }}
-          />
-        )}
-        {currentNav === 'documents' && (
-          <PoliciesPage
-            user={currentUser}
-            onOpenCreatePolicy={() => {
-              handleNavigate('admin');
-              setAdminTab('policies');
-              setOpenPolicyCreateModal(true);
-            }}
-          />
-        )}
-        {['academics', 'events', 'settings', 'support'].includes(currentNav) && (
-          <div className="rounded-[18px] border border-navy-100 bg-white p-8 text-center shadow-sm">
-            <h2 className="text-xl font-black capitalize text-navy-950">{currentNav}</h2>
-            <p className="mx-auto mt-2 max-w-md text-xs text-navy-500">This area is ready to connect to its university service.</p>
-            <button onClick={() => handleNavigate('dashboard')} className="mt-5 rounded-lg bg-navy-800 px-4 py-2 text-xs font-bold text-white">Return to dashboard</button>
-          </div>
-        )}
-      </main>
+      {/* Main Body Area: Responsive Sidebar + Scrollable Dashboard Content */}
+      <div className="flex-1 min-h-0 flex overflow-hidden relative">
+        {/* Left Dark Navy Sidebar (Static on lg+, Slide-over Drawer on mobile) */}
+        <Sidebar
+          isOpen={isReferenceSidebarOpen}
+          onClose={() => setIsReferenceSidebarOpen(false)}
+          applications={applications}
+          policies={policies}
+          onOpenApp={openApplication}
+          onNavigate={handleNavigate}
+          user={currentUser}
+        />
+
+        {/* Main Area to the right of Sidebar - ONLY main scrolls smoothly */}
+        <main className="flex-1 min-h-0 overflow-y-auto scroll-smooth overflow-x-hidden p-3 sm:p-4 lg:p-4 space-y-4 max-w-[1600px] mx-auto w-full overscroll-contain">
+          {currentNav === 'dashboard' && (
+            <>
+              {/* TOP HERO ROW */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5 items-stretch">
+                <div className="lg:col-span-8">
+                  <WelcomeHero user={currentUser} />
+                </div>
+                <div className="lg:col-span-4">
+                  <DateBirthdayCard />
+                </div>
+              </div>
+
+              <MainSection
+                notices={notices}
+                onViewAllNotices={() => handleNavigate('notices')}
+              />
+            </>
+          )}
+
+          {currentNav === 'notices' && (
+            <NoticesPage
+              user={currentUser}
+              onOpenCreateNotice={() => {
+                handleNavigate('admin');
+                setAdminTab('notices');
+                setOpenNoticeCreateModal(true);
+              }}
+              onBack={() => handleNavigate('dashboard')}
+            />
+          )}
+
+          {currentNav === 'notifications' && (
+            <NotificationsPage
+              notifications={notifications}
+              onMarkAllRead={() => setNotifications((items) => items.map((item) => ({ ...item, isRead: true })))}
+              onBack={() => handleNavigate('dashboard')}
+            />
+          )}
+
+          {currentNav === 'profile' && (
+            <ProfilePage
+              user={currentUser}
+              currentRole={currentRole}
+              onBack={() => handleNavigate('dashboard')}
+            />
+          )}
+
+          {currentNav === 'applications' && (
+            <ApplicationsPage
+              applications={applications}
+              onOpenApp={openApplication}
+              onToggleFavorite={() => {}}
+              onBack={() => handleNavigate('dashboard')}
+            />
+          )}
+
+          {currentNav === 'documents' && (
+            <PoliciesPage
+              user={currentUser}
+              onOpenCreatePolicy={() => {
+                handleNavigate('admin');
+                setAdminTab('policies');
+                setOpenPolicyCreateModal(true);
+              }}
+              onBack={() => handleNavigate('dashboard')}
+            />
+          )}
+
+          {currentNav === 'audit' && (currentUser.isSuperAdmin || currentUser.role === 'admin' || currentUser.permissions?.canManageAudit) && (
+            <AuditPage />
+          )}
+
+          {['academics', 'events', 'settings', 'support'].includes(currentNav) && (
+            <div className="rounded-2xl border border-slate-200/80 bg-white p-8 text-center shadow-xs max-w-xl mx-auto my-12">
+              <h2 className="text-xl font-bold capitalize text-[#393678] font-serif-custom">{currentNav}</h2>
+              <p className="mx-auto mt-2 max-w-md text-xs text-slate-500">This area is ready to connect to its university service.</p>
+              <button
+                onClick={() => handleNavigate('dashboard')}
+                className="mt-5 rounded-xl bg-[#0A1328] hover:bg-[#152347] px-4 py-2 text-xs font-bold text-white transition-all cursor-pointer"
+              >
+                Return to dashboard
+              </button>
+            </div>
+          )}
+        </main>
+      </div>
     </div>
   );
 };

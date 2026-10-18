@@ -293,14 +293,6 @@ async function fetchWithDevFallback<T>(url: string, options?: RequestInit, devFa
   try {
     const response = await fetch(url, options);
 
-    const contentType = response.headers.get('content-type') || '';
-    if (!contentType.includes('application/json')) {
-      if (isDevMode && devFallbackSupplier) {
-        return devFallbackSupplier();
-      }
-      throw new Error('Server returned non-JSON response.');
-    }
-
     if (response.status === 401) {
       if (isDevMode && devFallbackSupplier) return devFallbackSupplier();
       window.location.href = '/login';
@@ -312,6 +304,19 @@ async function fetchWithDevFallback<T>(url: string, options?: RequestInit, devFa
       throw new Error('Access denied. Administrator privileges required.');
     }
 
+    if (response.status === 502 || response.status === 504) {
+      if (devFallbackSupplier) return devFallbackSupplier();
+      throw new Error('Backend server is offline or unreachable (502/504). Please ensure the backend server is running on port 3001.');
+    }
+
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      if (devFallbackSupplier) {
+        return devFallbackSupplier();
+      }
+      throw new Error(`Server returned non-JSON response (${response.status} ${response.statusText || 'Error'}). Please ensure the backend server is running.`);
+    }
+
     if (!response.ok) {
       let errorMsg = `API request failed (${response.status})`;
       try {
@@ -321,13 +326,13 @@ async function fetchWithDevFallback<T>(url: string, options?: RequestInit, devFa
       } catch {
         // ignore
       }
-      if (isDevMode && devFallbackSupplier) return devFallbackSupplier();
+      if (devFallbackSupplier) return devFallbackSupplier();
       throw new Error(errorMsg);
     }
 
     return response.json() as Promise<T>;
   } catch (err: unknown) {
-    if (isDevMode && devFallbackSupplier) {
+    if (devFallbackSupplier) {
       return devFallbackSupplier();
     }
     throw err;

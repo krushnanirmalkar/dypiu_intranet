@@ -9,12 +9,22 @@ export interface AuthenticatedUser {
   isSuperAdmin?: boolean;
 }
 
+export function toTitleCase(name?: string): string {
+  if (!name) return '';
+  return name
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
 export const DEV_PREVIEW_USER: AuthenticatedUser = {
-  sub: 'dev-preview-user',
-  name: 'Krushna Nirmalkar',
-  email: 'preview@dypiu.ac.in',
-  role: 'staff',
-  roles: ['staff', 'super_admin'],
+  sub: '20240802084',
+  name: 'Sarthak Jayant Kharche',
+  email: '20240802084@dypiu.ac.in',
+  role: 'student',
+  roles: ['student', 'super_admin'],
   isSuperAdmin: true,
 };
 

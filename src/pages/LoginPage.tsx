@@ -1,12 +1,10 @@
-import React from 'react';
-
 export const LoginPage: React.FC = () => {
   const handleGoogleSignIn = () => {
     window.location.href = '/login';
   };
 
   return (
-    <div className="relative min-h-screen h-screen w-full flex items-center justify-center lg:justify-end bg-white font-sans antialiased text-navy-900 overflow-hidden">
+    <div className="relative min-h-screen h-screen w-full flex items-center justify-center lg:justify-end bg-[#F3F3F8] font-sans antialiased text-slate-800 overflow-hidden">
       {/* LOGIN BACKGROUND IMAGE */}
       <img
         src="/Login.png"

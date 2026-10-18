@@ -14,7 +14,9 @@ import {
   X,
 } from 'lucide-react';
 import type { UserProfile } from '../types';
-import imgLogo from '../assets/dashboard/logo.png';
+import dypiuLogo from '../assets/dypiu-logo.png';
+import { toTitleCase } from '../data/devPreviewData';
+import { TopRightHeaderShape } from '../components/DecorativeShapes';
 
 export type AdminTab = 'dashboard' | 'notices' | 'applications' | 'policies' | 'access' | 'audit' | 'notifications';
 
@@ -35,6 +37,14 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
 }) => {
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
+  const formattedName = toTitleCase(user.name || 'Admin User');
+  const initials = formattedName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('');
+
   const navItems: { id: AdminTab; label: string; icon: React.FC<{ className?: string }> }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     ...(user.isSuperAdmin || user.role === 'admin' || user.permissions?.canManageNotices ? [{ id: 'notices' as AdminTab, label: 'Notices', icon: Megaphone }] : []),
@@ -51,63 +61,74 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f7fc] font-sans text-navy-950 flex flex-col">
-      {/* Top Header - Always full-width on top with z-50 */}
-      <header className="sticky top-0 z-50 h-16 w-full bg-navy-900 text-white shadow-md flex items-center justify-between px-4 sm:px-6 border-b border-navy-800 shrink-0">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setIsMobileDrawerOpen((prev) => !prev)}
-            className="p-2 rounded-lg text-white/80 hover:bg-navy-800 lg:hidden focus:outline-none"
-            aria-label="Toggle admin menu"
-          >
-            {isMobileDrawerOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
+    <div className="min-h-screen bg-[#F3F3F8] font-sans text-slate-800 flex flex-col">
+      {/* Top Header - Reference Design Style */}
+      <div className="bg-[#0A1328] sticky top-0 z-50 select-none shrink-0 w-full">
+        <header className="bg-white rounded-bl-[24px] sm:rounded-bl-[32px] border-b border-slate-200/80 shadow-xs h-16 sm:h-20 px-3 sm:px-6 md:px-7 flex items-center justify-between relative overflow-visible">
+          {/* Top right decorative shape extending full height */}
+          <TopRightHeaderShape className="h-full w-28 sm:w-36 md:w-44" />
 
-          <div className="flex items-center gap-3">
-            <img src={imgLogo} alt="DYPIU Logo" className="h-8 w-auto object-contain" />
-            <div className="h-5 w-px bg-white/20 hidden sm:block" />
-            <div className="flex items-center gap-2">
-              <span className="text-lg font-black tracking-tight text-white">UniOne</span>
-              <span className="rounded-full bg-blue-500/20 px-2.5 py-0.5 text-[11px] font-bold text-blue-200 border border-blue-400/30">
-                {user.isSuperAdmin || user.role === 'admin' ? 'Admin Portal' : 'Service Portal'}
-              </span>
-            </div>
-          </div>
-        </div>
+          <div className="flex items-center gap-2 sm:gap-4">
+            <button
+              onClick={() => setIsMobileDrawerOpen((prev) => !prev)}
+              className="p-1.5 sm:p-2 rounded-xl text-[#393678] hover:bg-slate-100 lg:hidden focus:outline-none cursor-pointer"
+              aria-label="Toggle admin menu"
+            >
+              {isMobileDrawerOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
 
-        <div className="flex items-center gap-3">
-          {/* Return to UniOne */}
-          <button
-            onClick={onReturnToPortal}
-            className="flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-white/20"
-            title="Return to user portal"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Return to UniOne</span>
-          </button>
-
-          {/* Admin Identity */}
-          <div className="hidden md:flex items-center gap-2 pl-2 border-l border-white/15 text-xs">
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-600 text-[11px] font-black text-white uppercase shadow-sm">
-              {user.name.charAt(0)}
-            </div>
-            <div className="text-right leading-tight">
-              <div className="font-bold text-white">{user.name}</div>
-              <div className="text-[10px] text-blue-200 font-medium">{user.roleTitle || 'Administrator'}</div>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <img
+                src={dypiuLogo}
+                alt="DYPIU Logo"
+                className="h-10 sm:h-14 max-h-[44px] sm:max-h-[58px] w-auto object-contain cursor-pointer transition-transform hover:scale-102"
+                onClick={onReturnToPortal}
+              />
+              <div className="h-6 w-px bg-slate-200 hidden sm:block" />
+              <div className="flex items-center gap-2">
+                <span className="hidden sm:inline-block text-sm font-bold text-[#393678]">UniOne</span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#0A1328] px-2.5 py-0.5 text-[10.5px] font-bold text-white shadow-2xs">
+                  <ShieldCheck className="w-3 h-3 text-[#00afef]" />
+                  <span>{user.isSuperAdmin || user.role === 'admin' ? 'Super Admin' : 'Admin Portal'}</span>
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Sign Out */}
-          <button
-            onClick={() => { window.location.href = '/logout'; }}
-            className="p-2 text-white/70 hover:text-white hover:bg-red-500/20 rounded-lg transition-colors"
-            title="Sign Out"
-            aria-label="Sign Out"
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
-        </div>
-      </header>
+          <div className="flex items-center gap-2 sm:gap-4">
+            {/* Return to UniOne Intranet */}
+            <button
+              onClick={onReturnToPortal}
+              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-[#F1F1F7] hover:bg-[#E6E6F0] px-3.5 py-2 text-xs font-bold text-[#393678] transition-all cursor-pointer"
+              title="Return to user intranet"
+            >
+              <ArrowLeft className="h-3.5 w-3.5 text-[#00afef]" />
+              <span className="hidden sm:inline">Return to Intranet</span>
+            </button>
+
+            {/* Admin Identity */}
+            <div className="flex items-center gap-2 pl-2 border-l border-slate-200 text-xs">
+              <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-[#0A1328] text-xs font-bold text-white shadow-xs">
+                {initials}
+              </div>
+              <div className="hidden md:block text-left leading-tight">
+                <div className="font-bold text-[#393678]">{formattedName}</div>
+                <div className="text-[10px] text-slate-500 font-semibold">{user.roleTitle || 'Administrator'}</div>
+              </div>
+            </div>
+
+            {/* Sign Out */}
+            <button
+              onClick={() => { window.location.href = '/logout'; }}
+              className="p-2 text-slate-500 hover:text-[#f16136] hover:bg-[#f16136]/10 rounded-xl transition-colors cursor-pointer"
+              title="Sign Out"
+              aria-label="Sign Out"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
+        </header>
+      </div>
 
       {/* Main Container */}
       <div className="flex flex-1 min-h-0 relative">
@@ -162,7 +183,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
                 <User className="h-4 w-4" />
               </div>
               <div className="min-w-0">
-                <p className="truncate text-xs font-bold text-navy-950">{user.name}</p>
+                <p className="truncate text-xs font-bold text-navy-950">{formattedName}</p>
                 <p className="truncate text-[10px] text-navy-500">{user.email}</p>
               </div>
             </div>
@@ -214,7 +235,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
                 <User className="h-4 w-4" />
               </div>
               <div className="min-w-0">
-                <p className="truncate text-xs font-bold text-navy-950">{user.name}</p>
+                <p className="truncate text-xs font-bold text-navy-950">{formattedName}</p>
                 <p className="truncate text-[10px] text-navy-500">{user.email}</p>
               </div>
             </div>
