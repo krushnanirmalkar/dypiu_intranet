@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { RotateCcw } from 'lucide-react';
+import React from 'react';
 import { TopRightYellowBadgeShape, BottomLeftBlueYellowSwoosh } from './DecorativeShapes';
 import dypiuCampusHero from '../assets/dypiu_campus_hero.jpg';
 
@@ -7,15 +6,26 @@ const thoughts = [
   "“You don’t have to figure everything out today. Just take the next step.”",
   "“Excellence is not a skill, it’s an attitude.”",
   "“The secret of getting ahead is getting started.”",
-  "“Small daily improvements over time lead to stunning results.”"
+  "“Small daily improvements over time lead to stunning results.”",
+  "“Focus on progress, not perfection.”",
+  "“Opportunities don't happen, you create them.”",
+  "“Discipline is the bridge between goals and accomplishment.”",
+  "“Education is the passport to the future, for tomorrow belongs to those who prepare for it today.”",
+  "“Believe you can and you're halfway there.”",
+  "“Curiosity is the wick in the candle of learning.”",
+  "“Success is the sum of small efforts, repeated day in and day out.”",
+  "“The expert in anything was once a beginner.”",
+  "“What you do today can improve all your tomorrows.”",
+  "“Learn continuously. There is always ‘one more thing’ to learn.”"
 ];
 
 export const WelcomeHero = (/** @type {any} */ { user } = {}) => {
-  const [thoughtIndex, setThoughtIndex] = useState(0);
-
-  const handleNextThought = () => {
-    setThoughtIndex((prev) => (prev + 1) % thoughts.length);
-  };
+  // Deterministic daily thought that changes automatically every calendar day
+  const todayThought = (() => {
+    const now = new Date();
+    const dayNumber = Math.floor(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / 86400000);
+    return thoughts[Math.abs(dayNumber) % thoughts.length];
+  })();
 
   const rawFirstName = user?.name ? user.name.trim().split(/\s+/)[0] : 'Sarthak';
   const displayName = rawFirstName
@@ -38,20 +48,13 @@ export const WelcomeHero = (/** @type {any} */ { user } = {}) => {
       <div className="relative z-10 flex items-center justify-between">
         {/* Quote Card */}
         <div className="bg-white/90 backdrop-blur-sm border border-white/80 rounded-xl p-2.5 sm:p-3 shadow-2xs w-full max-w-sm sm:max-w-md hover:shadow-xs transition-shadow">
-          <div className="flex items-center justify-between gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-1">
             <span className="text-[9px] sm:text-[9.5px] font-extrabold text-[#00afef] tracking-wider uppercase">
               ✨ A LITTLE SOMETHING
             </span>
-            <button
-              onClick={handleNextThought}
-              className="flex items-center gap-1 text-[9.5px] sm:text-[10px] font-semibold text-[#393678] hover:text-[#00afef] transition-colors cursor-pointer"
-            >
-              <RotateCcw className="w-3 h-3" />
-              <span>Another thought</span>
-            </button>
           </div>
           <p className="text-[11px] sm:text-xs text-slate-700 font-medium leading-relaxed italic">
-            {thoughts[thoughtIndex]}
+            {todayThought}
           </p>
         </div>
       </div>
