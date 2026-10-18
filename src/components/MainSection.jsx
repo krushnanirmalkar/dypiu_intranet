@@ -31,7 +31,7 @@ export const MainSection = (/** @type {any} */ {
       ext: 'Ext: 1002 · dean@dypiu.ac.in',
       tag: 'ACADEMICS',
       tagColor: 'bg-[#00afef]/10 text-[#00afef] border-[#00afef]/20',
-      avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=150&auto=format&fit=crop',
+      avatar: '/images/avatars/ananya-sharma.jpg',
     },
     {
       id: 2,
@@ -40,7 +40,7 @@ export const MainSection = (/** @type {any} */ {
       ext: 'Ext: 1005 · cse@dypiu.ac.in',
       tag: 'FACULTY',
       tagColor: 'bg-[#1bb470]/10 text-[#1bb470] border-[#1bb470]/20',
-      avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=150&auto=format&fit=crop',
+      avatar: '/images/avatars/rahul-deshmukh.jpg',
     },
     {
       id: 3,
@@ -49,7 +49,7 @@ export const MainSection = (/** @type {any} */ {
       ext: 'Ext: 1003 · registrar@dypiu.ac.in',
       tag: 'REGISTRAR',
       tagColor: 'bg-[#faa831]/10 text-[#faa831] border-[#faa831]/20',
-      avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=150&auto=format&fit=crop',
+      avatar: '/images/avatars/priya-nair.jpg',
     },
     {
       id: 4,
@@ -58,7 +58,7 @@ export const MainSection = (/** @type {any} */ {
       ext: 'Ext: 1008 · research@dypiu.ac.in',
       tag: 'RESEARCH',
       tagColor: 'bg-[#f16136]/10 text-[#f16136] border-[#f16136]/20',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop',
+      avatar: '/images/avatars/vikram-patil.jpg',
     },
     {
       id: 5,
@@ -67,7 +67,7 @@ export const MainSection = (/** @type {any} */ {
       ext: 'Ext: 1010 · welfare@dypiu.ac.in',
       tag: 'WELFARE',
       tagColor: 'bg-[#8b5cf6]/10 text-[#8b5cf6] border-[#8b5cf6]/20',
-      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&auto=format&fit=crop',
+      avatar: '/images/avatars/sneha-kulkarni.jpg',
     },
   ];
 
@@ -142,7 +142,7 @@ export const MainSection = (/** @type {any} */ {
       day: '5',
       title: 'Spring Semester Registration Deadline',
       time: 'Fri, Dec 5, All day',
-      image: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?q=80&w=200&auto=format&fit=crop',
+      image: '/images/events/event-1.jpg',
     },
     {
       id: 2,
@@ -150,7 +150,7 @@ export const MainSection = (/** @type {any} */ {
       day: '12',
       title: 'First Day of Classes',
       time: 'Mon, Jan 12, All day',
-      image: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?q=80&w=200&auto=format&fit=crop',
+      image: '/images/events/event-2.jpg',
     },
     {
       id: 3,
@@ -158,7 +158,7 @@ export const MainSection = (/** @type {any} */ {
       day: '18',
       title: 'Faculty Workshop on AI in Education',
       time: 'Wed, Feb 18, 10:00 AM',
-      image: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?q=80&w=200&auto=format&fit=crop',
+      image: '/images/events/event-3.jpg',
     },
     {
       id: 4,
@@ -166,7 +166,7 @@ export const MainSection = (/** @type {any} */ {
       day: '14',
       title: 'Staff Wellness Day',
       time: 'Tue, Apr 14, 8:00 AM',
-      image: 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?q=80&w=200&auto=format&fit=crop',
+      image: '/images/events/event-4.jpg',
     },
     {
       id: 5,
@@ -174,7 +174,7 @@ export const MainSection = (/** @type {any} */ {
       day: '20',
       title: 'Annual Campus Sports Meet 2026',
       time: 'Wed, May 20, 9:00 AM',
-      image: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?q=80&w=200&auto=format&fit=crop',
+      image: '/images/events/event-5.jpg',
     },
   ];
 
@@ -206,23 +206,16 @@ export const MainSection = (/** @type {any} */ {
 
           <div className="space-y-2.5">
             {contactsList.map((contact) => {
-              const contactColorMap = {
-                'ACADEMICS': 'bg-[#00afef] text-white',
-                'FACULTY': 'bg-[#1bb470] text-white',
-                'REGISTRAR': 'bg-[#faa831] text-white',
-                'RESEARCH': 'bg-[#f16136] text-white',
-                'WELFARE': 'bg-[#8b5cf6] text-white',
-              };
-              const initials = contact.name.replace(/^(Dr\.|Prof\.|Ms\.|Mr\.)\s*/i, '').split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
-
               return (
                 <div
                   key={contact.id}
                   className="p-2.5 rounded-xl border border-slate-200/70 bg-slate-50/50 hover:bg-slate-100/70 hover:border-[#00afef]/40 transition-all cursor-pointer group flex items-center gap-3"
                 >
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs shrink-0 border border-slate-200/80 shadow-2xs group-hover:scale-105 transition-transform ${contactColorMap[contact.tag] || 'bg-[#393678] text-white'}`}>
-                    {initials}
-                  </div>
+                  <img
+                    src={contact.avatar}
+                    alt={contact.name}
+                    className="w-10 h-10 rounded-full object-cover shrink-0 border border-slate-200/80 shadow-2xs group-hover:scale-105 transition-transform"
+                  />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-1">
                       <h3 className="text-xs font-bold text-[#393678] group-hover:text-[#00afef] transition-colors truncate">
@@ -331,13 +324,21 @@ export const MainSection = (/** @type {any} */ {
                   className="py-2.5 flex items-center gap-3 hover:bg-slate-50/80 p-1.5 rounded-xl transition-colors cursor-pointer group"
                 >
                   {/* Date thumbnail box */}
-                  <div className="relative w-14 h-14 rounded-xl overflow-hidden shrink-0 shadow-2xs group-hover:scale-103 transition-transform border border-slate-200/80 bg-gradient-to-br from-[#393678] to-[#0A1328] flex flex-col items-center justify-center text-white">
-                    <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#00afef]">
-                      {event.month}
-                    </span>
-                    <span className="text-base font-extrabold leading-none mt-0.5 text-white">
-                      {event.day}
-                    </span>
+                  <div className="relative w-14 h-14 rounded-xl overflow-hidden shrink-0 shadow-2xs group-hover:scale-103 transition-transform border border-slate-200/80">
+                    <img
+                      src={event.image}
+                      alt={event.title}
+                      className="w-full h-full object-cover"
+                    />
+                    {/* Translucent overlay keeping image clear */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-black/20 flex flex-col items-center justify-center text-white">
+                      <span className="text-[8px] font-extrabold uppercase tracking-wider text-white drop-shadow-xs">
+                        {event.month}
+                      </span>
+                      <span className="text-sm font-extrabold leading-none mt-0.5 text-white drop-shadow-xs">
+                        {event.day}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Event text details */}

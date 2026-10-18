@@ -35,7 +35,7 @@ export const CampusJournal = () => {
       <div className="my-auto z-10 group cursor-pointer">
         <div className="rounded-lg overflow-hidden shadow-2xs border border-slate-100 h-24 w-full">
           <img
-            src="https://images.unsplash.com/photo-1562774053-701939374585?q=80&w=800&auto=format&fit=crop"
+            src="/images/campus-building.jpg"
             alt="DYPIU Campus Innovation Hub"
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />

@@ -89,7 +89,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
                 <span className="hidden sm:inline-block text-sm font-bold text-[#393678]">UniOne</span>
                 <span className="inline-flex items-center gap-1 rounded-full bg-[#0A1328] px-2.5 py-0.5 text-[10.5px] font-bold text-white shadow-2xs">
                   <ShieldCheck className="w-3 h-3 text-[#00afef]" />
-                  <span>{user.isSuperAdmin || user.role === 'admin' ? 'Super Admin' : 'Admin Portal'}</span>
+                  <span>{user.isSuperAdmin || user.role === 'admin' ? 'Admin Portal' : 'Service Portal'}</span>
                 </span>
               </div>
             </div>

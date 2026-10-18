@@ -81,13 +81,27 @@ export const Header = (/** @type {any} */ {
   const formattedName = formatName(propUser?.name);
   const formattedFirstName = formattedName.split(' ')[0] || 'Sarthak';
 
+  const isAdmin = Boolean(
+    propUser?.isSuperAdmin ||
+    propUser?.role === 'admin' ||
+    (Array.isArray(propUser?.roles) && (propUser.roles.includes('admin') || propUser.roles.includes('super_admin')))
+  );
+
+  const hasServiceAccess = Boolean(
+    propUser?.hasAdminPortalAccess ||
+    (Array.isArray(propUser?.permissions?.allowedServices) && propUser.permissions.allowedServices.length > 0)
+  );
+
   const user = {
     name: formattedName,
     email: propUser?.email || '20240802084@dypiu.ac.in',
     shortName: formattedFirstName,
-    avatar: propUser?.avatar || propUser?.picture || null,
+    avatar: propUser?.avatar || propUser?.picture || '/images/avatars/header-avatar.jpg',
     isSuperAdmin: propUser?.isSuperAdmin,
-    hasAdminPortalAccess: propUser?.hasAdminPortalAccess
+    hasAdminPortalAccess: propUser?.hasAdminPortalAccess,
+    role: propUser?.role,
+    roles: propUser?.roles,
+    permissions: propUser?.permissions
   };
 
   return (
@@ -261,27 +275,43 @@ export const Header = (/** @type {any} */ {
 
                 {/* Options List */}
                 <div className="p-1.5 space-y-0.5">
-                  <a
-                    href="#service-portal"
-                    onClick={(e) => {
-                      if (user.isSuperAdmin || user.hasAdminPortalAccess) {
+                  {isAdmin ? (
+                    <a
+                      href="#admin-portal"
+                      onClick={(e) => {
                         e.preventDefault();
                         setIsProfileOpen(false);
                         onNavigate?.('admin');
-                      } else {
+                      }}
+                      className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer group"
+                    >
+                      <div className="p-1.5 rounded-lg bg-[#00afef]/15 text-[#00afef] group-hover:bg-[#00afef]/25 transition-colors">
+                        <KeyRound className="w-4 h-4 stroke-[2.2]" />
+                      </div>
+                      <span className="text-xs font-bold text-[#393678] group-hover:text-[#00afef] transition-colors flex-1">
+                        Admin Portal
+                      </span>
+                      <ArrowUpRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#00afef] transition-colors" />
+                    </a>
+                  ) : hasServiceAccess ? (
+                    <a
+                      href="#service-portal"
+                      onClick={(e) => {
+                        e.preventDefault();
                         setIsProfileOpen(false);
-                      }
-                    }}
-                    className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer group"
-                  >
-                    <div className="p-1.5 rounded-lg bg-[#faa831]/15 text-[#faa831] group-hover:bg-[#faa831]/25 transition-colors">
-                      <KeyRound className="w-4 h-4 stroke-[2.2]" />
-                    </div>
-                    <span className="text-xs font-bold text-[#393678] group-hover:text-[#00afef] transition-colors flex-1">
-                      {user.isSuperAdmin || user.hasAdminPortalAccess ? 'Super Admin Portal' : 'Service Portal'}
-                    </span>
-                    <ArrowUpRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#00afef] transition-colors" />
-                  </a>
+                        onNavigate?.('admin');
+                      }}
+                      className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer group"
+                    >
+                      <div className="p-1.5 rounded-lg bg-[#faa831]/15 text-[#faa831] group-hover:bg-[#faa831]/25 transition-colors">
+                        <KeyRound className="w-4 h-4 stroke-[2.2]" />
+                      </div>
+                      <span className="text-xs font-bold text-[#393678] group-hover:text-[#00afef] transition-colors flex-1">
+                        Service Portal
+                      </span>
+                      <ArrowUpRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#00afef] transition-colors" />
+                    </a>
+                  ) : null}
 
                   <a
                     href="#profile"

@@ -5,9 +5,9 @@ export const CampusLife = () => {
   const [wished, setWished] = useState(false);
 
   const avatars = [
-    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=150&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop',
+    '/images/avatars/ananya-sharma.jpg',
+    '/images/avatars/rahul-deshmukh.jpg',
+    '/images/avatars/priya-nair.jpg',
   ];
 
   return (
@@ -43,7 +43,7 @@ export const CampusLife = () => {
         {/* Profile + Info */}
         <div className="flex items-center gap-2.5">
           <img
-            src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=200&auto=format&fit=crop"
+            src="/images/avatars/student-aarav.jpg"
             alt="Aarav Sharma"
             className="w-10 h-10 rounded-full object-cover border-2 border-amber-300 shadow-2xs"
           />
