@@ -6,7 +6,6 @@ import {
   ShieldCheck,
   ArrowLeft,
   KeyRound,
-  ExternalLink,
   LogOut,
   BadgeCheck
 } from 'lucide-react';
@@ -20,6 +19,7 @@ interface ProfilePageProps {
 }
 
 export const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentRole, onBack }) => {
+  const [avatarError, setAvatarError] = React.useState(false);
   const formattedName = toTitleCase(user.name || 'Sarthak Jayant Kharche');
   const initials = formattedName
     .split(/\s+/)
@@ -52,10 +52,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentRole, onB
 
         <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start relative z-10">
           {/* Avatar or Initial Box */}
-          {user.avatar ? (
+          {user.avatar && !avatarError ? (
             <img
               src={user.avatar}
               alt={formattedName}
+              referrerPolicy="no-referrer"
+              onError={() => setAvatarError(true)}
               className="w-24 h-24 rounded-3xl object-cover border-2 border-slate-200 shadow-md shrink-0"
             />
           ) : (
@@ -154,20 +156,10 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentRole, onB
           </div>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <a
-            href="https://auth.dypiu.ac.in/realms/dypiu/account"
-            target="_blank"
-            rel="noreferrer"
-            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#00afef]/10 text-[#00afef] hover:bg-[#00afef]/20 border border-[#00afef]/25 text-xs font-bold transition-all"
-          >
-            <span>Service Portal</span>
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
-
+        <div className="w-full sm:w-auto">
           <button
             onClick={() => { window.location.href = '/logout'; }}
-            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#f16136]/10 text-[#f16136] hover:bg-[#f16136]/20 border border-[#f16136]/25 text-xs font-bold transition-all cursor-pointer"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#f16136]/10 text-[#f16136] hover:bg-[#f16136]/20 border border-[#f16136]/25 text-xs font-bold transition-all cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Sign Out</span>

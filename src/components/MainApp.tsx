@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { ShieldCheck } from 'lucide-react';
 import type { ApplicationItem, NotificationItem, UserProfile, UserRole } from '../types';
 import { mockNotifications } from '../data/mockData';
@@ -11,11 +11,15 @@ import { ProfilePage } from '../pages/ProfilePage';
 import { NoticesPage } from '../pages/NoticesPage';
 import { NotificationsPage } from '../pages/NotificationsPage';
 import { PoliciesPage } from '../pages/PoliciesPage';
+import { PrivacyPolicyPage } from '../pages/PrivacyPolicyPage';
+import { TermsConditionsPage } from '../pages/TermsConditionsPage';
+import { HelpContactPage } from '../pages/HelpContactPage';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { WelcomeHero } from './WelcomeHero';
 import { DateBirthdayCard } from './DateBirthdayCard';
 import { MainSection } from './MainSection';
+import { IntranetFooter } from './IntranetFooter';
 
 // Super Admin Imports
 import { AdminLayout, type AdminTab } from '../admin/AdminLayout';
@@ -161,6 +165,19 @@ const normalizeApplications = (payload: unknown): ApplicationItem[] => {
   });
 };
 
+const getInitialNavFromPath = (path: string): string => {
+  if (path === '/admin') return 'admin';
+  if (path === '/privacy-policy' || path === '/privacy') return 'privacy';
+  if (path === '/terms-and-conditions' || path === '/terms' || path === '/terms-of-service') return 'terms';
+  if (path === '/contact' || path === '/help' || path === '/support') return 'support';
+  if (path === '/profile') return 'profile';
+  if (path === '/notices') return 'notices';
+  if (path === '/applications') return 'applications';
+  if (path === '/notifications') return 'notifications';
+  if (path === '/documents' || path === '/policies') return 'documents';
+  return 'dashboard';
+};
+
 export const MainApp: React.FC = () => {
   const isSignedOutPage = window.location.pathname === '/signed-out';
   const isLoginPage = window.location.pathname === '/login';
@@ -178,11 +195,29 @@ export const MainApp: React.FC = () => {
   const [currentRole, setCurrentRole] = useState<UserRole | null>(
     isPreviewMode ? resolvePreviewRole(DEV_PREVIEW_USER) : null,
   );
-  const [currentNav, setCurrentNav] = useState(isDirectAdminUrl ? 'admin' : 'dashboard');
+  const [currentNav, setCurrentNav] = useState(() => getInitialNavFromPath(window.location.pathname));
   const [adminTab, setAdminTab] = useState<AdminTab>('dashboard');
   const [openNoticeCreateModal, setOpenNoticeCreateModal] = useState(false);
   const [openAppCreateModal, setOpenAppCreateModal] = useState(false);
   const [openPolicyCreateModal, setOpenPolicyCreateModal] = useState(false);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentNav(getInitialNavFromPath(window.location.pathname));
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const mainScrollRef = useRef<HTMLDivElement>(null);
+
+  // Automatically scroll to top whenever navigation changes
+  useEffect(() => {
+    if (mainScrollRef.current) {
+      mainScrollRef.current.scrollTop = 0;
+    }
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [currentNav]);
 
   const [isReferenceSidebarOpen, setIsReferenceSidebarOpen] = useState(false);
   const [applications, setApplications] = useState<ApplicationItem[]>(DEV_PREVIEW_APPLICATIONS);
@@ -338,6 +373,11 @@ export const MainApp: React.FC = () => {
   };
 
   const handleNavigate = (page: string) => {
+    if (mainScrollRef.current) {
+      mainScrollRef.current.scrollTop = 0;
+    }
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    const currentSearch = window.location.search;
     if (page === 'admin') {
       const canAccessAdmin = Boolean(
         currentUser?.isSuperAdmin ||
@@ -347,18 +387,50 @@ export const MainApp: React.FC = () => {
       );
       if (canAccessAdmin) {
         if (window.location.pathname !== '/admin') {
-          window.history.pushState({}, '', '/admin');
+          window.history.pushState({}, '', '/admin' + currentSearch);
         }
         setCurrentNav('admin');
       } else {
         if (window.location.pathname === '/admin') {
-          window.history.replaceState({}, '', '/');
+          window.history.replaceState({}, '', '/' + currentSearch);
         }
         setCurrentNav('dashboard');
       }
+    } else if (page === 'privacy') {
+      if (window.location.pathname !== '/privacy-policy') {
+        window.history.pushState({}, '', '/privacy-policy' + currentSearch);
+      }
+      setCurrentNav('privacy');
+    } else if (page === 'terms') {
+      if (window.location.pathname !== '/terms-and-conditions') {
+        window.history.pushState({}, '', '/terms-and-conditions' + currentSearch);
+      }
+      setCurrentNav('terms');
+    } else if (page === 'support') {
+      if (window.location.pathname !== '/contact' && window.location.pathname !== '/help') {
+        window.history.pushState({}, '', '/contact' + currentSearch);
+      }
+      setCurrentNav('support');
+    } else if (page === 'profile') {
+      if (window.location.pathname !== '/profile') {
+        window.history.pushState({}, '', '/profile' + currentSearch);
+      }
+      setCurrentNav('profile');
+    } else if (page === 'dashboard') {
+      if (window.location.pathname !== '/') {
+        window.history.pushState({}, '', '/' + currentSearch);
+      }
+      setCurrentNav('dashboard');
     } else {
-      if (window.location.pathname === '/admin') {
-        window.history.pushState({}, '', '/');
+      if (
+        window.location.pathname === '/admin' ||
+        window.location.pathname === '/privacy-policy' ||
+        window.location.pathname === '/terms-and-conditions' ||
+        window.location.pathname === '/profile' ||
+        window.location.pathname === '/contact' ||
+        window.location.pathname === '/help'
+      ) {
+        window.history.pushState({}, '', '/' + currentSearch);
       }
       setCurrentNav(page);
     }
@@ -404,6 +476,27 @@ export const MainApp: React.FC = () => {
   }
 
   if (!authenticated || !authenticatedUser || !currentRole || !currentUser) {
+    if (currentNav === 'privacy' || window.location.pathname === '/privacy-policy' || window.location.pathname === '/privacy') {
+      return (
+        <div className="min-h-screen bg-[#F3F3F8] p-4 sm:p-6 overflow-y-auto">
+          <PrivacyPolicyPage onBack={() => { window.location.href = '/login'; }} />
+        </div>
+      );
+    }
+    if (currentNav === 'terms' || window.location.pathname === '/terms-and-conditions' || window.location.pathname === '/terms' || window.location.pathname === '/terms-of-service') {
+      return (
+        <div className="min-h-screen bg-[#F3F3F8] p-4 sm:p-6 overflow-y-auto">
+          <TermsConditionsPage onBack={() => { window.location.href = '/login'; }} />
+        </div>
+      );
+    }
+    if (currentNav === 'support' || window.location.pathname === '/contact' || window.location.pathname === '/help' || window.location.pathname === '/support') {
+      return (
+        <div className="min-h-screen bg-[#F3F3F8] p-4 sm:p-6 overflow-y-auto">
+          <HelpContactPage onBack={() => { window.location.href = '/login'; }} />
+        </div>
+      );
+    }
     return <LoginPage />;
   }
 
@@ -437,6 +530,10 @@ export const MainApp: React.FC = () => {
           setOpenPolicyCreateModal(false);
         }}
         onReturnToPortal={() => handleNavigate('dashboard')}
+        onNavigate={handleNavigate}
+        notifications={notifications}
+        unreadCount={unreadNotifCount}
+        onMarkNotificationsRead={() => setNotifications((items) => items.map((item) => ({ ...item, isRead: true })))}
       >
         {adminTab === 'dashboard' && (
           <AdminDashboard
@@ -509,10 +606,15 @@ export const MainApp: React.FC = () => {
           onOpenApp={openApplication}
           onNavigate={handleNavigate}
           user={currentUser}
+          currentNav={currentNav}
         />
 
-        {/* Main Area to the right of Sidebar - ONLY main scrolls smoothly */}
-        <main className="flex-1 min-h-0 overflow-y-auto scroll-smooth overflow-x-hidden p-3 sm:p-4 lg:p-4 space-y-4 max-w-[1600px] mx-auto w-full overscroll-contain">
+        {/* Main Column: Scrollable Dashboard Content + Full-width Intranet Footer at the end */}
+        <div
+          ref={mainScrollRef}
+          className="flex-1 min-h-0 overflow-y-auto scroll-smooth overflow-x-hidden flex flex-col justify-between bg-[#F3F3F8]"
+        >
+          <main className="flex-1 p-3 sm:p-4 lg:p-4 space-y-4 max-w-[1600px] mx-auto w-full overscroll-contain">
           {currentNav === 'dashboard' && (
             <>
               {/* TOP HERO ROW */}
@@ -560,6 +662,18 @@ export const MainApp: React.FC = () => {
             />
           )}
 
+          {currentNav === 'privacy' && (
+            <PrivacyPolicyPage
+              onBack={() => handleNavigate('dashboard')}
+            />
+          )}
+
+          {currentNav === 'terms' && (
+            <TermsConditionsPage
+              onBack={() => handleNavigate('dashboard')}
+            />
+          )}
+
           {currentNav === 'applications' && (
             <ApplicationsPage
               applications={applications}
@@ -585,7 +699,14 @@ export const MainApp: React.FC = () => {
             <AuditPage />
           )}
 
-          {['academics', 'events', 'settings', 'support'].includes(currentNav) && (
+          {currentNav === 'support' && (
+            <HelpContactPage
+              user={currentUser}
+              onBack={() => handleNavigate('dashboard')}
+            />
+          )}
+
+          {['academics', 'events', 'settings'].includes(currentNav) && (
             <div className="rounded-2xl border border-slate-200/80 bg-white p-8 text-center shadow-xs max-w-xl mx-auto my-12">
               <h2 className="text-xl font-bold capitalize text-[#393678] font-serif-custom">{currentNav}</h2>
               <p className="mx-auto mt-2 max-w-md text-xs text-slate-500">This area is ready to connect to its university service.</p>
@@ -598,6 +719,10 @@ export const MainApp: React.FC = () => {
             </div>
           )}
         </main>
+
+        {/* Full-width Intranet Footer seamlessly joined to the sidebar */}
+        <IntranetFooter onNavigate={handleNavigate} />
+      </div>
       </div>
     </div>
   );

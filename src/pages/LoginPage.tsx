@@ -5,12 +5,15 @@ export const LoginPage: React.FC = () => {
 
   return (
     <div className="relative min-h-screen h-screen w-full flex items-center justify-center lg:justify-end bg-[#F3F3F8] font-sans antialiased text-slate-800 overflow-hidden">
-      {/* LOGIN BACKGROUND IMAGE */}
-      <img
-        src="/Login.png"
-        alt="DYPIU Campus Login Background"
-        className="absolute inset-0 h-full w-full object-cover object-left z-0"
-      />
+      {/* LOGIN BACKGROUND IMAGE: Responsive for Desktop vs Mobile */}
+      <picture className="absolute inset-0 h-full w-full z-0 pointer-events-none select-none">
+        <source media="(max-width: 640px)" srcSet="/Mobile-Login.png" />
+        <img
+          src="/Login.png"
+          alt="DYPIU Campus Login Background"
+          className="h-full w-full object-cover object-center sm:object-left"
+        />
+      </picture>
 
       {/* RIGHT LOGIN CARD */}
       <div className="relative z-10 flex w-full max-w-xl justify-center lg:justify-end p-4 sm:p-6 lg:p-10 lg:pr-16">
@@ -59,16 +62,6 @@ export const LoginPage: React.FC = () => {
             </svg>
             Login
           </button>
-
-          {/* Footer */}
-          <div className="pt-2 text-center text-xs text-slate-400">
-            <p className="font-medium text-slate-500">Secure authentication powered by</p>
-            <div className="mt-1 flex flex-wrap items-center justify-center gap-2 font-semibold text-slate-600">
-              <span>Google Workspace</span>
-              <span>•</span>
-              <span>Keycloak</span>
-            </div>
-          </div>
         </div>
       </div>
     </div>

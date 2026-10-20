@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Bell, ChevronDown, KeyRound, User, Settings, LogOut, ArrowUpRight, Check, Menu, X } from 'lucide-react';
+import { Search, Bell, ChevronDown, KeyRound, User, Settings, LogOut, ArrowUpRight, ArrowLeft, Check, Menu, X } from 'lucide-react';
 import dypiuLogo from '../assets/dypiu-logo.png';
 import { TopRightHeaderShape } from './DecorativeShapes';
+import { MobileProfileMenu } from './MobileProfileMenu';
 
 export const Header = (/** @type {any} */ {
   onToggleSidebar,
@@ -10,9 +11,11 @@ export const Header = (/** @type {any} */ {
   notifications: propNotifications,
   unreadCount: propUnreadCount,
   onMarkNotificationsRead,
-  onNavigate
+  onNavigate,
+  isInAdminPortal
 } = {}) => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isMobileProfileOpen, setIsMobileProfileOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [localUnreadCount, setLocalUnreadCount] = useState(3);
@@ -123,6 +126,7 @@ export const Header = (/** @type {any} */ {
           <img 
             src={dypiuLogo} 
             alt="D Y Patil International University Akurdi Pune" 
+            onClick={() => onNavigate?.('dashboard')}
             className="h-10 sm:h-14 md:h-16 max-h-[44px] sm:max-h-[58px] w-auto object-contain cursor-pointer transition-transform hover:scale-102"
           />
         </div>
@@ -190,7 +194,7 @@ export const Header = (/** @type {any} */ {
                 <div className="border-b border-slate-100 my-3" />
 
                 {/* Main Notification Card(s) */}
-                <div className="space-y-2 max-h-60 overflow-y-auto">
+                <div className="space-y-2 max-h-60 overflow-y-auto no-scrollbar scrollbar-hide [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                   {rawNotifications.slice(0, 3).map((item) => (
                     <div
                       key={item.id}
@@ -240,13 +244,24 @@ export const Header = (/** @type {any} */ {
           {/* Profile Avatar & Dropdown */}
           <div className="relative" ref={dropdownRef}>
             <button
-              onClick={() => setIsProfileOpen(!isProfileOpen)}
+              onClick={() => {
+                if (typeof window !== 'undefined' && window.innerWidth < 768) {
+                  setIsMobileProfileOpen(!isMobileProfileOpen);
+                  setIsProfileOpen(false);
+                } else {
+                  setIsProfileOpen(!isProfileOpen);
+                }
+              }}
+              aria-label="User profile menu"
+              aria-expanded={isProfileOpen || isMobileProfileOpen}
+              aria-haspopup="true"
               className="flex items-center gap-1.5 sm:gap-2 pl-1.5 sm:pl-2 border-l border-slate-200 cursor-pointer group focus:outline-none"
             >
               {user.avatar && !avatarError ? (
                 <img
                   src={user.avatar}
                   alt={user.shortName}
+                  referrerPolicy="no-referrer"
                   onError={() => setAvatarError(true)}
                   className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border border-slate-200 group-hover:border-[#002B5C] transition-colors"
                 />
@@ -263,12 +278,12 @@ export const Header = (/** @type {any} */ {
                   {user.roleTitle}
                 </div>
               </div>
-              <ChevronDown className={`w-3.5 h-3.5 text-slate-500 group-hover:text-slate-800 transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-3.5 h-3.5 text-slate-500 group-hover:text-slate-800 transition-transform duration-200 ${(isProfileOpen || isMobileProfileOpen) ? 'rotate-180' : ''}`} />
             </button>
 
-            {/* Profile Dropdown Menu */}
+            {/* Profile Dropdown Menu (Desktop) */}
             {isProfileOpen && (
-              <div className="absolute right-0 top-full mt-3 w-72 max-w-[calc(100vw-1.5rem)] bg-white rounded-2xl border border-slate-200/80 shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+              <div className="hidden sm:block absolute right-0 top-full mt-3 w-72 max-w-[calc(100vw-1.5rem)] bg-white rounded-2xl border border-slate-200/80 shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
                 {/* Header User Details */}
                 <div className="p-3.5 bg-slate-50/80 border-b border-slate-100">
                   <div className="flex items-center justify-between gap-2">
@@ -286,7 +301,24 @@ export const Header = (/** @type {any} */ {
 
                 {/* Options List */}
                 <div className="p-1.5 space-y-0.5">
-                  {isAdmin ? (
+                  {isInAdminPortal ? (
+                    <a
+                      href="#dashboard"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setIsProfileOpen(false);
+                        onNavigate?.('dashboard');
+                      }}
+                      className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer group"
+                    >
+                      <div className="p-1.5 rounded-lg bg-[#00afef]/15 text-[#00afef] group-hover:bg-[#00afef]/25 transition-colors">
+                        <ArrowLeft className="w-4 h-4 stroke-[2.2]" />
+                      </div>
+                      <span className="text-xs font-bold text-[#393678] group-hover:text-[#00afef] transition-colors flex-1">
+                        Return to Intranet
+                      </span>
+                    </a>
+                  ) : isAdmin ? (
                     <a
                       href="#admin-portal"
                       onClick={(e) => {
@@ -434,7 +466,7 @@ export const Header = (/** @type {any} */ {
             </div>
 
             {/* Notification Message Body */}
-            <div className="rounded-2xl bg-[#F8F9FC] border border-slate-200/80 p-4 text-xs sm:text-sm font-medium leading-relaxed text-slate-700 max-h-60 overflow-y-auto whitespace-pre-wrap">
+            <div className="rounded-2xl bg-[#F8F9FC] border border-slate-200/80 p-4 text-xs sm:text-sm font-medium leading-relaxed text-slate-700 max-h-60 overflow-y-auto whitespace-pre-wrap no-scrollbar scrollbar-hide [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
               {selectedNotification.message || selectedNotification.content}
             </div>
 
@@ -462,6 +494,22 @@ export const Header = (/** @type {any} */ {
           </div>
         </div>
       )}
+
+      {/* Mobile Profile Menu Modal / Sheet (Reference Design) */}
+      <MobileProfileMenu
+        isOpen={isMobileProfileOpen}
+        onClose={() => setIsMobileProfileOpen(false)}
+        user={propUser}
+        isInAdminPortal={isInAdminPortal}
+        onNavigate={(route) => {
+          setIsMobileProfileOpen(false);
+          onNavigate?.(route);
+        }}
+        onLogout={() => {
+          setIsMobileProfileOpen(false);
+          window.location.href = '/logout';
+        }}
+      />
     </div>
   );
 };

@@ -344,6 +344,26 @@ app.get("/auth/callback", async (req, res) => {
         )
       : [];
 
+      let userinfoPicture = null;
+    if (!payload.picture && !accessPayload.picture && tokens.access_token) {
+      try {
+        const userinfoResponse = await fetch(
+          `${ISSUER}/protocol/openid-connect/userinfo`,
+          {
+            headers: {
+              Authorization: `Bearer ${tokens.access_token}`
+            }
+          }
+        );
+        if (userinfoResponse.ok) {
+          const userinfo = await userinfoResponse.json();
+          userinfoPicture = userinfo?.picture || null;
+        }
+      } catch {
+        // Fallback gracefully if userinfo is unreachable
+      }
+    }
+
     // -------------------------
     // Create Authenticated Session
     // -------------------------
@@ -359,7 +379,7 @@ app.get("/auth/callback", async (req, res) => {
         name: payload.name,
         email: payload.email,
         picture: normalizeProfilePicture(
-          payload.picture || accessPayload.picture
+          payload.picture || accessPayload.picture || userinfoPicture
         ),
         roles
       };
@@ -429,7 +449,7 @@ app.get("/api/me", requireAuth, async (req, res) => {
       isSuperAdmin,
       hasAdminPortalAccess,
       permissions,
-      picture: "/api/me/photo"
+      picture: req.session.user?.picture || "/api/me/photo"
     }
   });
 });
@@ -437,6 +457,9 @@ app.get("/api/me", requireAuth, async (req, res) => {
 
 app.get("/api/me/photo", requireAuth, async (req, res) => {
   if (!DIRECTORY_ROLE_SERVICE_URL || !DIRECTORY_LOOKUP_TOKEN) {
+    if (req.session.user?.picture) {
+      return res.redirect(req.session.user.picture);
+    }
     return res.status(503).json({
       error: "Directory photo service is not configured."
     });
@@ -458,6 +481,9 @@ app.get("/api/me/photo", requireAuth, async (req, res) => {
     );
 
     if (photoResponse.status === 404) {
+      if (req.session.user?.picture) {
+        return res.redirect(req.session.user.picture);
+      }
       return res.status(404).json({
         error: "Profile photo not found."
       });

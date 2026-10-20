@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Home,
   Search,
@@ -23,12 +23,23 @@ export const Sidebar = (/** @type {any} */ {
   policies: propPolicies,
   onOpenApp,
   onNavigate,
-  user
+  user,
+  currentNav
 } = {}) => {
   const [activeItem, setActiveItem] = useState('Home');
   const [isCommunicationOpen, setIsCommunicationOpen] = useState(false);
   const [isPoliciesOpen, setIsPoliciesOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    if (currentNav === 'dashboard' || currentNav === 'home') {
+      setActiveItem('Home');
+    } else if (currentNav === 'support') {
+      setActiveItem('Help & Support');
+    } else if (currentNav === 'documents') {
+      setActiveItem('Uni Policies');
+    }
+  }, [currentNav]);
 
   const defaultWebApplications = [
     {
@@ -129,6 +140,8 @@ export const Sidebar = (/** @type {any} */ {
     setActiveItem(app.name);
     if (app.id === 'policies' || app.name.toLowerCase().includes('policies')) {
       setIsPoliciesOpen(true);
+    } else if (app.id === 'support' || app.name.toLowerCase().includes('help & support') || app.name.toLowerCase().includes('help and support')) {
+      onNavigate?.('support');
     } else if (onOpenApp) {
       onOpenApp(app);
     } else if (app.url && /^https?:\/\//i.test(app.url)) {
@@ -145,8 +158,8 @@ export const Sidebar = (/** @type {any} */ {
       setIsPoliciesOpen(true);
     } else if (label === 'Admin Portal') {
       onNavigate?.('admin');
-    } else if (label === 'Help & Support') {
-      window.open('https://helpdesk.dypiu.ac.in', '_blank', 'noopener,noreferrer');
+    } else if (label === 'Help & Support' || label === 'Help and Support') {
+      onNavigate?.('support');
     } else if (label === 'Grievance') {
       window.open('https://grievance.dypiu.ac.in', '_blank', 'noopener,noreferrer');
     }
