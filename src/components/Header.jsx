@@ -99,7 +99,10 @@ export const Header = (/** @type {any} */ {
     name: formattedName,
     email: propUser?.email || '20240802084@dypiu.ac.in',
     shortName: formattedFirstName,
-    avatar: propUser?.avatar || propUser?.picture || '/images/avatars/header-avatar.jpg',
+    // Use /api/me/photo as the canonical avatar endpoint — it proxies the
+    // Google profile picture server-side, avoiding cross-origin redirect
+    // failures caused by referrerPolicy="no-referrer".
+    avatar: propUser?.avatar || '/api/me/photo',
     isSuperAdmin: propUser?.isSuperAdmin,
     hasAdminPortalAccess: propUser?.hasAdminPortalAccess,
     role: propUser?.role,
@@ -261,7 +264,6 @@ export const Header = (/** @type {any} */ {
                 <img
                   src={user.avatar}
                   alt={user.shortName}
-                  referrerPolicy="no-referrer"
                   onError={() => setAvatarError(true)}
                   className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border border-slate-200 group-hover:border-[#002B5C] transition-colors"
                 />

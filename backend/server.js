@@ -456,80 +456,77 @@ app.get("/api/me", requireAuth, async (req, res) => {
 
 
 app.get("/api/me/photo", requireAuth, async (req, res) => {
-  if (!DIRECTORY_ROLE_SERVICE_URL || !DIRECTORY_LOOKUP_TOKEN) {
-    if (req.session.user?.picture) {
-      return res.redirect(req.session.user.picture);
-    }
-    return res.status(503).json({
-      error: "Directory photo service is not configured."
-    });
-  }
-
-  try {
-    const photoResponse = await fetch(
-      `${DIRECTORY_ROLE_SERVICE_URL.replace(/\/$/, "")}/photo`,
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${DIRECTORY_LOOKUP_TOKEN}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          email: req.session.user.email
-        })
-      }
-    );
-
-    if (photoResponse.status === 404) {
-      if (req.session.user?.picture) {
-        return res.redirect(req.session.user.picture);
-      }
-      return res.status(404).json({
-        error: "Profile photo not found."
+  // Helper: fetch a remote image URL and pipe the bytes back to the browser.
+  // This avoids cross-origin / referrer-policy redirect failures that occur
+  // when the browser follows a redirect to lh3.googleusercontent.com with
+  // referrerPolicy="no-referrer".
+  const proxyRemoteImage = async (imageUrl) => {
+    try {
+      const upstream = await fetch(imageUrl, {
+        headers: { "User-Agent": "DYPIU-Intranet-PhotoProxy/1.0" }
       });
-    }
+      if (!upstream.ok) return false;
 
-    if (!photoResponse.ok) {
-      console.error(
-        "Directory photo service rejected request:",
-        photoResponse.status
+      const contentType = upstream.headers.get("content-type") || "image/jpeg";
+      if (!contentType.startsWith("image/")) return false;
+
+      const photo = Buffer.from(await upstream.arrayBuffer());
+      if (photo.length === 0 || photo.length > 4 * 1024 * 1024) return false;
+
+      res.set({
+        "Content-Type": contentType,
+        "Cache-Control": "private, max-age=3600",
+        "Content-Length": String(photo.length)
+      });
+      res.send(photo);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  // 1. Try the directory service first (if configured)
+  if (DIRECTORY_ROLE_SERVICE_URL && DIRECTORY_LOOKUP_TOKEN) {
+    try {
+      const photoResponse = await fetch(
+        `${DIRECTORY_ROLE_SERVICE_URL.replace(/\/$/, "")}/photo`,
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${DIRECTORY_LOOKUP_TOKEN}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ email: req.session.user.email })
+        }
       );
 
-      return res.status(502).json({
-        error: "Profile photo is temporarily unavailable."
-      });
+      if (photoResponse.ok) {
+        const photo = Buffer.from(await photoResponse.arrayBuffer());
+        if (photo.length > 0 && photo.length <= 2 * 1024 * 1024) {
+          res.set({
+            "Content-Type":
+              photoResponse.headers.get("content-type") || "image/jpeg",
+            "Cache-Control": "private, max-age=3600",
+            "Content-Length": String(photo.length)
+          });
+          return res.send(photo);
+        }
+      }
+    } catch (err) {
+      console.error("Directory photo request failed:", err.message);
     }
-
-    const photo = Buffer.from(
-      await photoResponse.arrayBuffer()
-    );
-
-    if (photo.length === 0 || photo.length > 2 * 1024 * 1024) {
-      return res.status(502).json({
-        error: "Invalid profile photo response."
-      });
-    }
-
-    res.set({
-      "Content-Type":
-        photoResponse.headers.get("content-type") ||
-        "image/jpeg",
-      "Cache-Control": "private, max-age=3600",
-      "Content-Length": String(photo.length)
-    });
-
-    return res.send(photo);
-
-  } catch (err) {
-    console.error(
-      "Directory photo request failed:",
-      err.message
-    );
-
-    return res.status(502).json({
-      error: "Profile photo is temporarily unavailable."
-    });
   }
+
+  // 2. Fall back to the Google profile picture stored in session — proxy it
+  //    through the server so the browser never has to follow a cross-origin
+  //    redirect (which fails with referrerPolicy="no-referrer").
+  if (req.session.user?.picture) {
+    const proxied = await proxyRemoteImage(req.session.user.picture);
+    if (proxied) return;
+  }
+
+  // 3. Nothing worked
+  return res.status(404).json({ error: "Profile photo not found." });
 });
 
 

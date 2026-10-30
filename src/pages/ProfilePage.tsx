@@ -56,7 +56,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentRole, onB
             <img
               src={user.avatar}
               alt={formattedName}
-              referrerPolicy="no-referrer"
               onError={() => setAvatarError(true)}
               className="w-24 h-24 rounded-3xl object-cover border-2 border-slate-200 shadow-md shrink-0"
             />

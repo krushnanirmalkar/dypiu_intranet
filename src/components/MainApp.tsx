@@ -97,7 +97,7 @@ const buildProfile = (user: SessionUser, role: UserRole): UserProfile => {
     email: user.email,
     role,
     roleTitle: user.isSuperAdmin ? 'Super Administrator' : role === 'staff' ? 'Staff' : role === 'admin' ? 'Administrator' : 'Student',
-    avatar: user.picture ?? '',
+    avatar: user.picture || '/api/me/photo',
     collegeId: user.email.split('@')[0],
     department: 'D Y Patil International University',
     yearOrDesignation: user.isSuperAdmin ? 'Super Administrator' : role === 'student' ? 'Student' : role === 'staff' ? 'Staff' : 'Administration',

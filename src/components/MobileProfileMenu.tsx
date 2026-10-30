@@ -143,7 +143,6 @@ export const MobileProfileMenu: React.FC<MobileProfileMenuProps> = ({
             <img
               src={user.avatar}
               alt={rawName}
-              referrerPolicy="no-referrer"
               onError={() => setAvatarError(true)}
               className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover border border-slate-200 shadow-xs shrink-0"
             />
