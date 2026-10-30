@@ -103,7 +103,7 @@ function normalizeProfilePicture(value) {
 
   try {
     const pictureUrl = new URL(value);
-    if (pictureUrl.protocol !== "https:") return null; let href = pictureUrl.href; if (pictureUrl.hostname.includes("googleusercontent.com")) { href = href.replace(/=s\d+(-c)?$/, "=s512-c"); } return href;
+    if (pictureUrl.protocol !== "https:") return null; let href = pictureUrl.href; if (pictureUrl.hostname.includes("googleusercontent.com")) { href = href.includes("=") ? href.replace(/=.*$/, "=s1000-c") : (href + "=s1000-c"); } return href;
   } catch {
     return null;
   }
@@ -475,7 +475,7 @@ app.get("/api/me/photo", requireAuth, async (req, res) => {
 
       res.set({
         "Content-Type": contentType,
-        "Cache-Control": "private, max-age=3600",
+        "Cache-Control": "no-cache, must-revalidate",
         "Content-Length": String(photo.length)
       });
       res.send(photo);
@@ -506,7 +506,7 @@ app.get("/api/me/photo", requireAuth, async (req, res) => {
           res.set({
             "Content-Type":
               photoResponse.headers.get("content-type") || "image/jpeg",
-            "Cache-Control": "private, max-age=3600",
+            "Cache-Control": "no-cache, must-revalidate",
             "Content-Length": String(photo.length)
           });
           return res.send(photo);
@@ -521,7 +521,7 @@ app.get("/api/me/photo", requireAuth, async (req, res) => {
   //    through the server so the browser never has to follow a cross-origin
   //    redirect (which fails with referrerPolicy="no-referrer").
   if (req.session.user?.picture) {
-    let photoUrl = req.session.user.picture; if (photoUrl.includes("googleusercontent.com")) { photoUrl = photoUrl.replace(/=s\d+(-c)?$/, "=s512-c"); } const proxied = await proxyRemoteImage(photoUrl);
+    let photoUrl = req.session.user.picture; if (photoUrl.includes("googleusercontent.com")) { photoUrl = photoUrl.includes("=") ? photoUrl.replace(/=.*$/, "=s1000-c") : (photoUrl + "=s1000-c"); } const proxied = await proxyRemoteImage(photoUrl);
     if (proxied) return;
   }
 
