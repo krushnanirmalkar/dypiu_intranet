@@ -103,7 +103,7 @@ function normalizeProfilePicture(value) {
 
   try {
     const pictureUrl = new URL(value);
-    return pictureUrl.protocol === "https:" ? pictureUrl.href : null;
+    if (pictureUrl.protocol !== "https:") return null; let href = pictureUrl.href; if (pictureUrl.hostname.includes("googleusercontent.com")) { href = href.replace(/=s\d+(-c)?$/, "=s512-c"); } return href;
   } catch {
     return null;
   }
@@ -521,7 +521,7 @@ app.get("/api/me/photo", requireAuth, async (req, res) => {
   //    through the server so the browser never has to follow a cross-origin
   //    redirect (which fails with referrerPolicy="no-referrer").
   if (req.session.user?.picture) {
-    const proxied = await proxyRemoteImage(req.session.user.picture);
+    let photoUrl = req.session.user.picture; if (photoUrl.includes("googleusercontent.com")) { photoUrl = photoUrl.replace(/=s\d+(-c)?$/, "=s512-c"); } const proxied = await proxyRemoteImage(photoUrl);
     if (proxied) return;
   }
 
