@@ -449,7 +449,7 @@ app.get("/api/me", requireAuth, async (req, res) => {
       isSuperAdmin,
       hasAdminPortalAccess,
       permissions,
-      picture: req.session.user?.picture || "/api/me/photo"
+      picture: "/api/me/photo"
     }
   });
 });
