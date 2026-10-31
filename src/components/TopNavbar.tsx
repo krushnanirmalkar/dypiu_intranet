@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { AlertCircle, Bell, CheckCircle2, LogOut, Menu, Search, Send, Settings, User, Users, X } from 'lucide-react';
+import { AlertCircle, Bell, CheckCircle2, Key, LogOut, Menu, Search, Send, Settings, ShieldCheck, User, Users, X } from 'lucide-react';
 import type { NotificationItem, UserProfile } from '../types';
 import { NotificationPanel } from './NotificationPanel';
 import imgLogo from '../assets/dashboard/logo.png';
@@ -202,7 +202,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
           <button onClick={() => setIsDropdownOpen((open) => !open)} className="flex items-center gap-2 cursor-pointer group">
             <div className="text-right leading-none hidden md:block">
               <div className="text-xs font-bold text-[#0c1e38]">{user.name}</div>
-              <div className="text-[10px] text-slate-500 font-medium mt-0.5">PRN: {user.collegeId}</div>
+              <div className="text-[10px] text-slate-500 font-medium mt-0.5">{user.roleTitle || 'Student'} · PRN: {user.collegeId}</div>
             </div>
             <div className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-[10px] font-extrabold text-[#0c1e38]">
               {initials}
@@ -212,10 +212,22 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
           {isDropdownOpen && (
             <div className="absolute right-0 top-[calc(100%+8px)] w-[min(340px,calc(100vw-32px))] overflow-hidden rounded-b-2xl rounded-t-sm border border-slate-200 bg-white shadow-[0_18px_48px_rgb(12,30,56,0.16)] z-50">
               <div className="px-5 py-4 bg-white">
-                <p className="text-base font-extrabold leading-tight text-[#02022D]">{user.name}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-base font-extrabold leading-tight text-[#02022D]">{user.name}</p>
+                  <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">{user.roleTitle || 'Student'}</span>
+                </div>
                 <p className="mt-1 truncate text-sm font-medium text-blue-600">{user.email}</p>
               </div>
               <div className="border-t border-slate-200">
+                {user.isSuperAdmin || user.role === 'admin' ? (
+                  <button onClick={() => { onNavigate('admin'); setIsDropdownOpen(false); }} className="flex w-full items-center gap-4 px-5 py-3.5 text-left text-base font-semibold text-blue-700 bg-blue-50/60 hover:bg-blue-100/70 transition-colors">
+                    <ShieldCheck className="h-5 w-5 text-blue-600" /><span>Admin Portal</span>
+                  </button>
+                ) : (user.hasAdminPortalAccess || Boolean(user.permissions?.allowedServices?.length)) ? (
+                  <button onClick={() => { onNavigate('admin'); setIsDropdownOpen(false); }} className="flex w-full items-center gap-4 px-5 py-3.5 text-left text-base font-semibold text-amber-700 bg-amber-50/60 hover:bg-amber-100/70 transition-colors">
+                    <Key className="h-5 w-5 text-amber-600" /><span>Service Portal</span>
+                  </button>
+                ) : null}
                 <button onClick={() => { onNavigate('profile'); setIsDropdownOpen(false); }} className="flex w-full items-center gap-4 px-5 py-3.5 text-left text-base font-semibold text-[#02022D] hover:bg-slate-50 transition-colors">
                   <User className="h-5 w-5" /><span>My Profile</span>
                 </button>

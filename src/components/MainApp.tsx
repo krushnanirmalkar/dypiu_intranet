@@ -1,28 +1,47 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, ArrowUpRight, BookOpen, CalendarDays, CheckSquare, FileText, Headphones, MessageSquare, Newspaper, ShieldCheck, Users } from 'lucide-react';
-import type { ApplicationItem, UserProfile, UserRole } from '../types';
-import { mockEvents, mockNotifications } from '../data/mockData';
-import { DEV_PREVIEW_APPLICATIONS, DEV_PREVIEW_USER, type AuthenticatedUser } from '../data/devPreviewData';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
+import { ShieldCheck } from 'lucide-react';
+import type { ApplicationItem, NotificationItem, UserProfile, UserRole } from '../types';
+import { mockNotifications } from '../data/mockData';
+import { normalizeNotifications } from '../utils/notifications';
+import { DEV_PREVIEW_APPLICATIONS, DEV_PREVIEW_USER, toTitleCase, type AuthenticatedUser } from '../data/devPreviewData';
 import { ApplicationsPage } from '../pages/ApplicationsPage';
 import { AuditPage } from '../pages/AuditPage';
 import { LoginPage } from '../pages/LoginPage';
 import { ProfilePage } from '../pages/ProfilePage';
-import { ActivityHub } from './ActivityHub';
-import { ApplicationsGrid } from './ApplicationsGrid';
-import { AppSidebar } from './AppSidebar';
-import { EventCard } from './EventCard';
-import { TopNavbar } from './TopNavbar';
-import ReferenceDashboard from './ReferenceDashboard';
-import { WelcomeBanner } from './WelcomeBanner';
+import { NoticesPage } from '../pages/NoticesPage';
+import { NotificationsPage } from '../pages/NotificationsPage';
+import { PoliciesPage } from '../pages/PoliciesPage';
+import { PrivacyPolicyPage } from '../pages/PrivacyPolicyPage';
+import { TermsConditionsPage } from '../pages/TermsConditionsPage';
+import { HelpContactPage } from '../pages/HelpContactPage';
+import { Header } from './Header';
+import { Sidebar } from './Sidebar';
+import { WelcomeHero } from './WelcomeHero';
+import { DateBirthdayCard } from './DateBirthdayCard';
+import { MainSection } from './MainSection';
+import { IntranetFooter } from './IntranetFooter';
 
-const USE_DEV_PREVIEW = false;
-
+// Super Admin Imports
+import { AdminLayout, type AdminTab } from '../admin/AdminLayout';
+import { AdminDashboard } from '../admin/pages/AdminDashboard';
+import { NoticesAdminPage } from '../admin/pages/NoticesAdminPage';
+import { ApplicationsAdminPage } from '../admin/pages/ApplicationsAdminPage';
+import { PoliciesAdminPage } from '../admin/pages/PoliciesAdminPage';
+import { AuditLogAdminPage } from '../admin/pages/AuditLogAdminPage';
+import { AccessControlAdminPage } from '../admin/pages/AccessControlAdminPage';
+import { NotificationsAdminPage } from '../admin/pages/NotificationsAdminPage';
 interface SessionUser {
   sub: string;
   name: string;
   email: string;
   picture?: string;
   roles: string[];
+  isSuperAdmin?: boolean;
+  hasAdminPortalAccess?: boolean;
+  permissions?: {
+    allowedServices: string[];
+    accessLevel: 'read' | 'write' | 'full';
+  };
 }
 
 const resolveRoleByPrecedence = (roles: readonly string[]): UserRole | null => {
@@ -34,20 +53,26 @@ const resolveRoleByPrecedence = (roles: readonly string[]): UserRole | null => {
 
 const resolvePreviewRole = (user: AuthenticatedUser): UserRole => {
   const previewRoles = Array.isArray(user.roles) ? user.roles : [];
-  return resolveRoleByPrecedence(previewRoles) ?? user.role ?? 'student';
+  return resolveRoleByPrecedence(previewRoles) ?? user.role ?? 'staff';
 };
 
 const createPreviewSessionUser = (user: AuthenticatedUser): SessionUser => {
   const previewRole = resolvePreviewRole(user);
   return {
     sub: user.sub ?? user.email,
-    name: user.name,
+    name: toTitleCase(user.name),
     email: user.email,
     roles: Array.isArray(user.roles) && user.roles.length > 0 ? [...user.roles] : [previewRole],
+    isSuperAdmin: user.isSuperAdmin ?? user.roles?.includes('super_admin') ?? false,
+    hasAdminPortalAccess: true,
+    permissions: {
+      allowedServices: ['notices', 'policies', 'applications', 'access', 'audit', 'notifications'],
+      accessLevel: 'full',
+    },
   };
 };
 
-const hasValidIdentity = (user: unknown): user is { sub: string; name: string; email: string; picture?: unknown; roles?: unknown } => {
+const hasValidIdentity = (user: unknown): user is { sub: string; name: string; email: string; picture?: unknown; roles?: unknown; isSuperAdmin?: unknown; hasAdminPortalAccess?: unknown; permissions?: unknown } => {
   if (typeof user !== 'object' || user === null) return false;
   const candidate = user as Record<string, unknown>;
   return typeof candidate.sub === 'string' && candidate.sub.length > 0
@@ -55,20 +80,44 @@ const hasValidIdentity = (user: unknown): user is { sub: string; name: string; e
     && typeof candidate.email === 'string' && candidate.email.length > 0;
 };
 
-const buildProfile = (user: SessionUser, role: UserRole): UserProfile => ({
-  id: user.sub,
-  name: user.name,
-  email: user.email,
-  role,
-  roleTitle: role === 'staff' ? 'Staff' : role === 'admin' ? 'Administrator' : 'Student',
-  avatar: user.picture ?? '',
-  collegeId: user.email.split('@')[0],
-  department: 'D Y Patil International University',
-  yearOrDesignation: role === 'student' ? 'Student' : role === 'staff' ? 'Staff' : 'Administration',
-  bio: 'Member of the DYPIU campus community.',
-  joinedYear: '',
-  phone: '',
-});
+const buildProfile = (user: SessionUser, role: UserRole): UserProfile => {
+  const allowedServices = user.permissions?.allowedServices || [];
+  const isSuperOrAdmin = Boolean(user.isSuperAdmin || role === 'admin');
+  const canManageNotices = isSuperOrAdmin || allowedServices.includes('notices');
+  const canManagePolicies = isSuperOrAdmin || allowedServices.includes('policies');
+  const canManageApplications = isSuperOrAdmin || allowedServices.includes('applications');
+  const canManageAccess = isSuperOrAdmin || allowedServices.includes('access');
+  const canManageAudit = isSuperOrAdmin || allowedServices.includes('audit');
+  const canManageNotifications = isSuperOrAdmin || allowedServices.includes('notifications');
+  const hasAdminPortalAccess = Boolean(user.hasAdminPortalAccess || isSuperOrAdmin || allowedServices.length > 0);
+
+  return {
+    id: user.sub,
+    name: toTitleCase(user.name),
+    email: user.email,
+    role,
+    roleTitle: user.isSuperAdmin ? 'Super Administrator' : role === 'staff' ? 'Staff' : role === 'admin' ? 'Administrator' : 'Student',
+    avatar: '/api/me/photo',
+    collegeId: user.email.split('@')[0],
+    department: 'D Y Patil International University',
+    yearOrDesignation: user.isSuperAdmin ? 'Super Administrator' : role === 'student' ? 'Student' : role === 'staff' ? 'Staff' : 'Administration',
+    bio: 'Member of the DYPIU campus community.',
+    joinedYear: '',
+    phone: '',
+    isSuperAdmin: user.isSuperAdmin,
+    hasAdminPortalAccess,
+    permissions: {
+      allowedServices,
+      accessLevel: user.permissions?.accessLevel || 'read',
+      canManageNotices,
+      canManagePolicies,
+      canManageApplications,
+      canManageAccess,
+      canManageAudit,
+      canManageNotifications,
+    },
+  };
+};
 
 const applicationCategories: ApplicationItem['category'][] = [
   'Academic',
@@ -116,39 +165,68 @@ const normalizeApplications = (payload: unknown): ApplicationItem[] => {
   });
 };
 
-const quickAccessItems = [
-  { label: 'My Schedule', sub: 'View timetable', icon: CalendarDays, nav: 'academics', color: 'bg-blue-50 text-blue-600' },
-  { label: 'My Tasks', sub: 'Pending tasks', icon: CheckSquare, nav: 'academics', color: 'bg-emerald-50 text-emerald-600' },
-  { label: 'Feedback', sub: 'Share feedback', icon: MessageSquare, nav: 'support', color: 'bg-violet-50 text-violet-600' },
-  { label: 'Help & Support', sub: 'Get assistance', icon: Headphones, nav: 'support', color: 'bg-sky-50 text-sky-600' },
-];
+const getInitialNavFromPath = (path: string): string => {
+  if (path === '/admin') return 'admin';
+  if (path === '/privacy-policy' || path === '/privacy') return 'privacy';
+  if (path === '/terms-and-conditions' || path === '/terms' || path === '/terms-of-service') return 'terms';
+  if (path === '/contact' || path === '/help' || path === '/support') return 'support';
+  if (path === '/profile') return 'profile';
+  if (path === '/notices') return 'notices';
+  if (path === '/applications') return 'applications';
+  if (path === '/notifications') return 'notifications';
+  if (path === '/documents' || path === '/policies') return 'documents';
+  return 'dashboard';
+};
 
 export const MainApp: React.FC = () => {
   const isSignedOutPage = window.location.pathname === '/signed-out';
-  const [authLoading, setAuthLoading] = useState(!USE_DEV_PREVIEW && !isSignedOutPage);
-  const [authenticated, setAuthenticated] = useState(USE_DEV_PREVIEW);
+  const isLoginPage = window.location.pathname === '/login';
+  const isDirectAdminUrl = window.location.pathname === '/admin';
+  const isPreviewMode = typeof window !== 'undefined' && (
+    new URLSearchParams(window.location.search).get('preview') === '1' ||
+    new URLSearchParams(window.location.search).get('preview') === 'true'
+  );
+
+  const [authLoading, setAuthLoading] = useState(!isSignedOutPage && !isLoginPage && !isPreviewMode);
+  const [authenticated, setAuthenticated] = useState(isPreviewMode);
   const [authenticatedUser, setAuthenticatedUser] = useState<SessionUser | null>(
-    USE_DEV_PREVIEW ? createPreviewSessionUser(DEV_PREVIEW_USER) : null,
+    isPreviewMode ? createPreviewSessionUser(DEV_PREVIEW_USER) : null,
   );
   const [currentRole, setCurrentRole] = useState<UserRole | null>(
-    USE_DEV_PREVIEW ? resolvePreviewRole(DEV_PREVIEW_USER) : null,
+    isPreviewMode ? resolvePreviewRole(DEV_PREVIEW_USER) : null,
   );
-  const [currentNav, setCurrentNav] = useState('dashboard');
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [applications, setApplications] = useState<ApplicationItem[]>(
-    USE_DEV_PREVIEW ? DEV_PREVIEW_APPLICATIONS : [],
-  );
-  const [applicationsLoading, setApplicationsLoading] = useState(!USE_DEV_PREVIEW);
-  const [notifications, setNotifications] = useState(mockNotifications);
+  const [currentNav, setCurrentNav] = useState(() => getInitialNavFromPath(window.location.pathname));
+  const [adminTab, setAdminTab] = useState<AdminTab>('dashboard');
+  const [openNoticeCreateModal, setOpenNoticeCreateModal] = useState(false);
+  const [openAppCreateModal, setOpenAppCreateModal] = useState(false);
+  const [openPolicyCreateModal, setOpenPolicyCreateModal] = useState(false);
 
   useEffect(() => {
-    if (isSignedOutPage) {
-      setAuthLoading(false);
-      return;
-    }
+    const handlePopState = () => {
+      setCurrentNav(getInitialNavFromPath(window.location.pathname));
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
-    if (USE_DEV_PREVIEW) {
-      setAuthenticated(true);
+  const mainScrollRef = useRef<HTMLDivElement>(null);
+
+  // Automatically scroll to top whenever navigation changes
+  useEffect(() => {
+    if (mainScrollRef.current) {
+      mainScrollRef.current.scrollTop = 0;
+    }
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [currentNav]);
+
+  const [isReferenceSidebarOpen, setIsReferenceSidebarOpen] = useState(false);
+  const [applications, setApplications] = useState<ApplicationItem[]>(DEV_PREVIEW_APPLICATIONS);
+  const [notifications, setNotifications] = useState<NotificationItem[]>(mockNotifications);
+  const [notices, setNotices] = useState<any[]>([]);
+  const [policies, setPolicies] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (isSignedOutPage || isLoginPage || isPreviewMode) {
       setAuthLoading(false);
       return;
     }
@@ -158,87 +236,133 @@ export const MainApp: React.FC = () => {
         const response = await fetch('/api/me', { method: 'GET', credentials: 'include' });
 
         if (response.ok) {
-          const data = await response.json() as { authenticated?: unknown; user?: unknown };
+          const data = await response.json() as { authenticated?: unknown; user?: { sub?: unknown; name?: unknown; email?: unknown; picture?: unknown; roles?: unknown; isSuperAdmin?: unknown } };
 
           if (data.authenticated === true && hasValidIdentity(data.user)) {
             const roles = Array.isArray(data.user.roles)
               ? data.user.roles.filter((role): role is string => typeof role === 'string')
               : [];
-            const resolvedRole = resolveRoleByPrecedence(roles);
-
-            if (!resolvedRole) {
-              console.error('Authenticated user has no supported DYPIU role:', roles);
-              window.location.href = '/signed-out';
-              return;
-            }
+            const isSuperAdmin = data.user.isSuperAdmin === true || roles.includes('super_admin') || roles.includes('admin');
+            const resolvedRole = resolveRoleByPrecedence(roles) || 'staff';
+            const userPermissions = typeof data.user.permissions === 'object' && data.user.permissions !== null
+              ? (data.user.permissions as { allowedServices: string[]; accessLevel: 'read' | 'write' | 'full' })
+              : undefined;
+            const hasAdminPortalAccess = Boolean(
+              data.user.hasAdminPortalAccess === true ||
+              isSuperAdmin ||
+              (userPermissions?.allowedServices && userPermissions.allowedServices.length > 0)
+            );
 
             setAuthenticatedUser({
               sub: data.user.sub,
-              name: data.user.name,
+              name: toTitleCase(data.user.name),
               email: data.user.email,
               picture: typeof data.user.picture === 'string' ? data.user.picture : undefined,
               roles,
+              isSuperAdmin,
+              hasAdminPortalAccess,
+              permissions: userPermissions,
             });
             setCurrentRole(resolvedRole);
             setAuthenticated(true);
-            setAuthLoading(false);
+
+            if (isDirectAdminUrl && !hasAdminPortalAccess) {
+              window.history.replaceState({}, '', '/');
+              setCurrentNav('dashboard');
+            }
             return;
           }
         }
-
         setAuthenticated(false);
-        setAuthLoading(false);
-      } catch (error) {
-        console.error('Authentication check failed:', error);
+        setAuthenticatedUser(null);
+        setCurrentRole(null);
+      } catch {
         setAuthenticated(false);
+        setAuthenticatedUser(null);
+        setCurrentRole(null);
+      } finally {
         setAuthLoading(false);
       }
     };
 
     void checkAuthentication();
-  }, [isSignedOutPage]);
+  }, [isSignedOutPage, isLoginPage, isDirectAdminUrl, isPreviewMode]);
 
   useEffect(() => {
-    if (isSignedOutPage) return;
-
-    if (USE_DEV_PREVIEW) {
-      setApplications(DEV_PREVIEW_APPLICATIONS);
-      setApplicationsLoading(false);
-      return;
-    }
-
-    if (!authenticated || !authenticatedUser || !currentRole) return;
+    if (isSignedOutPage || isLoginPage) return;
 
     const loadApplications = async () => {
-      setApplicationsLoading(true);
       try {
         const response = await fetch('/api/applications', { method: 'GET', credentials: 'include' });
-
-        if (response.status === 401) {
-          setAuthenticated(false);
-          return;
+        if (response.ok) {
+          const loaded = normalizeApplications(await response.json());
+          if (loaded.length > 0) {
+            setApplications(loaded);
+          }
         }
-
-        if (!response.ok) {
-          throw new Error(`Application request failed with status ${response.status}`);
-        }
-
-        setApplications(normalizeApplications(await response.json()));
-      } catch (error) {
-        console.error('Failed to load authorized applications:', error);
-        setApplications([]);
-      } finally {
-        setApplicationsLoading(false);
+      } catch {
+        // keep fallback preview applications
       }
     };
 
     void loadApplications();
-  }, [authenticated, authenticatedUser, currentRole, isSignedOutPage]);
+  }, [authenticated, isSignedOutPage, isLoginPage]);
+
+  useEffect(() => {
+    if (isSignedOutPage || isLoginPage) return;
+
+    const loadNotifications = async () => {
+      try {
+        const response = await fetch('/api/notifications', { method: 'GET', credentials: 'include' });
+        if (response.ok) {
+          const loaded = normalizeNotifications(await response.json());
+          if (loaded.length > 0) {
+            setNotifications(loaded);
+          }
+        }
+      } catch {
+        // keep fallback notifications
+      }
+    };
+
+    void loadNotifications();
+  }, [authenticated, isSignedOutPage, isLoginPage]);
+
+  useEffect(() => {
+    if (isSignedOutPage || !authenticated) return;
+
+    const loadData = async () => {
+      try {
+        const [noticesRes, policiesRes] = await Promise.all([
+          fetch('/api/notices', { method: 'GET', credentials: 'include' }).catch(() => null),
+          fetch('/api/policies', { method: 'GET', credentials: 'include' }).catch(() => null),
+        ]);
+
+        if (noticesRes && noticesRes.ok) {
+          const data = await noticesRes.json() as { notices?: any[] };
+          if (data && Array.isArray(data.notices)) {
+            setNotices(data.notices);
+          }
+        }
+        if (policiesRes && policiesRes.ok) {
+          const data = await policiesRes.json() as { policies?: any[] };
+          if (data && Array.isArray(data.policies)) {
+            setPolicies(data.policies);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load notices or policies:', err);
+      }
+    };
+
+    void loadData();
+  }, [authenticated, isSignedOutPage]);
 
   const currentUser = useMemo(
     () => authenticatedUser && currentRole ? buildProfile(authenticatedUser, currentRole) : null,
     [authenticatedUser, currentRole],
   );
+
   const unreadNotifCount = currentRole
     ? notifications.filter((item) => item.targetRoles.includes(currentRole) && !item.isRead).length
     : 0;
@@ -248,164 +372,358 @@ export const MainApp: React.FC = () => {
     else window.location.assign(app.url);
   };
 
+  const handleNavigate = (page: string) => {
+    if (mainScrollRef.current) {
+      mainScrollRef.current.scrollTop = 0;
+    }
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    const currentSearch = window.location.search;
+    if (page === 'admin') {
+      const canAccessAdmin = Boolean(
+        currentUser?.isSuperAdmin ||
+        currentUser?.role === 'admin' ||
+        currentUser?.hasAdminPortalAccess ||
+        currentUser?.permissions?.allowedServices?.length
+      );
+      if (canAccessAdmin) {
+        if (window.location.pathname !== '/admin') {
+          window.history.pushState({}, '', '/admin' + currentSearch);
+        }
+        setCurrentNav('admin');
+      } else {
+        if (window.location.pathname === '/admin') {
+          window.history.replaceState({}, '', '/' + currentSearch);
+        }
+        setCurrentNav('dashboard');
+      }
+    } else if (page === 'privacy') {
+      if (window.location.pathname !== '/privacy-policy') {
+        window.history.pushState({}, '', '/privacy-policy' + currentSearch);
+      }
+      setCurrentNav('privacy');
+    } else if (page === 'terms') {
+      if (window.location.pathname !== '/terms-and-conditions') {
+        window.history.pushState({}, '', '/terms-and-conditions' + currentSearch);
+      }
+      setCurrentNav('terms');
+    } else if (page === 'support') {
+      if (window.location.pathname !== '/contact' && window.location.pathname !== '/help') {
+        window.history.pushState({}, '', '/contact' + currentSearch);
+      }
+      setCurrentNav('support');
+    } else if (page === 'profile') {
+      if (window.location.pathname !== '/profile') {
+        window.history.pushState({}, '', '/profile' + currentSearch);
+      }
+      setCurrentNav('profile');
+    } else if (page === 'dashboard') {
+      if (window.location.pathname !== '/') {
+        window.history.pushState({}, '', '/' + currentSearch);
+      }
+      setCurrentNav('dashboard');
+    } else {
+      if (
+        window.location.pathname === '/admin' ||
+        window.location.pathname === '/privacy-policy' ||
+        window.location.pathname === '/terms-and-conditions' ||
+        window.location.pathname === '/profile' ||
+        window.location.pathname === '/contact' ||
+        window.location.pathname === '/help'
+      ) {
+        window.history.pushState({}, '', '/' + currentSearch);
+      }
+      setCurrentNav(page);
+    }
+  };
+
   if (isSignedOutPage) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-navy-50 px-4">
-        <div className="w-full max-w-md rounded-2xl border border-navy-100 bg-white p-8 text-center shadow-lg">
-          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-navy-800 text-white"><ShieldCheck className="h-7 w-7" /></div>
-          <h1 className="text-2xl font-black text-navy-900">You have been signed out</h1>
-          <p className="mt-3 text-sm text-navy-500">Your DYPIU Intranet session has been securely ended.</p>
-          <button onClick={() => { window.location.href = '/login?reauth=1'; }} className="mt-6 w-full rounded-xl bg-navy-800 py-3 text-sm font-bold text-white">Sign in again</button>
+      <div className="flex min-h-screen items-center justify-center bg-[#F3F3F8] px-4 font-sans antialiased text-slate-800">
+        <div className="w-full max-w-md rounded-3xl border border-slate-200/80 bg-white p-8 text-center shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+          <div className="mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#0A1328] text-[#00afef] shadow-md">
+            <ShieldCheck className="h-7 w-7" />
+          </div>
+          <h1 className="text-2xl font-extrabold text-[#393678] font-serif-custom tracking-tight">
+            You have been signed out
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 max-w-xs mx-auto">
+            Your DYPIU Intranet session has been securely ended.
+          </p>
+          <div className="pt-2">
+            <button
+              onClick={() => {
+                window.location.href = '/login?reauth=1';
+              }}
+              className="w-full rounded-xl bg-[#0A1328] hover:bg-[#152347] py-3 text-xs sm:text-sm font-bold text-white transition-all shadow-md cursor-pointer"
+            >
+              Sign in again
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   if (authLoading) {
-    return <div className="flex min-h-screen items-center justify-center bg-navy-50"><div className="text-center"><div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-navy-200 border-t-navy-800" /><p className="mt-3 text-sm font-semibold text-navy-700">Verifying university session...</p></div></div>;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#F3F3F8]">
+        <div className="text-center space-y-3">
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-[#00afef]" />
+          <p className="text-xs font-bold text-[#393678] tracking-wide">Verifying university session...</p>
+        </div>
+      </div>
+    );
   }
 
-if (!authenticated || !authenticatedUser || !currentRole || !currentUser) {
-  return <LoginPage />;
-}
+  if (!authenticated || !authenticatedUser || !currentRole || !currentUser) {
+    if (currentNav === 'privacy' || window.location.pathname === '/privacy-policy' || window.location.pathname === '/privacy') {
+      return (
+        <div className="min-h-screen bg-[#F3F3F8] p-4 sm:p-6 overflow-y-auto">
+          <PrivacyPolicyPage onBack={() => { window.location.href = '/login'; }} />
+        </div>
+      );
+    }
+    if (currentNav === 'terms' || window.location.pathname === '/terms-and-conditions' || window.location.pathname === '/terms' || window.location.pathname === '/terms-of-service') {
+      return (
+        <div className="min-h-screen bg-[#F3F3F8] p-4 sm:p-6 overflow-y-auto">
+          <TermsConditionsPage onBack={() => { window.location.href = '/login'; }} />
+        </div>
+      );
+    }
+    if (currentNav === 'support' || window.location.pathname === '/contact' || window.location.pathname === '/help' || window.location.pathname === '/support') {
+      return (
+        <div className="min-h-screen bg-[#F3F3F8] p-4 sm:p-6 overflow-y-auto">
+          <HelpContactPage onBack={() => { window.location.href = '/login'; }} />
+        </div>
+      );
+    }
+    return <LoginPage />;
+  }
 
-if (currentNav === 'dashboard') {
-  return (
-    <ReferenceDashboard
-      user={currentUser}
-      applications={applications}
-      loading={applicationsLoading}
-      onNavigate={setCurrentNav}
-      onOpenApp={openApplication}
-    />
-  );
-}
-  return (
-    <div className="min-h-screen bg-[#f7f9fd] font-sans text-navy-900">
-      <AppSidebar currentRole={currentRole} currentNav={currentNav} onNavigate={setCurrentNav} isOpenMobile={isMobileSidebarOpen} onCloseMobile={() => setIsMobileSidebarOpen(false)} />
-      <TopNavbar
+  // -------------------------
+  // Render Admin / Management Portal
+  // -------------------------
+  if (currentNav === 'admin') {
+    const canAccessAdmin = Boolean(
+      currentUser.isSuperAdmin ||
+      currentUser.role === 'admin' ||
+      currentUser.hasAdminPortalAccess ||
+      currentUser.permissions?.allowedServices?.length
+    );
+
+    if (!canAccessAdmin) {
+      if (window.location.pathname === '/admin') {
+        window.history.replaceState({}, '', '/');
+      }
+      setCurrentNav('dashboard');
+      return null;
+    }
+
+    return (
+      <AdminLayout
         user={currentUser}
-        onToggleMobileSidebar={() => setIsMobileSidebarOpen(true)}
-        unreadNotifCount={unreadNotifCount}
-        onNavigate={setCurrentNav}
+        activeTab={adminTab}
+        onTabChange={(tab) => {
+          setAdminTab(tab);
+          setOpenNoticeCreateModal(false);
+          setOpenAppCreateModal(false);
+          setOpenPolicyCreateModal(false);
+        }}
+        onReturnToPortal={() => handleNavigate('dashboard')}
+        onNavigate={handleNavigate}
         notifications={notifications}
-        onMarkAllRead={() => setNotifications((items) => items.map((item) => ({ ...item, isRead: true })))}
+        unreadCount={unreadNotifCount}
+        onMarkNotificationsRead={() => setNotifications((items) => items.map((item) => ({ ...item, isRead: true })))}
+      >
+        {adminTab === 'dashboard' && (
+          <AdminDashboard
+            user={currentUser}
+            onNavigateTab={(tab) => {
+              setAdminTab(tab);
+              setOpenNoticeCreateModal(false);
+              setOpenAppCreateModal(false);
+              setOpenPolicyCreateModal(false);
+            }}
+            onOpenCreateNotice={() => {
+              setAdminTab('notices');
+              setOpenNoticeCreateModal(true);
+            }}
+            onOpenCreateApplication={() => {
+              setAdminTab('applications');
+              setOpenAppCreateModal(true);
+            }}
+            onOpenCreatePolicy={() => {
+              setAdminTab('policies');
+              setOpenPolicyCreateModal(true);
+            }}
+          />
+        )}
+
+        {adminTab === 'notices' && (currentUser.isSuperAdmin || currentUser.role === 'admin' || currentUser.permissions?.canManageNotices) && (
+          <NoticesAdminPage initialOpenCreate={openNoticeCreateModal} />
+        )}
+        {adminTab === 'notifications' && (currentUser.isSuperAdmin || currentUser.role === 'admin' || currentUser.permissions?.canManageNotifications) && (
+          <NotificationsAdminPage />
+        )}
+        {adminTab === 'applications' && (currentUser.isSuperAdmin || currentUser.role === 'admin' || currentUser.permissions?.canManageApplications) && (
+          <ApplicationsAdminPage initialOpenCreate={openAppCreateModal} />
+        )}
+        {adminTab === 'policies' && (currentUser.isSuperAdmin || currentUser.role === 'admin' || currentUser.permissions?.canManagePolicies) && (
+          <PoliciesAdminPage initialOpenCreate={openPolicyCreateModal} />
+        )}
+        {adminTab === 'access' && (currentUser.isSuperAdmin || currentUser.role === 'admin' || currentUser.permissions?.canManageAccess) && (
+          <AccessControlAdminPage />
+        )}
+        {adminTab === 'audit' && (currentUser.isSuperAdmin || currentUser.role === 'admin' || currentUser.permissions?.canManageAudit) && (
+          <AuditLogAdminPage />
+        )}
+      </AdminLayout>
+    );
+  }
+
+  // Unified Reference Layout for Portal
+  return (
+    <div className="h-[100dvh] max-h-[100dvh] bg-[#F3F3F8] flex flex-col font-sans text-slate-800 antialiased selection:bg-[#00afef]/20 selection:text-[#393678] overflow-hidden">
+      {/* Top Navigation Header - Permanently pinned at the top, never scrolls away */}
+      <Header
+        onToggleSidebar={() => setIsReferenceSidebarOpen((prev) => !prev)}
+        isSidebarOpen={isReferenceSidebarOpen}
+        user={currentUser}
+        notifications={notifications}
+        unreadCount={unreadNotifCount}
+        onMarkNotificationsRead={() => setNotifications((items) => items.map((item) => ({ ...item, isRead: true })))}
+        onNavigate={handleNavigate}
       />
 
-      <main className="mx-auto w-full max-w-[1500px] px-4 py-3 sm:px-5 lg:px-6 lg:py-4">
-        {currentNav === 'dashboard' && (
-          <div className="space-y-3">
-            <WelcomeBanner user={currentUser} />
+      {/* Main Body Area: Responsive Sidebar + Scrollable Dashboard Content */}
+      <div className="flex-1 min-h-0 flex overflow-hidden relative">
+        {/* Left Dark Navy Sidebar (Static on lg+, Slide-over Drawer on mobile) */}
+        <Sidebar
+          isOpen={isReferenceSidebarOpen}
+          onClose={() => setIsReferenceSidebarOpen(false)}
+          applications={applications}
+          policies={policies}
+          onOpenApp={openApplication}
+          onNavigate={handleNavigate}
+          user={currentUser}
+          currentNav={currentNav}
+        />
 
-            <div className="dashboard-layout grid grid-cols-1 items-start gap-3">
-              <div className="space-y-3">
-                <ApplicationsGrid
-                  applications={applications}
-                  onOpenApp={openApplication}
-                  onToggleFavorite={() => {}}
-                  onViewAllApps={() => setCurrentNav('applications')}
-                  loading={applicationsLoading}
-                />
-
-                <div className="grid items-stretch gap-3 sm:grid-cols-[260px_minmax(0,1fr)] lg:grid-cols-[280px_minmax(0,1fr)]">
-                  <article className="group relative flex aspect-square w-full max-w-[260px] flex-col overflow-hidden rounded-[14px] border border-[#d9e2f1] bg-navy-950 p-5 shadow-[0_3px_12px_rgba(15,35,75,0.08)] transition hover:-translate-y-px hover:border-navy-300 hover:shadow-[0_10px_24px_rgba(15,35,75,0.14)] lg:max-w-[280px]">
-                    <img src="/zenith-cover.webp" alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover object-top transition duration-500 group-hover:scale-[1.03]" />
-                    <div aria-hidden="true" className="absolute inset-0 bg-navy-950/5" />
-                    <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-navy-950/95 via-navy-900/30 to-transparent" />
-                    <div className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-white/60 bg-white/90 text-navy-900 shadow-sm backdrop-blur-sm"><Newspaper className="h-5 w-5" /></div>
-                    <div className="relative mt-auto drop-shadow-sm">
-                      <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-blue-100">College Newspaper</p>
-                      <div className="mt-1.5 flex items-end justify-between gap-2">
-                        <div><h3 className="text-2xl font-black leading-none text-white">Zenith</h3><p className="mt-2 text-[11px] font-medium text-white/75">Stories from across campus</p></div>
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/60 bg-white/15 text-white backdrop-blur-sm transition group-hover:bg-white group-hover:text-navy-900"><ArrowUpRight className="h-4 w-4" /></span>
-                      </div>
-                    </div>
-                  </article>
-
-                  {currentRole === 'student' ? (
-                    <section className="relative flex min-h-[260px] flex-col overflow-hidden rounded-[14px] border border-[#dfe7f3] bg-gradient-to-br from-white via-white to-blue-50/70 p-5 shadow-[0_3px_12px_rgba(15,35,75,0.04)] lg:min-h-[280px]">
-                      <div aria-hidden="true" className="absolute -right-12 -top-16 h-44 w-44 rounded-full border-[28px] border-blue-100/40" />
-                      <div className="relative flex items-start justify-between">
-                        <div className="flex items-start gap-3">
-                          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-navy-800 text-white shadow-sm"><MessageSquare className="h-5 w-5" /></span>
-                          <div><p className="text-[11px] font-bold uppercase tracking-[0.16em] text-blue-600">Student support</p><h3 className="mt-1 text-lg font-black text-navy-950">Grievance Cell</h3></div>
-                        </div>
-                        
-                      </div>
-                      <p className="relative mt-4 max-w-md text-[12px] leading-relaxed text-navy-600">Raise an academic, administrative, campus, or conduct-related concern through a safe and transparent process.</p>
-                      <div className="relative mt-auto flex items-center gap-2 border-t border-navy-100 pt-4">
-                        <button onClick={() => setCurrentNav('support')} className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-navy-800 px-4 py-2.5 text-[12px] font-bold text-white transition hover:bg-navy-700">Report a concern <ArrowRight className="h-3.5 w-3.5" /></button>
-                        <button onClick={() => setCurrentNav('support')} className="rounded-lg border border-navy-200 bg-white px-4 py-2.5 text-[12px] font-bold text-navy-700 transition hover:bg-navy-50">Track report</button>
-                      </div>
-                    </section>
-                  ) : (
-                    <section className="relative flex min-h-[260px] flex-col overflow-hidden rounded-[14px] border border-[#dfe7f3] bg-white p-5 shadow-[0_3px_12px_rgba(15,35,75,0.04)] lg:min-h-[280px]">
-                      <div aria-hidden="true" className="absolute -right-14 -top-14 h-40 w-40 rounded-full bg-blue-50/80" />
-                      <div className="relative border-b border-navy-100 pb-3">
-                        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-blue-600">University essentials</p>
-                        <h3 className="mt-1 text-lg font-black text-navy-950">Campus Resources</h3>
-                        <p className="mt-1 text-[11px] text-navy-500">Common services for faculty and staff</p>
-                      </div>
-                      <div className="relative grid flex-1 grid-cols-2 divide-x divide-y divide-navy-100">
-                        {[
-                          { label: 'Digital Library', sub: 'Books, journals & research', icon: BookOpen, nav: 'applications', color: 'bg-blue-50 text-blue-600' },
-                          { label: 'Academic Calendar', sub: 'Important university dates', icon: CalendarDays, nav: 'events', color: 'bg-violet-50 text-violet-600' },
-                          { label: 'Campus Directory', sub: 'Find people & departments', icon: Users, nav: 'support', color: 'bg-emerald-50 text-emerald-600' },
-                          { label: 'Policies & Forms', sub: 'Official documents', icon: FileText, nav: 'documents', color: 'bg-amber-50 text-amber-600' },
-                        ].map(({ label, sub, icon: Icon, nav, color }) => (
-                          <button key={label} onClick={() => setCurrentNav(nav)} className="group flex min-w-0 items-center gap-2.5 px-3 py-3 text-left transition hover:bg-navy-50/70">
-                            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${color}`}><Icon className="h-4 w-4" /></span>
-                            <span className="min-w-0 flex-1"><span className="block truncate text-[12px] font-extrabold text-navy-950">{label}</span><span className="mt-0.5 block text-[7px] leading-snug text-navy-500">{sub}</span></span>
-                            <ArrowUpRight className="h-3 w-3 shrink-0 text-navy-300 transition group-hover:text-blue-600" />
-                          </button>
-                        ))}
-                      </div>
-                    </section>
-                  )}
+        {/* Main Column: Scrollable Dashboard Content + Full-width Intranet Footer at the end */}
+        <div
+          ref={mainScrollRef}
+          className="flex-1 min-h-0 overflow-y-auto scroll-smooth overflow-x-hidden flex flex-col justify-between bg-[#F3F3F8]"
+        >
+          <main className="flex-1 p-3 sm:p-4 lg:p-4 space-y-4 max-w-[1600px] mx-auto w-full overscroll-contain">
+          {currentNav === 'dashboard' && (
+            <>
+              {/* TOP HERO ROW */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5 items-stretch">
+                <div className="lg:col-span-8">
+                  <WelcomeHero user={currentUser} />
+                </div>
+                <div className="lg:col-span-4">
+                  <DateBirthdayCard />
                 </div>
               </div>
 
-              <aside className="space-y-3">
-                <ActivityHub currentRole={currentRole} />
-                <section className="relative overflow-hidden rounded-[14px] border border-[#e5ebf5] bg-white p-3 shadow-[0_3px_12px_rgba(15,35,75,0.03)]">
-                  <CalendarDays aria-hidden="true" className="pointer-events-none absolute -bottom-5 -right-3 h-24 w-24 rotate-[8deg] text-blue-100/80" />
-                  <div className="relative z-10 flex items-center justify-between border-b border-navy-100 pb-2.5">
-                    <h3 className="flex items-center gap-1.5 text-[12px] font-extrabold text-navy-950"><CalendarDays className="h-4 w-4 text-navy-800" />Upcoming Events</h3>
-                    <button onClick={() => setCurrentNav('events')} className="text-[11px] font-bold text-blue-600">View calendar →</button>
-                  </div>
-                  <div className="relative z-10">{mockEvents.slice(0, 2).map((event) => <EventCard key={event.id} event={event} />)}</div>
-                </section>
-              </aside>
+              <MainSection
+                notices={notices}
+                onViewAllNotices={() => handleNavigate('notices')}
+              />
+            </>
+          )}
+
+          {currentNav === 'notices' && (
+            <NoticesPage
+              user={currentUser}
+              onOpenCreateNotice={() => {
+                handleNavigate('admin');
+                setAdminTab('notices');
+                setOpenNoticeCreateModal(true);
+              }}
+              onBack={() => handleNavigate('dashboard')}
+            />
+          )}
+
+          {currentNav === 'notifications' && (
+            <NotificationsPage
+              notifications={notifications}
+              onMarkAllRead={() => setNotifications((items) => items.map((item) => ({ ...item, isRead: true })))}
+              onBack={() => handleNavigate('dashboard')}
+            />
+          )}
+
+          {currentNav === 'profile' && (
+            <ProfilePage
+              user={currentUser}
+              currentRole={currentRole}
+              onBack={() => handleNavigate('dashboard')}
+            />
+          )}
+
+          {currentNav === 'privacy' && (
+            <PrivacyPolicyPage
+              onBack={() => handleNavigate('dashboard')}
+            />
+          )}
+
+          {currentNav === 'terms' && (
+            <TermsConditionsPage
+              onBack={() => handleNavigate('dashboard')}
+            />
+          )}
+
+          {currentNav === 'applications' && (
+            <ApplicationsPage
+              applications={applications}
+              onOpenApp={openApplication}
+              onToggleFavorite={() => {}}
+              onBack={() => handleNavigate('dashboard')}
+            />
+          )}
+
+          {currentNav === 'documents' && (
+            <PoliciesPage
+              user={currentUser}
+              onOpenCreatePolicy={() => {
+                handleNavigate('admin');
+                setAdminTab('policies');
+                setOpenPolicyCreateModal(true);
+              }}
+              onBack={() => handleNavigate('dashboard')}
+            />
+          )}
+
+          {currentNav === 'audit' && (currentUser.isSuperAdmin || currentUser.role === 'admin' || currentUser.permissions?.canManageAudit) && (
+            <AuditPage />
+          )}
+
+          {currentNav === 'support' && (
+            <HelpContactPage
+              user={currentUser}
+              onBack={() => handleNavigate('dashboard')}
+            />
+          )}
+
+          {['academics', 'events', 'settings'].includes(currentNav) && (
+            <div className="rounded-2xl border border-slate-200/80 bg-white p-8 text-center shadow-xs max-w-xl mx-auto my-12">
+              <h2 className="text-xl font-bold capitalize text-[#393678] font-serif-custom">{currentNav}</h2>
+              <p className="mx-auto mt-2 max-w-md text-xs text-slate-500">This area is ready to connect to its university service.</p>
+              <button
+                onClick={() => handleNavigate('dashboard')}
+                className="mt-5 rounded-xl bg-[#0A1328] hover:bg-[#152347] px-4 py-2 text-xs font-bold text-white transition-all cursor-pointer"
+              >
+                Return to dashboard
+              </button>
             </div>
+          )}
+        </main>
 
-            <section className="overflow-hidden rounded-[14px] border border-[#e5ebf5] bg-white shadow-[0_3px_12px_rgba(15,35,75,0.03)]">
-              <div className="grid grid-cols-2 divide-x divide-y divide-navy-100 sm:grid-cols-[150px_repeat(4,minmax(0,1fr))] sm:divide-y-0">
-                <div className="col-span-2 flex items-center px-4 py-3 sm:col-span-1">
-                  <div><p className="text-[12px] font-bold uppercase tracking-[0.14em] text-blue-600">Shortcuts</p><h3 className="mt-0.5 text-[12px] font-extrabold text-navy-950">Quick Access</h3></div>
-                </div>
-                {quickAccessItems.map(({ label, sub, icon: Icon, nav, color }) => (
-                  <button key={label} onClick={() => setCurrentNav(nav)} className="group flex min-h-[68px] items-center gap-3 px-4 py-3 text-left transition hover:bg-navy-50">
-                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${color}`}><Icon className="h-4 w-4" /></span>
-                    <span className="min-w-0 flex-1"><span className="block text-[12px] font-extrabold text-navy-950">{label}</span><span className="mt-0.5 block text-[12px] text-navy-500">{sub}</span></span>
-                    <ArrowRight className="h-3 w-3 shrink-0 text-navy-300 transition group-hover:translate-x-0.5 group-hover:text-blue-600" />
-                  </button>
-                ))}
-              </div>
-            </section>
-          </div>
-        )}
-
-        {currentNav === 'applications' && <ApplicationsPage applications={applications} onOpenApp={openApplication} onToggleFavorite={() => {}} />}
-        {currentNav === 'audit' && currentRole === 'admin' && <AuditPage />}
-        {currentNav === 'profile' && <ProfilePage user={currentUser} currentRole={currentRole} />}
-        {['academics', 'events', 'notifications', 'documents', 'settings', 'support'].includes(currentNav) && (
-          <div className="rounded-[18px] border border-navy-100 bg-white p-8 text-center shadow-sm">
-            <h2 className="text-xl font-black capitalize text-navy-950">{currentNav}</h2>
-            <p className="mx-auto mt-2 max-w-md text-xs text-navy-500">This area is ready to connect to its university service.</p>
-            <button onClick={() => setCurrentNav('dashboard')} className="mt-5 rounded-lg bg-navy-800 px-4 py-2 text-xs font-bold text-white">Return to dashboard</button>
-          </div>
-        )}
-      </main>
+        {/* Full-width Intranet Footer seamlessly joined to the sidebar */}
+        <IntranetFooter onNavigate={handleNavigate} />
+      </div>
+      </div>
     </div>
   );
 };

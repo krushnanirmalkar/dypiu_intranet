@@ -1,7 +1,9 @@
 require("dotenv").config();
 
 const applications = require("./applications");
-const { requireAuth, requireRole } = require("./middleware/auth");
+const { requireAuth, requireRole, requireSuperAdmin, requireServicePermission } = require("./middleware/auth");
+const store = require("./data/store");
+const db = require("./db");
 
 const express = require("express");
 const session = require("express-session");
@@ -23,8 +25,36 @@ const {
 
 const app = express();
 app.disable("x-powered-by");
+app.use(express.json({ limit: "10mb" }));
+
+function isValidSafeUrl(urlStr) {
+  if (typeof urlStr !== "string" || !urlStr.trim()) return false;
+  const trimmed = urlStr.trim().toLowerCase();
+  if (
+    trimmed.startsWith("javascript:") ||
+    trimmed.startsWith("vbscript:")
+  ) {
+    return false;
+  }
+  if (trimmed.startsWith("data:")) {
+    return (
+      trimmed.startsWith("data:application/pdf") ||
+      trimmed.startsWith("data:application/msword") ||
+      trimmed.startsWith("data:application/vnd.") ||
+      trimmed.startsWith("data:image/") ||
+      trimmed.startsWith("data:text/")
+    );
+  }
+  try {
+    const parsed = new URL(urlStr);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return urlStr.startsWith("/") && !urlStr.startsWith("//");
+  }
+}
 
 const PORT = Number(process.env.PORT || 3001);
+
 const ABSOLUTE_SESSION_MAX_AGE = 5 * 60 * 60 * 1000;
 
 // -------------------------
@@ -73,7 +103,7 @@ function normalizeProfilePicture(value) {
 
   try {
     const pictureUrl = new URL(value);
-    return pictureUrl.protocol === "https:" ? pictureUrl.href : null;
+    if (pictureUrl.protocol !== "https:") return null; let href = pictureUrl.href; if (pictureUrl.hostname.includes("googleusercontent.com")) { href = href.includes("=") ? href.replace(/=.*$/, "=s1000-c") : (href + "=s1000-c"); } return href;
   } catch {
     return null;
   }
@@ -302,7 +332,8 @@ app.get("/auth/callback", async (req, res) => {
     const allowedRoles = [
       "student",
       "staff",
-      "admin"
+      "admin",
+      "super_admin"
     ];
 
     const roles = Array.isArray(
@@ -312,6 +343,26 @@ app.get("/auth/callback", async (req, res) => {
           allowedRoles.includes(role)
         )
       : [];
+
+      let userinfoPicture = null;
+    if (!payload.picture && !accessPayload.picture && tokens.access_token) {
+      try {
+        const userinfoResponse = await fetch(
+          `${ISSUER}/protocol/openid-connect/userinfo`,
+          {
+            headers: {
+              Authorization: `Bearer ${tokens.access_token}`
+            }
+          }
+        );
+        if (userinfoResponse.ok) {
+          const userinfo = await userinfoResponse.json();
+          userinfoPicture = userinfo?.picture || null;
+        }
+      } catch {
+        // Fallback gracefully if userinfo is unreachable
+      }
+    }
 
     // -------------------------
     // Create Authenticated Session
@@ -328,7 +379,7 @@ app.get("/auth/callback", async (req, res) => {
         name: payload.name,
         email: payload.email,
         picture: normalizeProfilePicture(
-          payload.picture || accessPayload.picture
+          payload.picture || accessPayload.picture || userinfoPicture
         ),
         roles
       };
@@ -381,14 +432,23 @@ app.get("/auth/callback", async (req, res) => {
 
 
 // -------------------------
+// -------------------------
 // Current User
 // -------------------------
 
-app.get("/api/me", requireAuth, (req, res) => {
+app.get("/api/me", requireAuth, async (req, res) => {
+  const userRoles = Array.isArray(req.session.user?.roles) ? req.session.user.roles : [];
+  const permissions = await store.evaluateUserAccess(req.session.user?.email, userRoles);
+  const isSuperAdmin = userRoles.includes("super_admin") || userRoles.includes("admin");
+  const hasAdminPortalAccess = isSuperAdmin || (permissions.allowedServices && permissions.allowedServices.length > 0);
+
   res.json({
     authenticated: true,
     user: {
       ...req.session.user,
+      isSuperAdmin,
+      hasAdminPortalAccess,
+      permissions,
       picture: "/api/me/photo"
     }
   });
@@ -396,92 +456,91 @@ app.get("/api/me", requireAuth, (req, res) => {
 
 
 app.get("/api/me/photo", requireAuth, async (req, res) => {
-  if (!DIRECTORY_ROLE_SERVICE_URL || !DIRECTORY_LOOKUP_TOKEN) {
-    return res.status(503).json({
-      error: "Directory photo service is not configured."
-    });
-  }
-
-  try {
-    const photoResponse = await fetch(
-      `${DIRECTORY_ROLE_SERVICE_URL.replace(/\/$/, "")}/photo`,
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${DIRECTORY_LOOKUP_TOKEN}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          email: req.session.user.email
-        })
-      }
-    );
-
-    if (photoResponse.status === 404) {
-      return res.status(404).json({
-        error: "Profile photo not found."
+  // Helper: fetch a remote image URL and pipe the bytes back to the browser.
+  // This avoids cross-origin / referrer-policy redirect failures that occur
+  // when the browser follows a redirect to lh3.googleusercontent.com with
+  // referrerPolicy="no-referrer".
+  const proxyRemoteImage = async (imageUrl) => {
+    try {
+      const upstream = await fetch(imageUrl, {
+        headers: { "User-Agent": "DYPIU-Intranet-PhotoProxy/1.0" }
       });
-    }
+      if (!upstream.ok) return false;
 
-    if (!photoResponse.ok) {
-      console.error(
-        "Directory photo service rejected request:",
-        photoResponse.status
+      const contentType = upstream.headers.get("content-type") || "image/jpeg";
+      if (!contentType.startsWith("image/")) return false;
+
+      const photo = Buffer.from(await upstream.arrayBuffer());
+      if (photo.length === 0 || photo.length > 4 * 1024 * 1024) return false;
+
+      res.set({
+        "Content-Type": contentType,
+        "Cache-Control": "no-cache, must-revalidate",
+        "Content-Length": String(photo.length)
+      });
+      res.send(photo);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  // 1. Try the directory service first (if configured)
+  if (DIRECTORY_ROLE_SERVICE_URL && DIRECTORY_LOOKUP_TOKEN) {
+    try {
+      const photoResponse = await fetch(
+        `${DIRECTORY_ROLE_SERVICE_URL.replace(/\/$/, "")}/photo`,
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${DIRECTORY_LOOKUP_TOKEN}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ email: req.session.user.email })
+        }
       );
 
-      return res.status(502).json({
-        error: "Profile photo is temporarily unavailable."
-      });
+      if (photoResponse.ok) {
+        const photo = Buffer.from(await photoResponse.arrayBuffer());
+        if (photo.length > 0 && photo.length <= 2 * 1024 * 1024) {
+          res.set({
+            "Content-Type":
+              photoResponse.headers.get("content-type") || "image/jpeg",
+            "Cache-Control": "no-cache, must-revalidate",
+            "Content-Length": String(photo.length)
+          });
+          return res.send(photo);
+        }
+      }
+    } catch (err) {
+      console.error("Directory photo request failed:", err.message);
     }
-
-    const photo = Buffer.from(
-      await photoResponse.arrayBuffer()
-    );
-
-    if (photo.length === 0 || photo.length > 2 * 1024 * 1024) {
-      return res.status(502).json({
-        error: "Invalid profile photo response."
-      });
-    }
-
-    res.set({
-      "Content-Type":
-        photoResponse.headers.get("content-type") ||
-        "image/jpeg",
-      "Cache-Control": "private, max-age=3600",
-      "Content-Length": String(photo.length)
-    });
-
-    return res.send(photo);
-
-  } catch (err) {
-    console.error(
-      "Directory photo request failed:",
-      err.message
-    );
-
-    return res.status(502).json({
-      error: "Profile photo is temporarily unavailable."
-    });
   }
+
+  // 2. Fall back to the Google profile picture stored in session — proxy it
+  //    through the server so the browser never has to follow a cross-origin
+  //    redirect (which fails with referrerPolicy="no-referrer").
+  if (req.session.user?.picture) {
+    let photoUrl = req.session.user.picture; if (photoUrl.includes("googleusercontent.com")) { photoUrl = photoUrl.includes("=") ? photoUrl.replace(/=.*$/, "=s1000-c") : (photoUrl + "=s1000-c"); } const proxied = await proxyRemoteImage(photoUrl);
+    if (proxied) return;
+  }
+
+  // 3. Nothing worked
+  return res.status(404).json({ error: "Profile photo not found." });
 });
 
 
 // -------------------------
-// Applications
+// User-Facing Applications, Notices, Policies
 // -------------------------
 
-app.get("/api/applications", requireAuth, (req, res) => {
+app.get("/api/applications", requireAuth, async (req, res) => {
   const userRoles = req.session.user.roles || [];
+  const allApps = await store.getApplications(false); // only enabled
 
-  const visibleApplications = applications.filter((app) => {
-    if (!app.enabled) {
-      return false;
-    }
-
-    return app.roles.some((role) =>
-      userRoles.includes(role)
-    );
+  const visibleApplications = allApps.filter((appItem) => {
+    const appRoles = Array.isArray(appItem.roles) ? appItem.roles : [];
+    return appRoles.some((role) => userRoles.includes(role));
   });
 
   res.json({
@@ -489,76 +548,473 @@ app.get("/api/applications", requireAuth, (req, res) => {
   });
 });
 
+app.get("/api/notices", requireAuth, async (req, res) => {
+  const userRoles = req.session.user.roles || [];
+  const primaryRole = userRoles.includes("staff") ? "Staff" : "Students";
+
+  const allNotices = await store.getNotices({ status: "published", checkExpiry: true });
+  const notices = allNotices.filter((notice) => {
+    if (notice.audience === "All") return true;
+    if (notice.audience === primaryRole) return true;
+    if (userRoles.includes("admin") || userRoles.includes("super_admin")) return true;
+    return false;
+  });
+
+  res.json({ notices });
+});
+
+app.get("/api/policies", requireAuth, async (req, res) => {
+  const policies = await store.getPolicies({ status: "published" });
+  res.json({ policies });
+});
+
+app.get("/api/notifications", requireAuth, async (req, res) => {
+  const userRoles = req.session.user?.roles || [];
+  const notifications = await store.getNotifications(userRoles);
+  res.json({ notifications });
+});
+
 
 // -------------------------
-// Administration - Audit
+// SUPER ADMIN PORTAL APIs
+// All routes under /api/admin/* requireSuperAdmin
 // -------------------------
 
-app.get("/api/admin/audit", requireRole("admin"), (req, res) => {
-  execFile(
-    "/usr/bin/journalctl",
-    [
-      "-u",
-      "dypiu-intranet-backend.service",
-      "--since",
-      "24 hours ago",
-      "--no-pager",
-      "-o",
-      "cat"
-    ],
-    {
-      encoding: "utf8",
-      maxBuffer: 1024 * 1024
+// Dashboard Summary
+app.get("/api/admin/dashboard", requireAuth, async (req, res) => {
+  const user = req.session.user;
+  const userRoles = Array.isArray(user.roles) ? user.roles : [];
+  const isSuperAdmin = userRoles.includes("super_admin") || userRoles.includes("admin");
+  const permissions = await store.evaluateUserAccess(user.email, userRoles);
+
+  if (!isSuperAdmin && (!permissions.allowedServices || permissions.allowedServices.length === 0)) {
+    return res.status(403).json({ authenticated: true, message: "Forbidden. Admin portal access required." });
+  }
+
+  const allNotices = await store.getNotices();
+  const allApps = await store.getApplications(true);
+  const allPolicies = await store.getPolicies();
+  const auditLogs = await store.getAuditLogs();
+
+  const activeNotices = allNotices.filter((n) => n.status === "published").length;
+  const publishedApplications = allApps.filter((a) => a.enabled !== false).length;
+  const activePolicies = allPolicies.filter((p) => p.status === "published").length;
+  const recentActions = auditLogs.length;
+
+  res.json({
+    stats: {
+      activeNotices,
+      publishedApplications,
+      activePolicies,
+      recentActions
     },
-    (err, stdout) => {
-      if (err) {
-        console.error("Failed to read security audit journal:", err.message);
-        return res.status(500).json({
-          message: "Unable to retrieve audit events."
-        });
-      }
+    recentNotices: allNotices.slice(0, 5),
+    recentAuditLogs: auditLogs.slice(0, 5)
+  });
+});
 
-      const events = stdout
-        .split("\n")
-        .filter(Boolean)
-        .map((line) => {
-          try {
-            return JSON.parse(line);
-          } catch {
-            return null;
-          }
-        })
-        .filter((entry) =>
-          entry &&
-          entry.type === "security_audit"
-        )
-        .map((entry) => ({
-          timestamp: entry.timestamp || null,
-          user: entry.email || null,
-          application: "dypiu-intranet",
-          action: entry.event || null,
-          result:
-            entry.event === "login_rejected" ||
-            entry.event === "authorization_denied" ||
-            entry.event === "token_validation_failure"
-              ? "failure"
-              : "success",
-          metadata: {
-            ip: entry.ip || null,
-            method: entry.method || null,
-            path: entry.path || null,
-            reason: entry.reason || null,
-            userRoles: entry.userRoles || null,
-            requiredRoles: entry.requiredRoles || null
-          }
-        }))
-        .reverse();
 
-      res.json({
-        events
-      });
-    }
+// Notice Management
+app.get("/api/admin/notices", requireServicePermission("notices", "read"), async (req, res) => {
+  const { category, audience, status } = req.query;
+  const notices = await store.getNotices({ category, audience, status });
+  res.json({ notices });
+});
+
+app.post("/api/admin/notices", requireServicePermission("notices", "write"), async (req, res) => {
+  const { title, content, category, audience, priority, status, publishAt, expiresAt, attachmentUrl, attachmentName, attachmentSize } = req.body || {};
+
+  if (typeof title !== "string" || !title.trim() || title.trim().length > 300) {
+    return res.status(400).json({ error: "Notice title is required and must be under 300 characters." });
+  }
+
+  if (typeof content !== "string" || !content.trim() || content.trim().length > 10000) {
+    return res.status(400).json({ error: "Notice content is required and must be under 10000 characters." });
+  }
+
+  if (attachmentUrl && !isValidSafeUrl(attachmentUrl)) {
+    return res.status(400).json({ error: "Invalid or unsafe attachment URL." });
+  }
+
+  const validCategories = ["Academic", "Administrative", "Campus", "Urgent"];
+  const validAudiences = ["All", "Students", "Staff"];
+  const validPriorities = ["Low", "Medium", "High", "Urgent"];
+  const validStatuses = ["draft", "published", "archived"];
+
+  const newNotice = await store.createNotice(
+    {
+      title: title.trim(),
+      content: content.trim(),
+      category: validCategories.includes(category) ? category : "Academic",
+      audience: validAudiences.includes(audience) ? audience : "All",
+      priority: validPriorities.includes(priority) ? priority : "Medium",
+      status: validStatuses.includes(status) ? status : "published",
+      author: req.session.user.name || "University Administration",
+      publishAt: publishAt || new Date().toISOString(),
+      expiresAt: expiresAt || null,
+      attachmentUrl: typeof attachmentUrl === "string" ? attachmentUrl.trim() : null,
+      attachmentName: typeof attachmentName === "string" ? attachmentName.trim() : null,
+      attachmentSize: typeof attachmentSize === "string" ? attachmentSize.trim() : null
+    },
+    req
   );
+
+  res.status(201).json({ notice: newNotice });
+});
+
+app.get("/api/admin/notices/:id", requireServicePermission("notices", "read"), async (req, res) => {
+  const notice = await store.getNoticeById(req.params.id);
+  if (!notice) {
+    return res.status(404).json({ error: "Notice not found." });
+  }
+  res.json({ notice });
+});
+
+app.put("/api/admin/notices/:id", requireServicePermission("notices", "write"), async (req, res) => {
+  const existing = await store.getNoticeById(req.params.id);
+  if (!existing) {
+    return res.status(404).json({ error: "Notice not found." });
+  }
+
+  const { title, content, category, audience, priority, status, publishAt, expiresAt, attachmentUrl, attachmentName, attachmentSize } = req.body || {};
+
+  const updates = {};
+  if (title !== undefined) {
+    if (typeof title !== "string" || !title.trim() || title.trim().length > 300) {
+      return res.status(400).json({ error: "Invalid title." });
+    }
+    updates.title = title.trim();
+  }
+
+  if (content !== undefined) {
+    if (typeof content !== "string" || !content.trim() || content.trim().length > 10000) {
+      return res.status(400).json({ error: "Invalid content." });
+    }
+    updates.content = content.trim();
+  }
+
+  if (attachmentUrl !== undefined) {
+    if (attachmentUrl && !isValidSafeUrl(attachmentUrl)) {
+      return res.status(400).json({ error: "Invalid or unsafe attachment URL." });
+    }
+    updates.attachmentUrl = attachmentUrl ? attachmentUrl.trim() : null;
+  }
+
+  if (attachmentName !== undefined) {
+    updates.attachmentName = attachmentName ? attachmentName.trim() : null;
+  }
+
+  if (attachmentSize !== undefined) {
+    updates.attachmentSize = attachmentSize ? attachmentSize.trim() : null;
+  }
+
+  if (category !== undefined) updates.category = category;
+  if (audience !== undefined) updates.audience = audience;
+  if (priority !== undefined) updates.priority = priority;
+  if (status !== undefined) updates.status = status;
+  if (publishAt !== undefined) updates.publishAt = publishAt;
+  if (expiresAt !== undefined) updates.expiresAt = expiresAt;
+
+  const updatedNotice = await store.updateNotice(req.params.id, updates, req);
+  res.json({ notice: updatedNotice });
+});
+
+app.delete("/api/admin/notices/:id", requireServicePermission("notices", "write"), async (req, res) => {
+  const existing = await store.getNoticeById(req.params.id);
+  if (!existing) {
+    return res.status(404).json({ error: "Notice not found." });
+  }
+
+  await store.deleteNotice(req.params.id, req);
+  res.json({ success: true, message: "Notice deleted." });
+});
+
+
+// Application Management
+app.get("/api/admin/applications", requireServicePermission("applications", "read"), async (req, res) => {
+  const applicationsList = await store.getApplications(true);
+  res.json({ applications: applicationsList });
+});
+
+app.post("/api/admin/applications", requireServicePermission("applications", "write"), async (req, res) => {
+  const { name, shortName, description, url, icon, category, roles, enabled, displayOrder, ssoEnabled, highlightColor } = req.body || {};
+
+  if (typeof name !== "string" || !name.trim() || name.trim().length > 100) {
+    return res.status(400).json({ error: "Application name is required." });
+  }
+
+  if (!isValidSafeUrl(url)) {
+    return res.status(400).json({ error: "Invalid or unsafe application URL." });
+  }
+
+  const newApp = await store.createApplication(
+    {
+      name: name.trim(),
+      shortName: typeof shortName === "string" ? shortName.trim() : name.trim(),
+      description: typeof description === "string" ? description.trim() : "",
+      url: url.trim(),
+      icon: typeof icon === "string" ? icon.trim() : "LayoutDashboard",
+      category: typeof category === "string" ? category.trim() : "Productivity",
+      roles: Array.isArray(roles) && roles.length > 0 ? roles : ["student", "staff", "admin"],
+      enabled: enabled !== false,
+      displayOrder: Number(displayOrder) || 1,
+      ssoEnabled: ssoEnabled !== false,
+      highlightColor: typeof highlightColor === "string" ? highlightColor : undefined
+    },
+    req
+  );
+
+  res.status(201).json({ application: newApp });
+});
+
+app.get("/api/admin/applications/:id", requireServicePermission("applications", "read"), async (req, res) => {
+  const appItem = await store.getApplicationById(req.params.id);
+  if (!appItem) {
+    return res.status(404).json({ error: "Application not found." });
+  }
+  res.json({ application: appItem });
+});
+
+app.put("/api/admin/applications/:id", requireServicePermission("applications", "write"), async (req, res) => {
+  const existing = await store.getApplicationById(req.params.id);
+  if (!existing) {
+    return res.status(404).json({ error: "Application not found." });
+  }
+
+  const { name, shortName, description, url, icon, category, roles, enabled, displayOrder, ssoEnabled, highlightColor } = req.body || {};
+
+  const updates = {};
+  if (name !== undefined) {
+    if (typeof name !== "string" || !name.trim() || name.trim().length > 100) {
+      return res.status(400).json({ error: "Invalid name." });
+    }
+    updates.name = name.trim();
+  }
+
+  if (url !== undefined) {
+    if (!isValidSafeUrl(url)) {
+      return res.status(400).json({ error: "Invalid or unsafe URL." });
+    }
+    updates.url = url.trim();
+  }
+
+  if (shortName !== undefined) updates.shortName = shortName;
+  if (description !== undefined) updates.description = description;
+  if (icon !== undefined) updates.icon = icon;
+  if (category !== undefined) updates.category = category;
+  if (roles !== undefined) updates.roles = roles;
+  if (enabled !== undefined) updates.enabled = Boolean(enabled);
+  if (displayOrder !== undefined) updates.displayOrder = Number(displayOrder);
+  if (ssoEnabled !== undefined) updates.ssoEnabled = Boolean(ssoEnabled);
+  if (highlightColor !== undefined) updates.highlightColor = highlightColor;
+
+  const updatedApp = await store.updateApplication(req.params.id, updates, req);
+  res.json({ application: updatedApp });
+});
+
+app.delete("/api/admin/applications/:id", requireServicePermission("applications", "write"), async (req, res) => {
+  const existing = await store.getApplicationById(req.params.id);
+  if (!existing) {
+    return res.status(404).json({ error: "Application not found." });
+  }
+
+  await store.deleteApplication(req.params.id, req);
+  res.json({ success: true, message: "Application deleted." });
+});
+
+
+// Policy Management
+app.get("/api/admin/policies", requireServicePermission("policies", "read"), async (req, res) => {
+  const { category, status } = req.query;
+  const policies = await store.getPolicies({ category, status });
+  res.json({ policies });
+});
+
+app.post("/api/admin/policies", requireServicePermission("policies", "write"), async (req, res) => {
+  const { title, category, summary, content, version, status, effectiveDate } = req.body || {};
+
+  if (typeof title !== "string" || !title.trim() || title.trim().length > 200) {
+    return res.status(400).json({ error: "Policy title is required." });
+  }
+
+  const newPolicy = await store.createPolicy(
+    {
+      title: title.trim(),
+      category: typeof category === "string" ? category.trim() : "Administrative",
+      summary: typeof summary === "string" ? summary.trim() : "",
+      content: typeof content === "string" ? content.trim() : "",
+      version: typeof version === "string" ? version.trim() : "1.0",
+      status: typeof status === "string" ? status.trim() : "published",
+      effectiveDate: effectiveDate || new Date().toISOString().split("T")[0]
+    },
+    req
+  );
+
+  res.status(201).json({ policy: newPolicy });
+});
+
+app.get("/api/admin/policies/:id", requireServicePermission("policies", "read"), async (req, res) => {
+  const policy = await store.getPolicyById(req.params.id);
+  if (!policy) {
+    return res.status(404).json({ error: "Policy not found." });
+  }
+  res.json({ policy });
+});
+
+app.put("/api/admin/policies/:id", requireServicePermission("policies", "write"), async (req, res) => {
+  const existing = await store.getPolicyById(req.params.id);
+  if (!existing) {
+    return res.status(404).json({ error: "Policy not found." });
+  }
+
+  const { title, category, summary, content, version, status, effectiveDate } = req.body || {};
+
+  const updates = {};
+  if (title !== undefined) {
+    if (typeof title !== "string" || !title.trim() || title.trim().length > 200) {
+      return res.status(400).json({ error: "Invalid title." });
+    }
+    updates.title = title.trim();
+  }
+
+  if (category !== undefined) updates.category = category;
+  if (summary !== undefined) updates.summary = summary;
+  if (content !== undefined) updates.content = content;
+  if (version !== undefined) updates.version = version;
+  if (status !== undefined) updates.status = status;
+  if (effectiveDate !== undefined) updates.effectiveDate = effectiveDate;
+
+  const updatedPolicy = await store.updatePolicy(req.params.id, updates, req);
+  res.json({ policy: updatedPolicy });
+});
+
+app.delete("/api/admin/policies/:id", requireServicePermission("policies", "write"), async (req, res) => {
+  const existing = await store.getPolicyById(req.params.id);
+  if (!existing) {
+    return res.status(404).json({ error: "Policy not found." });
+  }
+
+  await store.deletePolicy(req.params.id, req);
+  res.json({ success: true, message: "Policy deleted/archived." });
+});
+
+
+// Audit Log Management
+app.get("/api/admin/audit", requireServicePermission("audit", "read"), async (req, res) => {
+  const { action, resourceType, search } = req.query;
+  let events = await store.getAuditLogs();
+
+  if (action) {
+    events = events.filter((e) => e.action === action);
+  }
+
+  if (resourceType) {
+    events = events.filter((e) => e.resourceType === resourceType);
+  }
+
+  if (search && typeof search === "string") {
+    const q = search.toLowerCase();
+    events = events.filter(
+      (e) =>
+        (e.summary && e.summary.toLowerCase().includes(q)) ||
+        (e.actorEmail && e.actorEmail.toLowerCase().includes(q)) ||
+        (e.action && e.action.toLowerCase().includes(q))
+    );
+  }
+
+  res.json({ events });
+});
+
+// Notifications Management
+app.get("/api/admin/notifications", requireServicePermission("notifications", "read"), async (req, res) => {
+  const notifications = await store.getNotifications();
+  res.json({ notifications });
+});
+
+app.post("/api/admin/notifications", requireServicePermission("notifications", "write"), async (req, res) => {
+  const { title, message, type, targetAudience, linkUrl } = req.body || {};
+
+  if (typeof title !== "string" || !title.trim() || title.trim().length > 300) {
+    return res.status(400).json({ error: "Notification title is required and must be under 300 characters." });
+  }
+
+  if (typeof message !== "string" || !message.trim() || message.trim().length > 5000) {
+    return res.status(400).json({ error: "Notification message is required and must be under 5000 characters." });
+  }
+
+  if (linkUrl && !isValidSafeUrl(linkUrl)) {
+    return res.status(400).json({ error: "Invalid or unsafe link URL." });
+  }
+
+  const notification = await store.createNotification(
+    {
+      title: title.trim(),
+      message: message.trim(),
+      type: typeof type === "string" ? type : "info",
+      targetAudience: typeof targetAudience === "string" ? targetAudience : "All",
+      linkUrl: typeof linkUrl === "string" ? linkUrl.trim() : null
+    },
+    req
+  );
+
+  res.status(201).json({ notification });
+});
+
+app.delete("/api/admin/notifications/:id", requireServicePermission("notifications", "write"), async (req, res) => {
+  await store.deleteNotification(req.params.id, req);
+  res.json({ success: true, message: "Notification deleted." });
+});
+
+// -------------------------
+// Access Control / User Permission Endpoints
+// -------------------------
+
+app.get("/api/admin/access-rules", requireServicePermission("access", "read"), async (req, res) => {
+  const { targetType, status, search } = req.query;
+  const rules = await store.getAccessRules({ targetType, status, search });
+  res.json({ rules });
+});
+
+app.post("/api/admin/access-rules", requireServicePermission("access", "write"), async (req, res) => {
+  const { name, targetType, targetValue, services, accessLevel, status } = req.body;
+  if (!name || typeof name !== "string" || !name.trim()) {
+    return res.status(400).json({ message: "Rule name is required." });
+  }
+  if (!targetValue || typeof targetValue !== "string" || !targetValue.trim()) {
+    return res.status(400).json({ message: "Target role or email address is required." });
+  }
+
+  const rule = await store.createAccessRule(
+    { name, targetType, targetValue, services, accessLevel, status },
+    req
+  );
+  res.status(201).json({ rule });
+});
+
+app.put("/api/admin/access-rules/:id", requireServicePermission("access", "write"), async (req, res) => {
+  const { id } = req.params;
+  const existing = await store.getAccessRuleById(id);
+  if (!existing) {
+    return res.status(404).json({ message: "Access rule not found." });
+  }
+
+  const updated = await store.updateAccessRule(id, req.body, req);
+  res.json({ rule: updated });
+});
+
+app.delete("/api/admin/access-rules/:id", requireServicePermission("access", "write"), async (req, res) => {
+  const { id } = req.params;
+  const deleted = await store.deleteAccessRule(id, req);
+  if (!deleted) {
+    return res.status(404).json({ message: "Access rule not found." });
+  }
+  res.json({ success: true, id });
+});
+
+app.get("/api/me/permissions", requireAuth, async (req, res) => {
+  const user = req.session.user;
+  const evalResult = await store.evaluateUserAccess(user.email, user.roles || []);
+  res.json(evalResult);
 });
 
 
@@ -619,6 +1075,7 @@ app.get("/health", (req, res) => {
 
 async function startServer() {
   try {
+    await store.initStore();
     await redisClient.connect();
 
     console.log("Connected to Redis session store.");

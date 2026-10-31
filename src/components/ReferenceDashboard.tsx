@@ -1,9 +1,37 @@
 import React, { useEffect, useRef, useState } from 'react';
 import imgLogo from "../assets/dashboard/logo.png";
-import { Bell, AlertCircle, ChevronRight, BookOpen, GraduationCap, FileText, Laptop, Bookmark, Users, CheckCircle2, Briefcase, Award, HelpCircle, Clock, MapPin, Send, Sparkles, Search, X, Cake, Gift, User, Settings, LogOut } from 'lucide-react';
-import type { ApplicationItem, UserProfile } from '../types';
+import { Bell, AlertCircle, ChevronRight, BookOpen, GraduationCap, FileText, Laptop, Bookmark, Users, CheckCircle2, Briefcase, Award, HelpCircle, Clock, MapPin, Send, Sparkles, Search, X, Cake, Gift, User, Settings, LogOut, Paperclip, ExternalLink, ShieldCheck, Key } from 'lucide-react';
+import type { ApplicationItem, NotificationItem, UserProfile } from '../types';
 import { NotificationPanel } from './NotificationPanel';
-import { mockNotifications } from '../data/mockData';
+import { adminApi } from '../admin/services/adminApi';
+
+interface DashboardNoticeItem {
+  id: string | number;
+  tag: string;
+  title: string;
+  time: string;
+  isNew: boolean;
+  issuedBy: string;
+  description: string;
+  details?: string[];
+  attachmentUrl?: string | null;
+  attachmentName?: string | null;
+  attachmentSize?: string | null;
+}
+
+interface DashboardPolicyItem {
+  id: string | number;
+  title: string;
+  category: string;
+  summary: string;
+  content: string;
+  version: string;
+  effectiveDate?: string;
+  attachmentUrl?: string | null;
+  attachmentName?: string | null;
+  attachmentSize?: string | null;
+}
+
 
 const APPLICATIONS = [
   { id: 'udms', name: 'UDMS', fullName: 'University Data Management', desc: 'Faculty profiles & reports', category: 'Academic', icon: GraduationCap, badge: 'v2.4' },
@@ -245,6 +273,8 @@ interface DashboardProps {
   loading: boolean;
   onNavigate: (page: string) => void;
   onOpenApp: (app: ApplicationItem) => void;
+  notifications: NotificationItem[];
+  onMarkAllNotificationsRead: () => void;
 }
 
 type WorkspaceApp = ApplicationItem & {
@@ -262,7 +292,15 @@ const toApplicationCategory = (category: string): ApplicationItem['category'] =>
   return 'Academic';
 };
 
-export default function ReferenceDashboard({ user, applications, loading, onNavigate, onOpenApp }: DashboardProps) {
+export default function ReferenceDashboard({
+  user,
+  applications,
+  loading,
+  onNavigate,
+  onOpenApp,
+  notifications,
+  onMarkAllNotificationsRead,
+}: DashboardProps) {
   const [isGrievanceOpen, setIsGrievanceOpen] = useState(false);
   const [grievanceText, setGrievanceText] = useState(() => {
     try { return localStorage.getItem(`dypiu-grievance-draft:${user.id}`) ?? ''; }
@@ -272,13 +310,72 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
   const [grievanceSubmitted, setGrievanceSubmitted] = useState(false);
   const [isCommunicationOpen, setIsCommunicationOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
-  const [selectedNotice, setSelectedNotice] = useState<typeof NOTICES[number] | null>(null);
+  const [noticeList, setNoticeList] = useState<DashboardNoticeItem[]>(NOTICES);
+  const [selectedNotice, setSelectedNotice] = useState<DashboardNoticeItem | null>(null);
+  const [policyList, setPolicyList] = useState<DashboardPolicyItem[]>([]);
+  const [selectedPolicy, setSelectedPolicy] = useState<DashboardPolicyItem | null>(null);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [failedProfilePhoto, setFailedProfilePhoto] = useState<string | null>(null);
   const [directorySearch, setDirectorySearch] = useState('');
-  const [notifications, setNotifications] = useState(mockNotifications);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const fetchPublishedData = async () => {
+      try {
+        const fetchedNotices = await adminApi.fetchNotices({ status: 'published' });
+        if (Array.isArray(fetchedNotices) && fetchedNotices.length > 0) {
+          const mapped: DashboardNoticeItem[] = fetchedNotices.map((n) => {
+            const publishedDate = new Date(n.publishAt || n.createdAt);
+            const diffMs = Date.now() - publishedDate.getTime();
+            let timeStr = 'Recently';
+            if (diffMs < 3600000) timeStr = `${Math.max(1, Math.floor(diffMs / 60000))}m ago`;
+            else if (diffMs < 86400000) timeStr = `${Math.floor(diffMs / 3600000)}h ago`;
+            else timeStr = `${Math.floor(diffMs / 86400000)}d ago`;
+
+            return {
+              id: n.id,
+              tag: n.category,
+              title: n.title,
+              time: timeStr,
+              isNew: diffMs < 86400000 * 2,
+              issuedBy: n.author || 'University Administration',
+              description: n.content,
+              details: [],
+              attachmentUrl: n.attachmentUrl,
+              attachmentName: n.attachmentName,
+              attachmentSize: n.attachmentSize,
+            };
+          });
+          setNoticeList(mapped);
+        }
+      } catch {
+        // Fallback to static NOTICES if fetch fails
+      }
+
+      try {
+        const fetchedPolicies = await adminApi.fetchPublishedPolicies();
+        if (Array.isArray(fetchedPolicies) && fetchedPolicies.length > 0) {
+          const mapped: DashboardPolicyItem[] = fetchedPolicies.map((p) => ({
+            id: p.id,
+            title: p.title,
+            category: p.category,
+            summary: p.summary || p.category,
+            content: p.content,
+            version: p.version || '1.0',
+            effectiveDate: p.effectiveDate,
+            attachmentUrl: p.attachmentUrl,
+            attachmentName: p.attachmentName,
+            attachmentSize: p.attachmentSize,
+          }));
+          setPolicyList(mapped);
+        }
+      } catch {
+        // Keep policy list empty if the authenticated API request fails.
+      }
+    };
+    void fetchPublishedData();
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -348,6 +445,10 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
   const filteredDirectory = DIRECTORY.filter((person) =>
     `${person.name} ${person.role}`.toLowerCase().includes(directorySearch.trim().toLowerCase())
   );
+
+  const unreadNotifCount = notifications.filter(
+    (n) => n.targetRoles.includes(user.role) && !n.isRead,
+  ).length;
 
   const handleRaiseGrievance = (e: React.FormEvent) => {
     e.preventDefault();
@@ -467,14 +568,16 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
               className="relative p-2 text-slate-500 hover:text-slate-800 transition-colors rounded-full hover:bg-slate-100"
             >
               <Bell className="size-4" />
-              <span className="absolute top-1.5 right-1.5 size-2 bg-[#ec510d] rounded-full"></span>
+              {unreadNotifCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 size-2 bg-[#ec510d] rounded-full"></span>
+              )}
             </button>
             {isNotifOpen && (
               <div className="absolute right-0 mt-2 w-[min(24rem,calc(100vw-2rem))] rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl z-50">
                 <NotificationPanel
                   notifications={notifications}
                   currentRole={user.role}
-                  onMarkAllRead={() => setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })))}
+                  onMarkAllRead={onMarkAllNotificationsRead}
                   onViewAll={() => {
                     setIsNotifOpen(false);
                     onNavigate('notifications');
@@ -521,10 +624,30 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
             {isProfileMenuOpen && (
               <div className="absolute right-0 top-[calc(100%+8px)] w-[min(340px,calc(100vw-32px))] overflow-hidden rounded-b-2xl rounded-t-sm border border-slate-200 bg-white shadow-[0_18px_48px_rgb(12,30,56,0.16)]">
                 <div className="px-5 py-4 bg-white">
-                  <p className="text-base font-extrabold leading-tight text-[#02022D]">{userName}</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-base font-extrabold leading-tight text-[#02022D]">{userName}</p>
+                    <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">{user.roleTitle || 'Student'}</span>
+                  </div>
                   <p className="mt-1 truncate text-sm font-medium text-blue-600">{user.email}</p>
                 </div>
                 <div className="border-t border-slate-200">
+                  {user.isSuperAdmin || user.role === 'admin' ? (
+                    <button
+                      onClick={() => { onNavigate('admin'); setIsProfileMenuOpen(false); }}
+                      className="flex w-full items-center gap-4 px-5 py-3.5 text-left text-base font-semibold text-blue-700 bg-blue-50/60 hover:bg-blue-100/70 transition-colors"
+                    >
+                      <ShieldCheck className="size-5 text-blue-600" />
+                      <span>Admin Portal</span>
+                    </button>
+                  ) : (user.hasAdminPortalAccess || Boolean(user.permissions?.allowedServices?.length)) ? (
+                    <button
+                      onClick={() => { onNavigate('admin'); setIsProfileMenuOpen(false); }}
+                      className="flex w-full items-center gap-4 px-5 py-3.5 text-left text-base font-semibold text-amber-700 bg-amber-50/60 hover:bg-amber-100/70 transition-colors"
+                    >
+                      <Key className="size-5 text-amber-600" />
+                      <span>Service Portal</span>
+                    </button>
+                  ) : null}
                   <button
                     onClick={() => { onNavigate('profile'); setIsProfileMenuOpen(false); }}
                     className="flex w-full items-center gap-4 px-5 py-3.5 text-left text-base font-semibold text-[#02022D] hover:bg-slate-50 transition-colors"
@@ -695,29 +818,29 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
                     </span>
                     <h3 className="text-sm sm:text-base font-serif font-bold text-[#0c1e38] tracking-tight">University Policy</h3>
                   </div>
-                  <a href="#policies" onClick={(event) => event.preventDefault()} className="text-xs font-bold text-[#ec510d] hover:text-[#c8430b] flex items-center gap-0.5">View All <ChevronRight className="size-3.5" /></a>
+                  <a href="#policies" onClick={(event) => { event.preventDefault(); onNavigate('documents'); }} className="text-xs font-bold text-[#ec510d] hover:text-[#c8430b] flex items-center gap-0.5 cursor-pointer">View All <ChevronRight className="size-3.5" /></a>
                 </div>
                 <div className="relative z-10 space-y-1.5 flex-1 flex flex-col justify-center">
-                  {[
-                    ['Code of Conduct Policy', 'Effective from 1 Sep 2025', 'Updated'],
-                    ['Attendance Guidelines', 'For all students and faculty', 'Reminder'],
-                    ['Academic Integrity Policy', 'Maintaining ethical standards', ''],
-                    ['Campus IT & WiFi Policy', 'Fair usage & security rules', 'New'],
-                  ].map(([title, detail, badge]) => (
-                    <div key={title} className="flex items-center justify-between gap-3 rounded-xl bg-white/95 px-3 py-1.5 border border-white/40 shadow-[0_3px_8px_rgb(12,30,56,0.025)] hover:bg-white transition-colors">
+                  {policyList.slice(0, 4).map((policy) => (
+                    <div
+                      key={policy.id}
+                      onClick={() => setSelectedPolicy(policy)}
+                      className="cursor-pointer flex items-center justify-between gap-3 rounded-xl bg-white/95 px-3 py-1.5 border border-white/40 shadow-[0_3px_8px_rgb(12,30,56,0.025)] hover:bg-white transition-colors group"
+                    >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <span className="size-7 rounded-full bg-pink-50 text-pink-600 flex items-center justify-center shrink-0 border border-pink-100">
                           <FileText className="size-3" />
                         </span>
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <h4 className="text-[11px] font-bold text-[#0c1e38] truncate">{title}</h4>
-                            {badge && <span className="shrink-0 rounded-full bg-orange-50 px-1.5 py-0.5 text-[8px] font-bold text-[#ec510d]">{badge}</span>}
+                            <h4 className="text-[11px] font-bold text-[#0c1e38] group-hover:text-[#ec510d] truncate">{policy.title}</h4>
+                            {policy.version && <span className="shrink-0 rounded-full bg-orange-50 px-1.5 py-0.5 text-[8px] font-bold text-[#ec510d]">v{policy.version}</span>}
+                            {policy.attachmentUrl && <Paperclip className="size-2.5 text-blue-600 shrink-0" />}
                           </div>
-                          <p className="text-[9px] font-medium text-slate-500 truncate">{detail}</p>
+                          <p className="text-[9px] font-medium text-slate-500 truncate">{policy.summary || policy.category}</p>
                         </div>
                       </div>
-                      <ChevronRight className="size-3.5 text-slate-400 shrink-0" />
+                      <ChevronRight className="size-3.5 text-slate-400 shrink-0 group-hover:text-[#ec510d]" />
                     </div>
                   ))}
                 </div>
@@ -744,7 +867,7 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
               </a>
             </div>
             <div className="flex flex-col p-2.5 sm:p-3 space-y-2 relative z-10">
-              {NOTICES.slice(0, 4).map((notice, i) => (
+              {noticeList.slice(0, 4).map((notice, i) => (
                 <div
                   key={notice.id}
                   onClick={() => setSelectedNotice(notice)}
@@ -763,6 +886,11 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
                       </span>
                       {notice.isNew && (
                         <span className="text-[8px] sm:text-[9px] font-bold text-[#ec510d] px-1.5 py-0.5 bg-orange-50 border border-orange-100 rounded-md">New</span>
+                      )}
+                      {notice.attachmentUrl && (
+                        <span className="text-[8px] sm:text-[9px] font-bold text-blue-700 px-1.5 py-0.5 bg-blue-50 border border-blue-100 rounded-md flex items-center gap-0.5">
+                          <Paperclip className="size-2.5" /> Doc
+                        </span>
                       )}
                     </div>
                     <span className="text-[9px] sm:text-[10px] text-slate-400 flex items-center gap-1 font-medium">
@@ -885,7 +1013,7 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
                 </div>
               </div>
 
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium whitespace-pre-wrap">
                 {selectedNotice.description}
               </p>
 
@@ -903,6 +1031,36 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
                 </div>
               )}
 
+              {/* Document Attachment Box */}
+              {selectedNotice.attachmentUrl && (
+                <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-3.5 flex items-center justify-between">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white">
+                      <FileText className="h-4 w-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-[#0c1e38] truncate">
+                        {selectedNotice.attachmentName || 'Attached Document'}
+                      </p>
+                      {selectedNotice.attachmentSize && (
+                        <p className="text-[10px] font-medium text-slate-500">
+                          File Size: {selectedNotice.attachmentSize}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <a
+                    href={selectedNotice.attachmentUrl}
+                    download={selectedNotice.attachmentName || 'notice-document'}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex shrink-0 items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 transition"
+                  >
+                    View / Download <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              )}
+
               <div className="flex items-center justify-end pt-2">
                 <button
                   type="button"
@@ -910,6 +1068,95 @@ export default function ReferenceDashboard({ user, applications, loading, onNavi
                   className="bg-[#0c1e38] hover:bg-[#142b4b] text-white text-xs font-bold px-5 py-2.5 rounded-xl transition-colors shadow-sm"
                 >
                   Close Notice
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedPolicy && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-navy-950/40 backdrop-blur-xs">
+          <div className="w-full max-w-[500px] rounded-2xl bg-white border border-slate-200 shadow-[0_24px_70px_rgb(12,30,56,0.28)] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="bg-[#0c1e38] text-white px-6 py-4 flex items-center justify-between border-b border-white/10">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md bg-violet-600 text-white">
+                  {selectedPolicy.category}
+                </span>
+                {selectedPolicy.version && (
+                  <span className="text-[10px] font-bold text-amber-300 px-2 py-0.5 bg-amber-500/20 rounded-md">
+                    v{selectedPolicy.version}
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                aria-label="Close policy details"
+                onClick={() => setSelectedPolicy(null)}
+                className="size-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors text-white"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div>
+                <h3 className="text-base sm:text-lg font-serif font-bold text-[#0c1e38] leading-snug">
+                  {selectedPolicy.title}
+                </h3>
+                <div className="flex items-center justify-between mt-2 text-xs text-slate-500 font-medium pb-3 border-b border-slate-100">
+                  <span className="flex items-center gap-1"><Clock className="size-3.5 text-[#ec510d]" /> Effective {selectedPolicy.effectiveDate || 'Immediately'}</span>
+                  <span className="font-semibold text-slate-700">DYPIU Governance</span>
+                </div>
+              </div>
+
+              {selectedPolicy.summary && (
+                <p className="text-xs sm:text-sm text-slate-700 font-semibold bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  {selectedPolicy.summary}
+                </p>
+              )}
+
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium whitespace-pre-wrap max-h-48 overflow-y-auto">
+                {selectedPolicy.content}
+              </p>
+
+              {/* Document Attachment Box */}
+              {selectedPolicy.attachmentUrl && (
+                <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-3.5 flex items-center justify-between">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white">
+                      <FileText className="h-4 w-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-[#0c1e38] truncate">
+                        {selectedPolicy.attachmentName || 'Policy Document'}
+                      </p>
+                      {selectedPolicy.attachmentSize && (
+                        <p className="text-[10px] font-medium text-slate-500">
+                          File Size: {selectedPolicy.attachmentSize}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <a
+                    href={selectedPolicy.attachmentUrl}
+                    download={selectedPolicy.attachmentName || 'policy-document'}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex shrink-0 items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 transition"
+                  >
+                    View / Download <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedPolicy(null)}
+                  className="bg-[#0c1e38] hover:bg-[#142b4b] text-white text-xs font-bold px-5 py-2.5 rounded-xl transition-colors shadow-sm"
+                >
+                  Close Document
                 </button>
               </div>
             </div>

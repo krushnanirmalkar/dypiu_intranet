@@ -1,6 +1,6 @@
 import React from 'react';
 import type { NotificationItem, UserRole } from '../types';
-import { Bell, BookOpen, FileCheck, Calendar, Award, ShieldAlert, Check } from 'lucide-react';
+import { Bell, BookOpen, FileCheck, Calendar, Award, ShieldAlert, Check, Info } from 'lucide-react';
 
 interface NotificationPanelProps {
   notifications: NotificationItem[];
@@ -25,7 +25,11 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
       case 'Examination': return <FileCheck className="w-4 h-4 text-navy-800" />;
       case 'Event': return <Calendar className="w-4 h-4 text-navy-800" />;
       case 'Achievement': return <Award className="w-4 h-4 text-navy-800" />;
-      default: return <ShieldAlert className="w-4 h-4 text-navy-800" />;
+      case 'Notice': return <Bell className="w-4 h-4 text-navy-800" />;
+      case 'Urgent': return <ShieldAlert className="w-4 h-4 text-red-600" />;
+      case 'Info': return <Info className="w-4 h-4 text-navy-800" />;
+      case 'System': return <Bell className="w-4 h-4 text-navy-800" />;
+      default: return <Bell className="w-4 h-4 text-navy-800" />;
     }
   };
 
