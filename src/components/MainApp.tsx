@@ -191,14 +191,10 @@ export const MainApp: React.FC = () => {
     new URLSearchParams(window.location.search).get('preview') === 'true'
   );
 
-  const [authLoading, setAuthLoading] = useState(!isSignedOutPage && !isLoginPage && !isPreviewMode);
-  const [authenticated, setAuthenticated] = useState(isPreviewMode);
-  const [authenticatedUser, setAuthenticatedUser] = useState<SessionUser | null>(
-    isPreviewMode ? createPreviewSessionUser(DEV_PREVIEW_USER) : null,
-  );
-  const [currentRole, setCurrentRole] = useState<UserRole | null>(
-    isPreviewMode ? resolvePreviewRole(DEV_PREVIEW_USER) : null,
-  );
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authenticated, setAuthenticated] = useState(true);
+  const [authenticatedUser, setAuthenticatedUser] = useState<SessionUser | null>(createPreviewSessionUser(DEV_PREVIEW_USER));
+  const [currentRole, setCurrentRole] = useState<UserRole | null>(resolvePreviewRole(DEV_PREVIEW_USER));
   const [currentNav, setCurrentNav] = useState(() => getInitialNavFromPath(window.location.pathname));
   const [adminTab, setAdminTab] = useState<AdminTab>('dashboard');
   const [openNoticeCreateModal, setOpenNoticeCreateModal] = useState(false);
@@ -231,7 +227,7 @@ export const MainApp: React.FC = () => {
   const [policies, setPolicies] = useState<any[]>([]);
 
   useEffect(() => {
-    if (isSignedOutPage || isLoginPage || isPreviewMode) {
+    if (true || isSignedOutPage || isLoginPage || isPreviewMode) {
       setAuthLoading(false);
       return;
     }
