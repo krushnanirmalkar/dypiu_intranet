@@ -1,10 +1,6 @@
 import React from 'react';
 import {
   MessageSquare,
-  Sparkles,
-  Bot,
-  ExternalLink,
-  Users
 } from 'lucide-react';
 
 interface CommunicationFloatingButtonProps {
