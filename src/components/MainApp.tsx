@@ -17,8 +17,12 @@ import { HelpContactPage } from '../pages/HelpContactPage';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { WelcomeHero } from './WelcomeHero';
-import { DateBirthdayCard } from './DateBirthdayCard';
-import { MainSection } from './MainSection';
+import { BirthdaySection } from './BirthdaySection';
+import { UniversityApplicationsSection } from './UniversityApplicationsSection';
+import { NoticeBoardAndEventsSection } from './NoticeBoardAndEventsSection';
+import { CommunicationModal } from './CommunicationModal';
+import { CommunicationFloatingButton } from './CommunicationFloatingButton';
+import { UniOneDashboardPage } from './UniOneDashboardPage';
 import { IntranetFooter } from './IntranetFooter';
 
 // Super Admin Imports
@@ -200,6 +204,7 @@ export const MainApp: React.FC = () => {
   const [openNoticeCreateModal, setOpenNoticeCreateModal] = useState(false);
   const [openAppCreateModal, setOpenAppCreateModal] = useState(false);
   const [openPolicyCreateModal, setOpenPolicyCreateModal] = useState(false);
+  const [isCommModalOpen, setIsCommModalOpen] = useState(false);
 
   useEffect(() => {
     const handlePopState = () => {
@@ -581,6 +586,17 @@ export const MainApp: React.FC = () => {
     );
   }
 
+  // When on dashboard, render the source-of-truth UniOne Redesign layout pixel-for-pixel
+  if (currentNav === 'dashboard' || currentNav === 'home') {
+    return (
+      <UniOneDashboardPage
+        user={currentUser}
+        onNavigate={handleNavigate}
+        showBirthdayProp={true}
+      />
+    );
+  }
+
   // Unified Reference Layout for Portal
   return (
     <div className="h-[100dvh] max-h-[100dvh] bg-[#F3F3F8] flex flex-col font-sans text-slate-800 antialiased selection:bg-[#00afef]/20 selection:text-[#393678] overflow-hidden">
@@ -616,22 +632,36 @@ export const MainApp: React.FC = () => {
         >
           <main className="flex-1 p-3 sm:p-4 lg:p-4 space-y-4 max-w-[1600px] mx-auto w-full overscroll-contain">
           {currentNav === 'dashboard' && (
-            <>
-              {/* TOP HERO ROW */}
+            <div className="space-y-4 sm:space-y-5">
+              {/* Top Row: Welcome Hero & Birthday Celebrating Section */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5 items-stretch">
                 <div className="lg:col-span-8">
                   <WelcomeHero user={currentUser} />
                 </div>
                 <div className="lg:col-span-4">
-                  <DateBirthdayCard />
+                  <BirthdaySection />
                 </div>
               </div>
 
-              <MainSection
+              {/* Priority Feature 1: University Applications (6-8 apps, fixed & prominent) */}
+              <UniversityApplicationsSection
+                onOpenApp={(app) => {
+                  if (app.url.startsWith('http')) {
+                    window.open(app.url, '_blank', 'noopener,noreferrer');
+                  } else {
+                    handleNavigate(app.id);
+                  }
+                }}
+                onViewAll={() => handleNavigate('applications')}
+              />
+
+              {/* Priority Features 2 & 3: Notice Board & Upcoming Events (Top 3 records + Show all) */}
+              <NoticeBoardAndEventsSection
                 notices={notices}
                 onViewAllNotices={() => handleNavigate('notices')}
+                onViewAllEvents={() => handleNavigate('events')}
               />
-            </>
+            </div>
           )}
 
           {currentNav === 'notices' && (
@@ -721,6 +751,10 @@ export const MainApp: React.FC = () => {
         </main>
 
         {/* Full-width Intranet Footer seamlessly joined to the sidebar */}
+        <CommunicationFloatingButton onClick={() => setIsCommModalOpen(true)} unreadCount={2} />
+        <CommunicationModal isOpen={isCommModalOpen} onClose={() => setIsCommModalOpen(false)} />
+        <CommunicationFloatingButton onClick={() => setIsCommModalOpen(true)} unreadCount={2} />
+        <CommunicationModal isOpen={isCommModalOpen} onClose={() => setIsCommModalOpen(false)} />
         <IntranetFooter onNavigate={handleNavigate} />
       </div>
       </div>

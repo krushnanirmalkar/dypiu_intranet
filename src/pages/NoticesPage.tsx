@@ -134,12 +134,26 @@ export const NoticesPage: React.FC<NoticesPageProps> = ({ user, onOpenCreateNoti
               <span>Official Circulars</span>
             </div>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-[#393678] font-serif-custom tracking-tight">
-            University Notice Board
-          </h1>
-          <p className="text-slate-500 text-xs sm:text-sm mt-1 max-w-2xl">
-            Access all official university circulars, examination notifications, academic schedules, and administrative attachments.
-          </p>
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-xl bg-[#393678]/10 border border-[#393678]/15 flex items-center justify-center shrink-0">
+              <svg className="w-6 h-6 text-[#393678]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="4" width="18" height="16" rx="2" />
+                <path d="M8 4l4-2.5 4 2.5" />
+                <rect x="6.5" y="8" width="11" height="8.5" rx="1" />
+                <circle cx="12" cy="7" r="1" fill="currentColor" />
+                <line x1="8.5" y1="11" x2="15.5" y2="11" />
+                <line x1="8.5" y1="13.5" x2="13.5" y2="13.5" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-[#393678] font-serif-custom tracking-tight">
+                University Notice Board
+              </h1>
+              <p className="text-slate-500 text-xs sm:text-sm mt-1 max-w-2xl">
+                Access all official university circulars, examination notifications, academic schedules, and administrative attachments.
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
