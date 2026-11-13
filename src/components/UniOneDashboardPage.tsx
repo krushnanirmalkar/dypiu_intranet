@@ -346,6 +346,7 @@ export const UniOneDashboardPage: React.FC<UniOneDashboardPageProps> = ({
       style={{
         background: '#F3F6FB',
         color: '#14213D',
+        fontFamily: "'Nunito', system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
         minHeight: '100%',
         width: '100%',
         position: 'relative'
@@ -755,14 +756,20 @@ export const UniOneDashboardPage: React.FC<UniOneDashboardPageProps> = ({
 
                     <h3 style={{
                       margin: 0,
-                      fontFamily: isHighlight ? "'Fredoka', sans-serif" : 'inherit',
+                      fontFamily: isHighlight ? "'Fredoka', sans-serif" : "'Nunito', system-ui, sans-serif",
                       fontWeight: isHighlight ? 600 : 800,
                       fontSize: isHighlight ? '22px' : '17px',
                       color: '#0B2559'
                     }}>
                       {notice.title}
                     </h3>
-                    <p className="clamp2" style={{ margin: 0, fontSize: isHighlight ? '16px' : '15px', lineHeight: 1.5, color: isHighlight ? '#3A2E0F' : '#46526F' }}>
+                    <p className="clamp2" style={{
+                      margin: 0,
+                      fontFamily: "'Nunito', system-ui, sans-serif",
+                      fontSize: isHighlight ? '16px' : '15px',
+                      lineHeight: 1.5,
+                      color: isHighlight ? '#3A2E0F' : '#46526F'
+                    }}>
                       {notice.desc}
                     </p>
                   </article>
