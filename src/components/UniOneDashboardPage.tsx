@@ -338,7 +338,6 @@ export const UniOneDashboardPage: React.FC<UniOneDashboardPageProps> = ({
 
   const topNotices = SAMPLE_NOTICES.slice(0, 3);
   const topEvents = SAMPLE_EVENTS.slice(0, 3);
-  const totalUnreadCount = 6;
 
   return (
     <div
@@ -923,44 +922,6 @@ export const UniOneDashboardPage: React.FC<UniOneDashboardPageProps> = ({
           <span style={{ fontSize: '14px', color: '#BFE3F7' }}>Powered by Students @DYPIU</span>
         </div>
       </footer>
-
-      {/* ─── Floating Messages Button ─── */}
-      {!chatOpen && (
-        <button
-          onClick={() => setChatOpen(true)}
-          aria-label="Open messages"
-          style={{
-            position: 'fixed',
-            right: '20px',
-            bottom: '20px',
-            zIndex: 40,
-            height: '60px',
-            padding: '0 24px 0 20px',
-            border: 0,
-            borderRadius: '999px',
-            background: '#0074B8',
-            color: '#fff',
-            fontFamily: "'Fredoka', sans-serif",
-            fontWeight: 500,
-            fontSize: '18px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            cursor: 'pointer',
-            boxShadow: '0 10px 26px rgba(11,37,89,.35)'
-          }}
-        >
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.5A8 8 0 1 1 21 12z"></path>
-          </svg>
-          Messages
-          {totalUnreadCount > 0 && (
-            <span style={{ minWidth: '24px', height: '24px', borderRadius: '12px', background: '#FDB515', color: '#0B2559', fontFamily: "'Nunito', sans-serif", fontSize: '13px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 6px' }}>
-              {totalUnreadCount}
-            </span>
-          )}
-        </button>
-      )}
 
       {/* ─── Chat Window (WhatsApp Web / MS Teams style) ─── */}
       <UniOneChatModal

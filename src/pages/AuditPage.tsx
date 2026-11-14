@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
+import { adminApi } from '../admin/services/adminApi';
 
 interface AuditEvent {
   timestamp: string | null;
@@ -17,9 +18,42 @@ interface AuditEvent {
   };
 }
 
-interface AuditResponse {
-  events?: AuditEvent[];
+// The audit service records the actor as actorEmail/actorSub and the affected
+// area as resourceType, while this table reads user/application. Accept either.
+interface RawAuditEvent {
+  timestamp?: string | null;
+  user?: string | null;
+  application?: string | null;
+  action?: string | null;
+  result?: string | null;
+  actorEmail?: string;
+  actorSub?: string;
+  resourceType?: string;
+  metadata?: {
+    ip?: string | null;
+    method?: string | null;
+    path?: string | null;
+    reason?: string | null;
+    userRoles?: string[] | null;
+    requiredRoles?: string[] | null;
+  };
 }
+
+const toAuditRow = (raw: RawAuditEvent): AuditEvent => ({
+  timestamp: typeof raw.timestamp === 'string' ? raw.timestamp : null,
+  user: raw.user ?? raw.actorEmail ?? raw.actorSub ?? null,
+  application: raw.application ?? raw.resourceType ?? null,
+  action: raw.action ?? null,
+  result: raw.result ?? null,
+  metadata: {
+    ip: raw.metadata?.ip ?? null,
+    method: raw.metadata?.method ?? null,
+    path: raw.metadata?.path ?? null,
+    reason: raw.metadata?.reason ?? null,
+    userRoles: raw.metadata?.userRoles ?? null,
+    requiredRoles: raw.metadata?.requiredRoles ?? null,
+  },
+});
 
 export const AuditPage: React.FC = () => {
   const [events, setEvents] = useState<AuditEvent[]>([]);
@@ -27,38 +61,27 @@ export const AuditPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+
     const loadAuditEvents = async () => {
       try {
-        const response = await fetch('/api/admin/audit', {
-          method: 'GET',
-          credentials: 'include',
-        });
-
-        if (response.status === 401) {
-          window.location.href = '/login';
-          return;
-        }
-
-        if (response.status === 403) {
-          setError('You do not have permission to view audit logs.');
-          return;
-        }
-
-        if (!response.ok) {
-          throw new Error(`Audit request failed with status ${response.status}`);
-        }
-
-        const data = await response.json() as AuditResponse;
-        setEvents(Array.isArray(data.events) ? data.events : []);
+        // adminApi already handles 401/403 and falls back to the seeded local
+        // audit log when the backend on port 3001 is not running.
+        const events = await adminApi.fetchAuditLogs();
+        if (!cancelled) setEvents((Array.isArray(events) ? events : []).map(toAuditRow));
       } catch (requestError) {
         console.error('Failed to load audit events:', requestError);
-        setError('Unable to load audit logs.');
+        if (!cancelled) setError('Unable to load audit logs.');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     void loadAuditEvents();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (

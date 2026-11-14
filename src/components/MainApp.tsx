@@ -20,8 +20,6 @@ import { WelcomeHero } from './WelcomeHero';
 import { BirthdaySection } from './BirthdaySection';
 import { UniversityApplicationsSection } from './UniversityApplicationsSection';
 import { NoticeBoardAndEventsSection } from './NoticeBoardAndEventsSection';
-import { CommunicationModal } from './CommunicationModal';
-import { CommunicationFloatingButton } from './CommunicationFloatingButton';
 import { UniOneDashboardPage } from './UniOneDashboardPage';
 import { IntranetFooter } from './IntranetFooter';
 
@@ -186,21 +184,26 @@ export const MainApp: React.FC = () => {
   const isSignedOutPage = window.location.pathname === '/signed-out';
   const isLoginPage = window.location.pathname === '/login';
   const isDirectAdminUrl = window.location.pathname === '/admin';
-  const isPreviewMode = typeof window !== 'undefined' && (
+  // Local-only escape hatch: ?preview=1 opens the intranet with seed data and no
+  // backend. Restricted to dev builds so the deployed site always verifies /api/me.
+  const isPreviewMode = import.meta.env.DEV && typeof window !== 'undefined' && (
     new URLSearchParams(window.location.search).get('preview') === '1' ||
     new URLSearchParams(window.location.search).get('preview') === 'true'
   );
 
-  const [authLoading, setAuthLoading] = useState(false);
-  const [authenticated, setAuthenticated] = useState(true);
-  const [authenticatedUser, setAuthenticatedUser] = useState<SessionUser | null>(createPreviewSessionUser(DEV_PREVIEW_USER));
-  const [currentRole, setCurrentRole] = useState<UserRole | null>(resolvePreviewRole(DEV_PREVIEW_USER));
+  const [authLoading, setAuthLoading] = useState(!isPreviewMode && !isLoginPage && !isSignedOutPage);
+  const [authenticated, setAuthenticated] = useState(isPreviewMode);
+  const [authenticatedUser, setAuthenticatedUser] = useState<SessionUser | null>(
+    isPreviewMode ? createPreviewSessionUser(DEV_PREVIEW_USER) : null,
+  );
+  const [currentRole, setCurrentRole] = useState<UserRole | null>(
+    isPreviewMode ? resolvePreviewRole(DEV_PREVIEW_USER) : null,
+  );
   const [currentNav, setCurrentNav] = useState(() => getInitialNavFromPath(window.location.pathname));
   const [adminTab, setAdminTab] = useState<AdminTab>('dashboard');
   const [openNoticeCreateModal, setOpenNoticeCreateModal] = useState(false);
   const [openAppCreateModal, setOpenAppCreateModal] = useState(false);
   const [openPolicyCreateModal, setOpenPolicyCreateModal] = useState(false);
-  const [isCommModalOpen, setIsCommModalOpen] = useState(false);
 
   useEffect(() => {
     const handlePopState = () => {
@@ -221,13 +224,17 @@ export const MainApp: React.FC = () => {
   }, [currentNav]);
 
   const [isReferenceSidebarOpen, setIsReferenceSidebarOpen] = useState(false);
-  const [applications, setApplications] = useState<ApplicationItem[]>(DEV_PREVIEW_APPLICATIONS);
-  const [notifications, setNotifications] = useState<NotificationItem[]>(mockNotifications);
+  // Demo seeds stay out of production builds: a live /api failure should show an
+  // empty state rather than seeded preview data.
+  const [applications, setApplications] = useState<ApplicationItem[]>(import.meta.env.DEV ? DEV_PREVIEW_APPLICATIONS : []);
+  const [notifications, setNotifications] = useState<NotificationItem[]>(import.meta.env.DEV ? mockNotifications : []);
   const [notices, setNotices] = useState<any[]>([]);
   const [policies, setPolicies] = useState<any[]>([]);
 
   useEffect(() => {
-    if (true || isSignedOutPage || isLoginPage || isPreviewMode) {
+    // ?preview=1 (or ?preview=true) renders the intranet with the bundled seed
+    // data and never calls /api/me — the no-backend preview mode.
+    if (isSignedOutPage || isLoginPage || isPreviewMode) {
       setAuthLoading(false);
       return;
     }
@@ -747,10 +754,6 @@ export const MainApp: React.FC = () => {
         </main>
 
         {/* Full-width Intranet Footer seamlessly joined to the sidebar */}
-        <CommunicationFloatingButton onClick={() => setIsCommModalOpen(true)} unreadCount={2} />
-        <CommunicationModal isOpen={isCommModalOpen} onClose={() => setIsCommModalOpen(false)} />
-        <CommunicationFloatingButton onClick={() => setIsCommModalOpen(true)} unreadCount={2} />
-        <CommunicationModal isOpen={isCommModalOpen} onClose={() => setIsCommModalOpen(false)} />
         <IntranetFooter onNavigate={handleNavigate} />
       </div>
       </div>

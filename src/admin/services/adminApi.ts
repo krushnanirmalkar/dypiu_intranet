@@ -288,30 +288,33 @@ function saveDevAuditLogs(logs: AuditEvent[]): void {
 }
 
 async function fetchWithDevFallback<T>(url: string, options?: RequestInit, devFallbackSupplier?: () => T): Promise<T> {
-  const isDevMode = import.meta.env.DEV;
+  // The localStorage seed data exists so the admin portal can be developed and
+  // previewed without a backend. In a production build it must never stand in
+  // for the real API, otherwise a broken endpoint would silently show fake data.
+  const canUseFallback = import.meta.env.DEV && Boolean(devFallbackSupplier);
 
   try {
     const response = await fetch(url, options);
 
     if (response.status === 401) {
-      if (isDevMode && devFallbackSupplier) return devFallbackSupplier();
+      if (canUseFallback && devFallbackSupplier) return devFallbackSupplier();
       window.location.href = '/login';
       throw new Error('Authentication required.');
     }
 
     if (response.status === 403) {
-      if (isDevMode && devFallbackSupplier) return devFallbackSupplier();
+      if (canUseFallback && devFallbackSupplier) return devFallbackSupplier();
       throw new Error('Access denied. Administrator privileges required.');
     }
 
     if (response.status === 502 || response.status === 504) {
-      if (devFallbackSupplier) return devFallbackSupplier();
+      if (canUseFallback && devFallbackSupplier) return devFallbackSupplier();
       throw new Error('Backend server is offline or unreachable (502/504). Please ensure the backend server is running on port 3001.');
     }
 
     const contentType = response.headers.get('content-type') || '';
     if (!contentType.includes('application/json')) {
-      if (devFallbackSupplier) {
+      if (canUseFallback && devFallbackSupplier) {
         return devFallbackSupplier();
       }
       throw new Error(`Server returned non-JSON response (${response.status} ${response.statusText || 'Error'}). Please ensure the backend server is running.`);
@@ -326,13 +329,13 @@ async function fetchWithDevFallback<T>(url: string, options?: RequestInit, devFa
       } catch {
         // ignore
       }
-      if (devFallbackSupplier) return devFallbackSupplier();
+      if (canUseFallback && devFallbackSupplier) return devFallbackSupplier();
       throw new Error(errorMsg);
     }
 
     return response.json() as Promise<T>;
   } catch (err: unknown) {
-    if (devFallbackSupplier) {
+    if (canUseFallback && devFallbackSupplier) {
       return devFallbackSupplier();
     }
     throw err;
